@@ -122,7 +122,7 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
 
     add_executable(dream_core_event_tests tests/core/event_tests.cpp)
     target_link_libraries(dream_core_event_tests PRIVATE DreamEngine::Core)
-    target_compile_features(dream_core_tests PRIVATE cxx_std_20)
+    target_compile_features(dream_core_event_tests PRIVATE cxx_std_20)
     set_target_properties(dream_core_event_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.core.events COMMAND dream_core_event_tests)
 
