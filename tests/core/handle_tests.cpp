@@ -9,7 +9,7 @@ namespace {
 
 void require(bool condition, std::string_view message) {
     if (!condition) {
-        std::cerr << "FAILED: " << message << '\\n';
+        std::cerr << "FAILED: " << message << '\n';
         std::exit(EXIT_FAILURE);
     }
 }
@@ -54,6 +54,6 @@ int main() {
     require(textures.release(second), "second handle releases");
     require(textures.release(reused), "reused handle releases");
 
-    std::cout << "Dream Engine handle tests passed.\\n";
+    std::cout << "Dream Engine handle tests passed.\n";
     return EXIT_SUCCESS;
 }
