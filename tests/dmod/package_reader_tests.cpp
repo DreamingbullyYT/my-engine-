@@ -105,6 +105,57 @@ int main() {
             "case-colliding paths are rejected");
 
     errors.clear();
+    auto duplicate_zip = make_zip({
+        {"manifest.toml", manifest},
+        {"scripts/main.dms", script},
+        {"assets/duplicate.txt", "first"},
+        {"assets/duplicate.txt", "second"}
+    });
+    require(open_package(duplicate_zip, errors) == nullptr,
+            "duplicate archive paths are rejected");
+
+    errors.clear();
+    auto symlink_zip = valid_zip;
+    mz_zip_archive symlink_reader{};
+    require(mz_zip_reader_init_mem(&symlink_reader, symlink_zip.data(),
+                                   symlink_zip.size(), 0) != 0,
+            "symlink fixture opens for mutation");
+    mz_zip_archive_file_stat symlink_stat{};
+    require(mz_zip_reader_file_stat(&symlink_reader, 2, &symlink_stat) != 0,
+            "symlink fixture entry metadata is read");
+    const auto symlink_central = static_cast<std::size_t>(symlink_stat.m_central_dir_ofs);
+    mz_zip_reader_end(&symlink_reader);
+    symlink_zip[symlink_central + 5] = std::byte{3};
+    constexpr std::uint32_t unix_symlink_mode = 0120777u << 16;
+    for (unsigned int i = 0; i < 4; ++i) {
+        symlink_zip[symlink_central + 38 + i] =
+            static_cast<std::byte>((unix_symlink_mode >> (i * 8)) & 0xffu);
+    }
+    errors.clear();
+    require(open_package(symlink_zip, errors) == nullptr,
+            "Unix symbolic links are rejected");
+
+    errors.clear();
+    auto unsupported_zip = valid_zip;
+    mz_zip_archive unsupported_reader{};
+    require(mz_zip_reader_init_mem(&unsupported_reader, unsupported_zip.data(),
+                                   unsupported_zip.size(), 0) != 0,
+            "unsupported-method fixture opens for mutation");
+    mz_zip_archive_file_stat unsupported_stat{};
+    require(mz_zip_reader_file_stat(&unsupported_reader, 2, &unsupported_stat) != 0,
+            "unsupported-method fixture metadata is read");
+    const auto unsupported_local = static_cast<std::size_t>(unsupported_stat.m_local_header_ofs);
+    const auto unsupported_central = static_cast<std::size_t>(unsupported_stat.m_central_dir_ofs);
+    mz_zip_reader_end(&unsupported_reader);
+    unsupported_zip[unsupported_local + 8] = std::byte{12};
+    unsupported_zip[unsupported_local + 9] = std::byte{0};
+    unsupported_zip[unsupported_central + 10] = std::byte{12};
+    unsupported_zip[unsupported_central + 11] = std::byte{0};
+    errors.clear();
+    require(open_package(unsupported_zip, errors) == nullptr,
+            "unsupported compression methods are rejected");
+
+    errors.clear();
     auto missing_entry_zip = make_zip({
         {"manifest.toml", make_manifest("scripts/missing.dms")}
     });
@@ -151,6 +202,33 @@ int main() {
     malformed_header_zip[0] = std::byte{0x00};
     require(open_package(malformed_header_zip, errors) == nullptr,
             "malformed local ZIP header is rejected");
+
+    errors.clear();
+    auto corrupted_data_zip = valid_zip;
+    mz_zip_archive crc_reader{};
+    require(mz_zip_reader_init_mem(&crc_reader, corrupted_data_zip.data(),
+                                   corrupted_data_zip.size(), 0) != 0,
+            "CRC fixture opens for mutation");
+    mz_zip_archive_file_stat crc_stat{};
+    require(mz_zip_reader_file_stat(&crc_reader, 1, &crc_stat) != 0,
+            "CRC fixture entry metadata is read");
+    const auto local_header = static_cast<std::size_t>(crc_stat.m_local_header_ofs);
+    const auto read_u16 = [&corrupted_data_zip](std::size_t offset) {
+        return static_cast<std::size_t>(
+            std::to_integer<unsigned char>(corrupted_data_zip[offset]) |
+            (std::to_integer<unsigned char>(corrupted_data_zip[offset + 1]) << 8));
+    };
+    const auto filename_size = read_u16(local_header + 26);
+    const auto extra_size = read_u16(local_header + 28);
+    const auto compressed_data = local_header + 30 + filename_size + extra_size;
+    mz_zip_reader_end(&crc_reader);
+    require(compressed_data < corrupted_data_zip.size(), "CRC fixture data offset is valid");
+    corrupted_data_zip[compressed_data] ^= std::byte{0x01};
+    errors.clear();
+    auto corrupted_package = open_package(corrupted_data_zip, errors);
+    require(corrupted_package != nullptr, "valid headers with damaged file data can be indexed");
+    require(!corrupted_package->read_file("scripts/main.dms").success(),
+            "CRC or decompression errors are reported when reading file data");
 
     errors.clear();
     const std::vector<std::byte> invalid_zip{std::byte{0x01}, std::byte{0x02}};
