@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
 #include <atomic>
 #include <cstdint>
 #include <exception>
@@ -45,7 +46,6 @@ public:
     }
 
 private:
-    template <typename> friend class EventDispatcherAccess;
     friend class EventDispatcher;
 
     explicit EventConnection(std::function<void()> disconnect)
