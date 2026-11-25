@@ -24,20 +24,20 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - Update PMCS whenever implementation state or verified decisions change.
 
 ## Current implementation
-- dream_core: version API, logging, diagnostics, event dispatcher and worker job system.
+- dream_core: version API, logging, diagnostics, event dispatcher, worker job system and typed generational handle pool (latest handle change awaits CI).
 - dream_platform: application lifecycle, window/surface/input contracts and virtual filesystem path validation.
 - dream_dmod: manifest model, validation, dependency resolver, TOML parser and read-only in-memory ZIP package reader with local-header validation.
 - Pinned dependencies: miniz 3.1.2 at 77d0dce8627735138c51770d1799a1ef48f2117d; toml++ 3.5.1 at efd80e03356af65c7d4e61c56ffb326b34f8d0f4.
 - Application lifecycle passed Linux GCC/Clang and Android ARM64 cross-build in [run 45708669112](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45708669112).
-- Latest window/surface/input/filesystem contracts are awaiting CI; don't mark them verified until success.
+- Window/surface/input/filesystem contracts passed all four CI jobs in [run 45710274229](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45710274229).
 - Android results are cross-compilation, not physical-device execution.
 - C++20 remains a provisional implementation baseline.
 
 ## Next work
-1. Verify latest platform contracts in CI and fix actual failures.
-2. Add concrete platform backends only after interface review; don't choose SDL or another dependency prematurely.
-3. Continue resource identity/lifetime foundations and renderer API research.
-4. Define DMod package signature/trust and format-version policy; continue interpreter security audit.
+1. Verify the new typed generational handle pool in CI.
+2. Review resource ownership/registry contracts and expand lifetime/concurrency tests.
+3. Research renderer candidates and define engine-owned 2D/3D rendering interfaces before selecting a backend.
+4. Continue DMod package trust/versioning and interpreter security audit.
 
 ## Handoff requirements
 Update CURRENT_STATE.md, ARCHITECTURE.md, TECHNICAL_AUDIT.md and ROADMAP.md as work progresses. Update DECISIONS.md only for explicitly accepted decisions. Never label work VERIFIED without reproducible evidence.
