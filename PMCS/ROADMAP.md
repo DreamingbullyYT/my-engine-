@@ -48,9 +48,13 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [x] In-memory manifest model and validation.
 - [x] Required/optional dependency resolution and deterministic topological order.
 - [x] Missing dependency, incompatible version, duplicate ID and cycle rejection tests (run 45705412340).
+- [x] TOML manifest parser, strict version fields and malformed/oversized input tests (run 45706951573).
+- [x] Pin miniz ZIP library and toml++ TOML parser to immutable upstream commits; verify GCC, Clang and Android ARM64 builds (run 45706951573).
+- [ ] Implement read-only ZIP package reader without filesystem extraction.
+- [ ] Reject archive traversal, links, duplicate paths, unsupported methods and size/ratio bombs.
+- [ ] Connect package reader, manifest and entry-script validation.
 - [ ] Choose interpreter only after Android cross-compile and runtime safety audit.
-- [ ] Manifest serialization parser and .dmod package/container format.
-- [ ] Safe archive reading, path validation, size limits and trust/signature policy.
+- [ ] Package signature/trust policy.
 - [ ] C++ host bindings, mod contexts and enforced capabilities.
 - [ ] Registries, events and hooks.
 - [ ] Mod lifecycle, diagnostics and hot reload.
