@@ -9,16 +9,18 @@
 - Public engine version/name API.
 - Core logger with severity filtering and replaceable, thread-safe sink configuration.
 - Structured diagnostic value type with severity, code, message and source.
-- Dependency-free tests for version, logging filters/records and diagnostic classification.
+- Typed event dispatcher with RAII subscriptions, priority ordering, re-entrant dispatch, callback execution outside locks and exception isolation.
+- Job system with worker threads, futures, exception propagation, idle waiting and drain-on-shutdown semantics.
+- Dependency-free tests for version, logging, diagnostics, event ordering/disconnection/failure isolation, and job execution/failure/draining.
 - GitHub Actions workflow for Linux GCC/Clang build+CTest and Android NDK cross-build for `arm64-v8a`.
 
 ## Verified CI
-- Run [45698607959](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45698607959) completed successfully.
+- Run [45700477183](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45700477183) completed successfully after the logger/diagnostics and independent-test-target changes.
 - Linux GCC: configure, build and CTest passed.
 - Linux Clang: configure, build and CTest passed.
 - Android NDK: configure and cross-build passed for `arm64-v8a` (ARMv8-A).
 - This is cross-compilation evidence, not execution on a physical Android device.
-- The latest logging/diagnostics additions are pending a new CI run; do not treat them as verified until that run passes.
+- Event/job implementation has been pushed and is awaiting validation in the current CI run; do not mark it verified until the run passes.
 
 ## Build and test policy
 - The user has no PC available. GitHub Actions is the primary build/test environment.
@@ -34,7 +36,6 @@
 ## Not yet implemented
 - Platform abstraction and application lifecycle.
 - Memory/handles/resource identity.
-- Event system and job system.
 - Renderer and graphics backend.
 - ECS/world/scene model.
 - 2D/3D physics integration.
@@ -43,7 +44,7 @@
 - Editor and profiling.
 
 ## Immediate next actions
-1. Verify the new logger/diagnostic changes with GCC, Clang and Android ARM64 in Actions.
-2. Add core event and job contracts after CI is green.
+1. Verify event and job services with GCC, Clang and Android ARM64 in Actions.
+2. Review concurrency edge cases and add stress/lifecycle tests where useful.
 3. Research DMod interpreter candidates at source level, beginning with ChaiScript parser/evaluator behavior.
 4. Keep dependency choices open until technical and licensing audits are complete.
