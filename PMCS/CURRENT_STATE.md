@@ -6,7 +6,7 @@
 
 ## Implemented
 - CMake project with separate dream_core, dream_platform and dream_dmod static libraries.
-- Core version API, logger, diagnostics, typed event dispatcher, worker job system and typed generational handle pool (verified in run 45714411879) and owning ResourceRegistry (awaiting CI).
+- Core version API, logger, diagnostics, typed event dispatcher, worker job system and typed generational handle pool and owning ResourceRegistry (verified in run 45715295194).
 - Platform application lifecycle with initialization/update/shutdown callbacks, stop requests, frame delta clamping and cleanup on failure.
 - Backend-neutral window configuration/metrics/events and opaque window IDs.
 - Native render-surface bridge with borrowed native handles and opaque surface IDs.
@@ -26,9 +26,6 @@
 - Android NDK: engine core, DMod, miniz and application lifecycle code cross-build passed for arm64-v8a (ARMv8-A).
 - ChaiScript direct AST proof passed on Linux and cross-compiled for Android ARM64.
 - Android proof is cross-compilation, not physical-device execution.
-
-## Pending verification
-- Owning ResourceRegistry and its CTest coverage have been added after handle verification; wait for CI before marking registry work verified.
 
 ## Dependency pins
 - miniz: richgel999/miniz, commit 77d0dce8627735138c51770d1799a1ef48f2117d, upstream LICENSE is MIT.
@@ -54,10 +51,10 @@
 
 ## Other engine work not yet implemented
 - Concrete desktop/Android platform backends and physical-device tests.
-- Renderer, ECS/world, physics, asset pipeline, audio, serialization, editor and profiling. Handle identity has an initial implementation; resource ownership/registry remain unimplemented.
+- Renderer, ECS/world, physics, asset pipeline, audio, serialization, editor and profiling. Typed handle identity and initial resource ownership/registry are implemented; higher-level asset management remains unimplemented.
 
 ## Immediate next actions
 1. Verify typed generational handles in Linux GCC/Clang and Android ARM64 CI.
 2. Verify ResourceRegistry, then extend resource lifetime/concurrency tests.
 3. Compare renderer candidates and define an engine-owned 2D/3D API without locking a backend prematurely.
-4. Continue DMod signature/trust, format-versioning and interpreter security work.
+4. Build a higher-level resource/asset manager on the verified registry, then continue renderer research and DMod security work.
