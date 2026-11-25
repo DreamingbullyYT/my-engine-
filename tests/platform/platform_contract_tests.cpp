@@ -37,7 +37,7 @@ int main() {
     require(!is_valid_virtual_path("assets/"), "trailing separator rejected");
     require(!is_valid_virtual_path("assets/trailing."), "trailing dot rejected");
     require(!is_valid_virtual_path("assets/bad?name"), "nonportable filename character rejected");
-    const std::string invalid_utf8{"\\xC0\\xAF", 2};
+    const std::string invalid_utf8{"\xC0\xAF", 2};
     require(!is_valid_virtual_path(invalid_utf8), "invalid UTF-8 rejected");
 
     const SurfaceId surface{7};
