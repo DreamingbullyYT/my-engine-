@@ -1,9 +1,11 @@
 #include <dream/platform/filesystem.hpp>
 #include <dream/platform/input.hpp>
 #include <dream/platform/window.hpp>
+#include <dream/platform/surface.hpp>
 
 #include <cstdlib>
 #include <iostream>
+#include <string>
 #include <string_view>
 
 namespace {
@@ -33,6 +35,17 @@ int main() {
     require(!is_valid_virtual_path("C:/outside"), "drive-prefixed path rejected");
     require(!is_valid_virtual_path("assets\\file"), "backslash path rejected");
     require(!is_valid_virtual_path("assets/"), "trailing separator rejected");
+    require(!is_valid_virtual_path("assets/trailing."), "trailing dot rejected");
+    require(!is_valid_virtual_path("assets/bad?name"), "nonportable filename character rejected");
+    const std::string invalid_utf8{"\\xC0\\xAF", 2};
+    require(!is_valid_virtual_path(invalid_utf8), "invalid UTF-8 rejected");
+
+    const SurfaceId surface{7};
+    require(static_cast<bool>(surface), "nonzero surface ID is valid");
+    require(!static_cast<bool>(SurfaceId{}), "zero surface ID is invalid");
+    NativeSurface native;
+    require(native.kind == NativeSurfaceKind::Unknown && native.window == nullptr,
+            "native surface starts in a safe empty state");
 
     const WindowId first{1};
     const WindowId second{2};
