@@ -20,7 +20,10 @@
 - Linux Clang: configure, build and CTest passed.
 - Android NDK: configure and cross-build passed for `arm64-v8a` (ARMv8-A).
 - This is cross-compilation evidence, not execution on a physical Android device.
-- Event/job implementation has been pushed and is awaiting validation in the current CI run; do not mark it verified until the run passes.
+- Run [45702103975](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45702103975) completed successfully.
+- Linux GCC and Clang: configure, build and all four CTest targets passed.
+- Android NDK: configure and cross-build passed for `arm64-v8a` (ARMv8-A).
+- Event and job services are now CI-verified. Android remains cross-compilation only.
 
 ## Build and test policy
 - The user has no PC available. GitHub Actions is the primary build/test environment.
@@ -39,12 +42,12 @@
 - Renderer and graphics backend.
 - ECS/world/scene model.
 - 2D/3D physics integration.
-- DMod package loader and interpreter.
+- DMod package loader and interpreter (ChaiScript AST proof is now added to CI and pending its first run).
 - Asset pipeline, audio, input, serialization.
 - Editor and profiling.
 
 ## Immediate next actions
-1. Verify event and job services with GCC, Clang and Android ARM64 in Actions.
-2. Review concurrency edge cases and add stress/lifecycle tests where useful.
-3. Research DMod interpreter candidates at source level, beginning with ChaiScript parser/evaluator behavior.
+1. Verify the pinned ChaiScript no-optimizer AST proof in Actions.
+2. If the proof passes, evaluate Android ARM64 compatibility and runtime restrictions before any dependency adoption.
+3. Continue concurrency stress/lifecycle tests for event and job services.
 4. Keep dependency choices open until technical and licensing audits are complete.
