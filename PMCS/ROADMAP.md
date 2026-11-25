@@ -7,9 +7,11 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [x] Confirm 2D and 3D as first-class.
 - [x] Confirm C++ as primary engine language.
 - [x] Record strict DMod no-compilation requirement.
-- [ ] Select supported C++ standard/compiler matrix.
-- [ ] Establish CMake desktop baseline.
-- [ ] Establish Android NDK/ARM64 baseline.
+- [x] Configure initial CMake project and GitHub Actions build/test workflow (implementation exists; green run pending).
+- [x] Configure Android NDK cross-build for `arm64-v8a` (implementation exists; green run pending).
+- [ ] Verify Linux GCC and Clang builds and CTest in Actions.
+- [ ] Verify Android ARM64 NDK cross-build in Actions.
+- [ ] Select final supported C++ standard/compiler matrix.
 - [ ] Prove direct source/AST interpretation for DMod.
 
 ## P1 — Foundation
@@ -17,7 +19,7 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [ ] Logging, diagnostics and assertion strategy.
 - [ ] Memory/handle/resource identity strategy.
 - [ ] Job system and event model.
-- [ ] Unit-test and CI baseline for desktop and Android.
+- [ ] Expand automated contract tests for desktop and Android build.
 
 ## P2 — World and core runtime
 - [ ] Scene/world lifecycle.

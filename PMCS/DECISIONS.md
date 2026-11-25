@@ -46,8 +46,18 @@
 **Decision:** Do not finalize renderer, ECS, physics or scripting dependencies before comparative research and prototypes.  
 **Consequence:** Maintain a technical audit and record exact versions/licenses.
 
+## ADR-0010 — CI-first development
+**Status:** ACCEPTED  
+**Decision:** GitHub Actions is the primary build and test environment because the user has no PC available.  
+**Consequence:** Every engine milestone must have automated build/test evidence; avoid workflows that require a local desktop.
+
+## ADR-0011 — Android ABI
+**Status:** ACCEPTED  
+**Decision:** The initial Android target is `arm64-v8a` (ARMv8-A).  
+**Consequence:** Configure and validate this ABI first; do not spend CI time on other ABIs without a requirement.
+
 ## Open decisions
-- C++ standard and compiler matrix
+- Final C++ standard and compiler support matrix (the initial scaffold uses C++20 provisionally)
 - CMake details and dependency manager
 - Renderer/backend
 - ECS/world model

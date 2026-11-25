@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Planning baseline; no implementation verified.
+**Status:** Planning baseline; initial CMake/core scaffold implemented, build verification pending.
 
 ## High-level modules
 - **Platform:** desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
@@ -42,6 +42,14 @@ The desired DMod runtime reads script source and interprets its AST directly. A 
 - Experimental: unstable internal-facing hooks and APIs.
 Never make every private implementation symbol a permanent public contract.
 
+## Build and CI baseline
+- CMake is the project build system.
+- GitHub Actions is the primary build/test environment because the user has no PC available.
+- Linux CI builds and runs tests with GCC and Clang.
+- Android CI cross-compiles with the NDK for `arm64-v8a` (ARMv8-A).
+- An Android cross-build is not equivalent to running on a physical device.
+- C++20 is currently used by the initial scaffold as a provisional baseline; final standard/compiler support remains an open decision.
+
 ## Proposed repository layout
 ```
 /CMakeLists.txt
@@ -61,4 +69,4 @@ Never make every private implementation symbol a permanent public contract.
 ```
 
 ## Build direction
-Use a C++-first build. CMake is the current recommended direction, subject to a minimal desktop and Android NDK proof. Keep dependency versions pinned and build options reproducible.
+Keep dependency versions pinned and build options reproducible. Do not lock renderer, ECS, physics or scripting dependencies before comparative research and CI proof.

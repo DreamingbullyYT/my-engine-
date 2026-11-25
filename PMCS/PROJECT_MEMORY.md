@@ -8,7 +8,8 @@ Dream Engine is a reusable, general-purpose game engine. It is not a custom engi
 - First-class 2D and 3D support from the beginning. A later unrelated 3D game must not require an engine fork.
 - Modular architecture with reusable systems and clear subsystem boundaries.
 - Research and reuse/adapt suitable existing libraries and engine components. Do not rewrite everything needlessly, and do not adopt a complete engine unchanged without evaluating fit.
-- PC is the main development/testing environment; Android is an important target.
+- GitHub Actions is the primary build/test environment because the user has no PC available.
+- Android target ABI is `arm64-v8a` (ARMv8-A). Other ABIs are not currently required.
 - Deeply extensible runtime modding through DMod packages.
 - Ordinary mods must not require rebuilding the engine, game, or Android APK, and must not require native compilation on the user's device.
 - User's strict interpretation of zero compilation also rejects runtime bytecode generation. Prefer direct source/AST interpretation; prove the actual runtime pipeline rather than relying on marketing claims.
@@ -30,7 +31,7 @@ The engine provides generic rendering, resources, scenes/worlds, entities/compon
 C++ is the engine language. Rust is not an alternative default and must not be introduced for engine subsystems without explicit user approval and a demonstrated technical reason. Third-party libraries may be written in other languages internally only where their integration model is acceptable and does not change the engine's language decision.
 
 ## Current status
-Planning/research stage. Repository currently contains only its MIT LICENSE; no engine code, build system, tests or dependencies have been verified. The repository's existing MIT license is not silently changed by this PMCS.
+The first CMake/core scaffold and CI workflow are now present. CI verification is pending. The repository's existing MIT license is not silently changed.
 
 ## Highest-risk question
 Find or prove a C++-embeddable runtime that directly evaluates source/AST without generating bytecode, works on desktop and Android ARM64, exposes native C++ objects safely, and supports reload/diagnostics. This requirement affects architecture and must be tested before broad implementation.
