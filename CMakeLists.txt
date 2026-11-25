@@ -150,6 +150,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     set_target_properties(dream_core_handle_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.core.handles COMMAND dream_core_handle_tests)
 
+    add_executable(dream_core_resource_registry_tests tests/core/resource_registry_tests.cpp)
+    target_link_libraries(dream_core_resource_registry_tests PRIVATE DreamEngine::Core)
+    target_compile_features(dream_core_resource_registry_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_core_resource_registry_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.core.resource_registry COMMAND dream_core_resource_registry_tests)
+
     add_executable(dream_platform_application_tests tests/platform/application_tests.cpp)
     target_link_libraries(dream_platform_application_tests PRIVATE DreamEngine::Platform)
     target_compile_features(dream_platform_application_tests PRIVATE cxx_std_20)
