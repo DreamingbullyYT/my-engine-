@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <mutex>
@@ -72,7 +73,7 @@ public:
         return handle_type{index, slots_.back().generation};
     }
 
-    // Returns false for invalid, stale, foreign or already released handles.
+    // Returns false for invalid, stale or already released handles.
     [[nodiscard]] bool release(handle_type handle) {
         if (!handle) return false;
 
