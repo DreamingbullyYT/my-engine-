@@ -7,23 +7,21 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [x] Confirm 2D and 3D as first-class.
 - [x] Confirm C++ as primary engine language.
 - [x] Record strict DMod no-compilation requirement.
-- [x] Configure CMake and GitHub Actions for Linux GCC/Clang and Android ARM64.
-- [x] Verify Linux GCC build and CTest in Actions.
-- [x] Verify Linux Clang build and CTest in Actions.
-- [x] Verify Android ARM64 NDK cross-build in Actions.
+- [x] Configure GitHub Actions for Linux GCC/Clang and Android ARM64.
+- [x] Verify Linux GCC and Clang build/CTest.
+- [x] Verify Android ARM64 NDK core cross-build.
 - [ ] Select final supported C++ standard/compiler matrix.
-- [x] Prove direct source/AST interpretation for DMod on Linux using pinned ChaiScript commit and identity optimizer (run 45702432586).
+- [x] Prove direct ChaiScript AST evaluation on Linux with identity optimizer.
+- [x] Cross-compile the pinned ChaiScript AST proof for Android ARM64 (run 45704291464).
 
 ## P1 — Foundation
 - [x] Initial core library and version API.
-- [x] Core logging API with severity filter and configurable sink (verified in run 45700477183).
-- [x] Structured diagnostic value type (verified in run 45700477183).
-- [x] Typed event dispatcher with RAII subscriptions, priority order and exception isolation (verified in run 45702103975).
-- [x] Worker job system with futures, idle wait and drain-on-shutdown (verified in run 45702103975).
+- [x] Core logging and structured diagnostics.
+- [x] Typed event dispatcher with RAII subscriptions, priority order and exception isolation.
+- [x] Worker job system with futures, idle wait and drain-on-shutdown.
 - [ ] Platform abstraction and application lifecycle.
 - [ ] Memory/handle/resource identity strategy.
 - [ ] Expand event/job concurrency, lifetime and shutdown stress tests.
-- [ ] Expand automated contract tests for desktop and Android build.
 
 ## P2 — World and core runtime
 - [ ] Scene/world lifecycle.
@@ -47,13 +45,16 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [ ] Animation and navigation integration.
 
 ## P5 — DMod
-- [ ] Choose interpreter only after Android cross-compile and runtime safety audit (Linux AST proof passed).
-- [ ] .dmod manifest and package validation.
-- [ ] Dependency resolution and deterministic load order.
-- [ ] C++ host bindings and mod contexts.
+- [x] In-memory manifest model and validation.
+- [x] Required/optional dependency resolution and deterministic topological order.
+- [x] Missing dependency, incompatible version, duplicate ID and cycle rejection tests (CI pending).
+- [ ] Choose interpreter only after Android cross-compile and runtime safety audit.
+- [ ] Manifest serialization parser and .dmod package/container format.
+- [ ] Safe archive reading, path validation, size limits and trust/signature policy.
+- [ ] C++ host bindings, mod contexts and enforced capabilities.
 - [ ] Registries, events and hooks.
 - [ ] Mod lifecycle, diagnostics and hot reload.
-- [ ] Permission/capability model and resource limits.
+- [ ] Runtime resource limits and sandbox review.
 - [ ] Desktop and Android ARM64 runtime tests.
 
 ## P6 — Runtime services and content
