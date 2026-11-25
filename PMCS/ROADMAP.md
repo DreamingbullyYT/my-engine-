@@ -32,7 +32,8 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [ ] Entity/component model.
 - [ ] Transform hierarchy.
 - [ ] Serialization and save/load contracts.
-- [ ] Higher-level resource/asset manager, asset keys, loading policy and dependency tracking (built on the verified ResourceRegistry).
+- [x] Initial typed ResourceStore key-to-handle layer with duplicate-key rejection and scoped access; pending CI.
+- [ ] Asset loading pipeline: file I/O, decoding, async scheduling, dependency tracking, caching policy and renderer upload (built above ResourceStore).
 
 ## P3 — Rendering
 - [ ] Compare renderer candidates.
