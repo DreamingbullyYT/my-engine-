@@ -9,6 +9,7 @@ project(DreamEngine
 option(DREAM_BUILD_TESTS "Build Dream Engine tests" ON)
 
 include(FetchContent)
+include(GenerateExportHeader)
 find_package(Threads REQUIRED)
 
 # Dependencies are pinned to immutable upstream commits.
@@ -41,10 +42,18 @@ add_library(dream_miniz STATIC
     ${miniz_SOURCE_DIR}/miniz_tdef.c
 )
 add_library(DreamEngine::Miniz ALIAS dream_miniz)
+generate_export_header(dream_miniz
+    BASE_NAME miniz
+    EXPORT_MACRO_NAME MINIZ_EXPORT
+)
 target_include_directories(dream_miniz PUBLIC
     $<BUILD_INTERFACE:${miniz_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
-target_compile_definitions(dream_miniz PRIVATE MINIZ_NO_STDIO)
+target_compile_definitions(dream_miniz
+    PUBLIC MINIZ_STATIC_DEFINE
+    PRIVATE MINIZ_NO_STDIO
+)
 set_target_properties(dream_miniz PROPERTIES
     C_STANDARD 90
     C_STANDARD_REQUIRED ON
@@ -113,7 +122,7 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
 
     add_executable(dream_core_event_tests tests/core/event_tests.cpp)
     target_link_libraries(dream_core_event_tests PRIVATE DreamEngine::Core)
-    target_compile_features(dream_core_event_tests PRIVATE cxx_std_20)
+    target_compile_features(dream_core_tests PRIVATE cxx_std_20)
     set_target_properties(dream_core_event_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.core.events COMMAND dream_core_event_tests)
 
