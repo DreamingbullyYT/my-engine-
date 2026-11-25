@@ -99,3 +99,18 @@ jobs:
 
       - name: Build Android ARM64
         run: cmake --build build-android --parallel 2
+
+      - name: Checkout pinned ChaiScript source
+        run: |
+          git init /tmp/chaiscript
+          git -C /tmp/chaiscript remote add origin https://github.com/ChaiScript/ChaiScript.git
+          git -C /tmp/chaiscript fetch --depth 1 origin f635b51e3f8e95868210edfc66fdbd8e475710f5
+          git -C /tmp/chaiscript checkout --detach FETCH_HEAD
+
+      - name: Cross-compile ChaiScript AST proof for Android ARM64
+        run: |
+          "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \\
+            -std=c++17 -DCHAISCRIPT_NO_DYNLOAD \\
+            -I/tmp/chaiscript/include \\
+            tests/dmod/chaiscript_ast_proof.cpp \\
+            -pthread -o /tmp/chaiscript-ast-proof-android
