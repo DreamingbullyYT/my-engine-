@@ -28,7 +28,7 @@ public:
         auto task = std::make_shared<std::packaged_task<Result()>>(
             [fn = std::forward<Function>(function),
              ... captured = std::forward<Args>(args)]() mutable -> Result {
-                return std::invoke(std::move(fn), std::move(captured)...);
+                return std::invoke(fn, std::move(captured)...);
             });
         auto result = task->get_future();
         enqueue([task] { (*task)(); });
@@ -36,6 +36,7 @@ public:
     }
 
     // Stops accepting new work, drains queued work, then joins all workers.
+    // Lifecycle operations must not be called concurrently or from a worker.
     void shutdown();
     void wait_idle();
 
