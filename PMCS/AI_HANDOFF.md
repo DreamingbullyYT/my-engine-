@@ -24,7 +24,8 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - Update PMCS whenever implementation state or verified decisions change.
 
 ## Current implementation
-- dream_core: version API, logging, diagnostics, event dispatcher, worker job system, typed generational handle pool (verified in run 45714411879) and owning ResourceRegistry (awaiting CI).
+- ResourceRegistry<T, Tag> owns resources through unique_ptr, provides callback-scoped access, rejects stale handles and uses exception-safe identity invalidation during destruction; tests passed in [run 45715295194](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715295194).
+- dream_core: version API, logging, diagnostics, event dispatcher, worker job system, typed generational handle pool and owning ResourceRegistry (verified in run 45715295194).
 - dream_platform: application lifecycle, window/surface/input contracts and virtual filesystem path validation.
 - dream_dmod: manifest model, validation, dependency resolver, TOML parser and read-only in-memory ZIP package reader with local-header validation.
 - Pinned dependencies: miniz 3.1.2 at 77d0dce8627735138c51770d1799a1ef48f2117d; toml++ 3.5.1 at efd80e03356af65c7d4e61c56ffb326b34f8d0f4.
@@ -34,10 +35,9 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - C++20 remains a provisional implementation baseline.
 
 ## Next work
-1. Verify the new typed generational handle pool in CI.
-2. Review resource ownership/registry contracts and expand lifetime/concurrency tests.
-3. Research renderer candidates and define engine-owned 2D/3D rendering interfaces before selecting a backend.
-4. Continue DMod package trust/versioning and interpreter security audit.
+1. Expand ResourceRegistry lifetime/concurrency tests and design a higher-level asset manager without mixing it into the low-level registry.
+2. Research renderer candidates and define engine-owned 2D/3D rendering interfaces before selecting a backend.
+3. Continue DMod package trust/versioning and interpreter security audit.
 
 ## Handoff requirements
 Update CURRENT_STATE.md, ARCHITECTURE.md, TECHNICAL_AUDIT.md and ROADMAP.md as work progresses. Update DECISIONS.md only for explicitly accepted decisions. Never label work VERIFIED without reproducible evidence.
