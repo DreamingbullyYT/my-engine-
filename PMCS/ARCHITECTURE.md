@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Core services and initial DMod manifest/resolver contracts are CI-verified. ChaiScript direct AST proof passed on Linux and Android ARM64 cross-compilation.
+**Status:** Core services, DMod manifest validation/resolution and TOML manifest parsing are CI-verified. miniz and toml++ build on Linux and Android ARM64. The ZIP package reader is the next DMod milestone. ChaiScript direct AST proof passed on Linux and Android ARM64 cross-compilation.
 
 ## High-level modules
 - Platform: desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
@@ -24,9 +24,17 @@
 ## DMod contracts implemented and verified
 - Manifest model includes package ID/name/version, engine API range, relative entry script, dependencies and requested capabilities.
 - Validation rejects invalid IDs, unsafe paths (absolute paths, traversal, backslashes, drive-like paths and trailing separators), duplicate dependencies/capabilities and invalid version ranges.
-- Resolver checks engine API compatibility, duplicate installed IDs, required dependency presence/version, optional dependencies and cycles; output order is deterministic.
-- Linux GCC/Clang tests and Android ARM64 cross-build passed in [run 45705412340](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45705412340).
-- These are in-memory contracts only. No archive reader, text parser, signature verification, interpreter execution or capability enforcement exists yet.
+- TOML parser accepts manifest format version 1, parses strict three-part numeric versions, dependency ranges and capabilities, and caps manifest text at 64 KiB.
+- Deterministic resolver checks engine API compatibility, duplicate installed IDs, required dependency presence/version, optional dependencies and cycles.
+- Linux GCC/Clang tests and Android ARM64 cross-build passed in [run 45706951573](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45706951573).
+- No ZIP package reader, signature verification, interpreter execution or capability enforcement exists yet.
+
+## DMod package proposal
+- .dmod is planned as a ZIP container with a root manifest.toml and relative paths for scripts/assets.
+- The package reader must be read-only and must not extract untrusted paths to the filesystem.
+- The reader must validate archive structure, entry types, UTF-8 paths, duplicate/case-colliding paths, entry count, compressed/uncompressed sizes and compression ratios before exposing entries.
+- Only stored and deflate entries are intended for the initial format. Encryption, symlinks, hardlinks, absolute paths and traversal are rejected.
+- This remains an implementation proposal until package-reader tests pass.
 
 ## Dependency direction
 Platform adapters implement platform interfaces. Backends implement engine-owned rendering/physics/audio interfaces. Game systems depend on public engine APIs. DMods depend on versioned DMod APIs and granted capabilities. Core must not depend on a particular game or backend.
