@@ -1,6 +1,6 @@
 # Technical Audit
 
-**Status:** Research notes and candidates only. No third-party runtime dependency is approved or integrated.
+**Status:** Core dependencies for DMod package parsing are pinned and CI-verified. ChaiScript remains a proof-only candidate; no script runtime has been approved for production use.
 
 ## Engine references
 - Luanti: study runtime modding, API exposure, package lifecycle and server/client boundaries.
@@ -20,6 +20,26 @@ Do not expose third-party physics types throughout engine/game APIs.
 ## ECS candidates
 - EnTT and Flecs: compare storage, queries, signals, reflection, serialization, scheduler integration, performance and Android build cost.
 
+## DMod package dependencies
+
+### miniz — pinned for ZIP archive access
+- Upstream: richgel999/miniz.
+- Version: 3.1.2.
+- Immutable commit: 77d0dce8627735138c51770d1799a1ef48f2117d.
+- Upstream LICENSE file identifies the project as MIT licensed.
+- C implementation; ZIP APIs support reading an archive from memory and incremental file extraction. No external runtime dependency is needed for the selected build.
+- The project CMake compiles miniz sources as a static library with stdio disabled; ZIP package reading has not yet been implemented.
+- CI run [45706951573](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45706951573) passed GCC, Clang and Android ARM64 cross-build.
+- Security limits remain Dream Engine's responsibility: archive size, file count, path normalization, duplicate paths, links, uncompressed sizes, compression ratios and CRC/error handling.
+
+### toml++ — pinned for manifest parsing
+- Upstream: marzer/tomlplusplus.
+- Version: 3.5.1.
+- Immutable commit: efd80e03356af65c7d4e61c56ffb326b34f8d0f4.
+- MIT license; header-only C++17 parser with ARM64 support.
+- Integrated as an interface target; manifest parser caps input at 64 KiB and validates the expected fields.
+- CI run [45706951573](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45706951573) passed GCC, Clang and Android ARM64 cross-build.
+
 ## DMod runtime candidates — highest risk
 
 ### ChaiScript — promising, not approved
@@ -30,7 +50,6 @@ Do not expose third-party physics types throughout engine/game APIs.
 - The pinned proof injects an identity optimizer and verifies no AST_Node_Type::Compiled nodes.
 - Proof uses an AST evaluation step budget and explicit no-module/no-external-script/no-IO configuration.
 - Run [45704291464](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45704291464) passed Linux proof and Android ARM64 cross-compilation.
-- Run [45705412340](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45705412340) also passed the full current CI matrix, including DMod library/tests on Linux and Android cross-build.
 - This does not prove physical Android execution, memory quotas, safe native host bindings, unload safety or complete sandboxing. Step limits are not memory limits; exposed C++ host functions can block or mutate engine state. Do not integrate until these risks are addressed.
 
 ### Lua
@@ -41,13 +60,6 @@ Its module workflows involve script compilation/bytecode and likely conflict wit
 
 ### Custom AST interpreter
 Fallback only if existing runtimes fail. It requires substantial language, parser, runtime, diagnostics, security and tooling maintenance.
-
-## DMod package contracts currently implemented and verified
-- Manifest model includes package ID/name/version, engine API range, relative entry script, dependency constraints and requested capabilities.
-- Validation rejects invalid IDs, unsafe entry paths, duplicate dependencies/capabilities and empty/reversed version ranges.
-- Resolver checks engine API compatibility, duplicate installed IDs, required dependency presence/version, optional dependencies, cycles and deterministic topological order.
-- Linux GCC/Clang CI and Android ARM64 cross-build passed in run 45705412340.
-- These contracts are in-memory only. No manifest text parser, .dmod archive reader, signature verification, interpreter integration or capability enforcement exists yet.
 
 ## Required DMod proof
 For each interpreter, inspect exact source/version:
