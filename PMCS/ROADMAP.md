@@ -12,14 +12,14 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [x] Verify Linux Clang build and CTest in Actions.
 - [x] Verify Android ARM64 NDK cross-build in Actions.
 - [ ] Select final supported C++ standard/compiler matrix.
-- [ ] Prove direct source/AST interpretation for DMod.
+- [ ] Prove direct source/AST interpretation for DMod (pinned ChaiScript proof is in CI; pending first result).
 
 ## P1 — Foundation
 - [x] Initial core library and version API.
 - [x] Core logging API with severity filter and configurable sink (verified in run 45700477183).
 - [x] Structured diagnostic value type (verified in run 45700477183).
-- [ ] Typed event dispatcher with RAII subscriptions, priority order and exception isolation (implementation pushed; CI pending).
-- [ ] Worker job system with futures, idle wait and drain-on-shutdown (implementation pushed; CI pending).
+- [x] Typed event dispatcher with RAII subscriptions, priority order and exception isolation (verified in run 45702103975).
+- [x] Worker job system with futures, idle wait and drain-on-shutdown (verified in run 45702103975).
 - [ ] Platform abstraction and application lifecycle.
 - [ ] Memory/handle/resource identity strategy.
 - [ ] Expand event/job concurrency, lifetime and shutdown stress tests.
@@ -47,7 +47,7 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [ ] Animation and navigation integration.
 
 ## P5 — DMod
-- [ ] Choose interpreter only after source-level proof.
+- [ ] Choose interpreter only after source-level and Android proof (ChaiScript direct AST test pending).
 - [ ] .dmod manifest and package validation.
 - [ ] Dependency resolution and deterministic load order.
 - [ ] C++ host bindings and mod contexts.
