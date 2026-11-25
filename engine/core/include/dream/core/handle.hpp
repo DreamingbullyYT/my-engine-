@@ -86,8 +86,8 @@ public:
         // Push first: if allocation throws, the live slot remains unchanged.
         free_indices_.push_back(handle.index_);
         slot.active = false;
-        ++slot.generation_;
-        if (slot.generation_ == 0) ++slot.generation_;
+        ++slot.generation;
+        if (slot.generation == 0) ++slot.generation;
         return true;
     }
 
