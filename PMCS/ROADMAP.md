@@ -16,11 +16,13 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 
 ## P1 — Foundation
 - [x] Initial core library and version API.
-- [x] Core logging API with severity filter and configurable sink (CI verification pending for latest changes).
-- [x] Structured diagnostic value type (CI verification pending for latest changes).
+- [x] Core logging API with severity filter and configurable sink (verified in run 45700477183).
+- [x] Structured diagnostic value type (verified in run 45700477183).
+- [ ] Typed event dispatcher with RAII subscriptions, priority order and exception isolation (implementation pushed; CI pending).
+- [ ] Worker job system with futures, idle wait and drain-on-shutdown (implementation pushed; CI pending).
 - [ ] Platform abstraction and application lifecycle.
 - [ ] Memory/handle/resource identity strategy.
-- [ ] Event model and job system.
+- [ ] Expand event/job concurrency, lifetime and shutdown stress tests.
 - [ ] Expand automated contract tests for desktop and Android build.
 
 ## P2 — World and core runtime
