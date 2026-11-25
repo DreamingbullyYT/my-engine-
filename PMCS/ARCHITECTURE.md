@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Initial C++ core scaffold implemented and CI-verified; logging/diagnostics additions are awaiting CI.
+**Status:** Initial C++ core, logger and diagnostics are CI-verified. Event dispatcher and job system are implemented and awaiting CI validation.
 
 ## High-level modules
 - **Platform:** desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
@@ -17,7 +17,9 @@
 - Engine identity/version API.
 - Logger instance with severity filtering and replaceable sink. Sink configuration is synchronized; user callback is invoked outside the lock to avoid callback-induced deadlock.
 - Structured diagnostic value carrying severity, stable code, message and source location string.
-- No process-global singleton is imposed; callers own logger instances and inject them where needed.
+- Typed event dispatcher with move-only RAII connections, descending priority and stable registration order, snapshot dispatch, callback invocation outside locks, re-entrancy and per-listener exception isolation. Dispatch returns invoked/failed counts.
+- Job system with a configurable worker pool, futures, task exception propagation, `wait_idle()`, and shutdown that stops submissions, drains queued tasks and joins workers. Lifecycle operations are not safe to call concurrently or from a worker thread.
+- No process-global singleton is imposed; callers own service instances and inject them where needed.
 
 ## Dependency direction
 Platform adapters implement platform interfaces. Backends implement engine-owned rendering/physics/audio interfaces. Game systems depend on public engine APIs. DMods depend on versioned DMod APIs and granted capabilities. Core must not depend on a particular game, renderer or physics library.
@@ -52,6 +54,7 @@ Never make every private implementation symbol a permanent public contract.
 - CMake is the project build system.
 - GitHub Actions is the primary build/test environment because the user has no PC available.
 - Linux CI builds and runs tests with GCC and Clang.
+- `Threads::Threads` is linked through the core target for portable threading support.
 - Android CI cross-compiles with the NDK for `arm64-v8a` (ARMv8-A).
 - An Android cross-build is not equivalent to running on a physical device.
 - C++20 is currently used by the initial scaffold as a provisional baseline; final standard/compiler support remains an open decision.
