@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Core services are CI-verified. ChaiScript direct AST proof passed on Linux and Android ARM64 cross-compilation. Initial DMod manifest validation and dependency resolution are implemented; their integrated CI verification is pending.
+**Status:** Core services and initial DMod manifest/resolver contracts are CI-verified. ChaiScript direct AST proof passed on Linux and Android ARM64 cross-compilation.
 
 ## High-level modules
 - Platform: desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
@@ -21,10 +21,11 @@
 - Job system with worker pool, futures, exception propagation, idle wait and drain-on-shutdown. Lifecycle operations are not safe to call concurrently or from a worker thread.
 - No process-global singleton is imposed; callers own service instances.
 
-## DMod contracts implemented
+## DMod contracts implemented and verified
 - Manifest model includes package ID/name/version, engine API range, relative entry script, dependencies and requested capabilities.
 - Validation rejects invalid IDs, unsafe paths (absolute paths, traversal, backslashes, drive-like paths and trailing separators), duplicate dependencies/capabilities and invalid version ranges.
 - Resolver checks engine API compatibility, duplicate installed IDs, required dependency presence/version, optional dependencies and cycles; output order is deterministic.
+- Linux GCC/Clang tests and Android ARM64 cross-build passed in [run 45705412340](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45705412340).
 - These are in-memory contracts only. No archive reader, text parser, signature verification, interpreter execution or capability enforcement exists yet.
 
 ## Dependency direction
