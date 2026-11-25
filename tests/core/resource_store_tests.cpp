@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <string>
 #include <string_view>
 
 namespace {
@@ -25,6 +26,10 @@ int main() {
     require(!textures.contains("textures/player"), "missing key is absent");
     require(!textures.find("textures/player"), "missing key returns invalid handle");
     require(!textures.emplace("", 16, 16), "empty key is rejected");
+    const std::string oversized_key(4097, 'x');
+    require(!textures.emplace(oversized_key, 16, 16), "oversized key is rejected");
+    require(!textures.find(oversized_key), "oversized lookup key is rejected");
+    require(!textures.erase(oversized_key), "oversized erase key is rejected");
 
     const auto player = textures.emplace("textures/player", 64, 32);
     require(static_cast<bool>(player), "keyed resource is inserted");
