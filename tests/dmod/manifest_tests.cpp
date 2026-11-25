@@ -38,6 +38,9 @@ int main() {
     auto traversal = valid;
     traversal.entry_script = "scripts/../../escape.dms";
     require(!dmod::validate_manifest(traversal).valid(), "path traversal rejected");
+    auto trailing_separator = valid;
+    trailing_separator.entry_script = "scripts/";
+    require(!dmod::validate_manifest(trailing_separator).valid(), "trailing separator rejected");
 
     auto bad_id = valid;
     bad_id.id = "Sample/Bad";
