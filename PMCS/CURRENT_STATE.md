@@ -6,7 +6,7 @@
 
 ## Implemented
 - CMake project with separate dream_core, dream_platform and dream_dmod static libraries.
-- Core version API, logger, diagnostics, typed event dispatcher, worker job system and typed generational handle foundation (new handle work awaits CI).
+- Core version API, logger, diagnostics, typed event dispatcher, worker job system and typed generational handle pool (verified in run 45714411879) and owning ResourceRegistry (awaiting CI).
 - Platform application lifecycle with initialization/update/shutdown callbacks, stop requests, frame delta clamping and cleanup on failure.
 - Backend-neutral window configuration/metrics/events and opaque window IDs.
 - Native render-surface bridge with borrowed native handles and opaque surface IDs.
@@ -28,7 +28,7 @@
 - Android proof is cross-compilation, not physical-device execution.
 
 ## Pending verification
-- Typed generational handle foundation and its CTest coverage have been added after run 45710274229; wait for the next CI run before marking them verified.
+- Owning ResourceRegistry and its CTest coverage have been added after handle verification; wait for CI before marking registry work verified.
 
 ## Dependency pins
 - miniz: richgel999/miniz, commit 77d0dce8627735138c51770d1799a1ef48f2117d, upstream LICENSE is MIT.
@@ -58,6 +58,6 @@
 
 ## Immediate next actions
 1. Verify typed generational handles in Linux GCC/Clang and Android ARM64 CI.
-2. Extend handle lifetime/concurrency tests and define resource ownership/registry contracts.
+2. Verify ResourceRegistry, then extend resource lifetime/concurrency tests.
 3. Compare renderer candidates and define an engine-owned 2D/3D API without locking a backend prematurely.
 4. Continue DMod signature/trust, format-versioning and interpreter security work.
