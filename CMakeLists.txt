@@ -77,6 +77,7 @@ add_library(DreamEngine::Core ALIAS dream_core)
 
 add_library(dream_platform STATIC
     engine/platform/src/application.cpp
+    engine/platform/src/filesystem.cpp
 )
 add_library(DreamEngine::Platform ALIAS dream_platform)
 target_include_directories(dream_platform PUBLIC
@@ -148,6 +149,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_platform_application_tests PRIVATE cxx_std_20)
     set_target_properties(dream_platform_application_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.platform.application COMMAND dream_platform_application_tests)
+
+    add_executable(dream_platform_contract_tests tests/platform/platform_contract_tests.cpp)
+    target_link_libraries(dream_platform_contract_tests PRIVATE DreamEngine::Platform)
+    target_compile_features(dream_platform_contract_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_platform_contract_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.platform.contracts COMMAND dream_platform_contract_tests)
 
     add_executable(dream_dmod_manifest_tests tests/dmod/manifest_tests.cpp)
     target_link_libraries(dream_dmod_manifest_tests PRIVATE DreamEngine::DMod)
