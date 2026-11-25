@@ -25,14 +25,14 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 
 ## Current implementation
 - dream_core: version API, logging, diagnostics, event dispatcher and worker job system.
-- dream_dmod: manifest model, validation, dependency resolver, TOML parser and read-only in-memory ZIP package reader.
+- dream_dmod: manifest model, validation, dependency resolver, TOML parser and read-only in-memory ZIP package reader with local-header validation.
 - Pinned dependencies: miniz 3.1.2 at 77d0dce8627735138c51770d1799a1ef48f2117d; toml++ 3.5.1 at efd80e03356af65c7d4e61c56ffb326b34f8d0f4.
-- CI run [45707512573](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45707512573) passed Linux GCC, Linux Clang, Android ARM64 cross-build, package-reader tests and ChaiScript AST proof.
+- CI run [45707911163](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45707911163) passed Linux GCC, Linux Clang, Android ARM64 cross-build, package-reader tests and ChaiScript AST proof.
 - Android result is cross-compilation, not physical-device execution.
 - C++20 remains a provisional implementation baseline.
 
 ## Next work
-1. Add miniz local-header validation for every package entry and broaden adversarial archive tests.
+1. Add adversarial tests for links, duplicate paths, unsupported compression and CRC corruption.
 2. Define signature/trust and package-format versioning policy.
 3. Continue the ChaiScript runtime/security audit; do not declare it sandboxed or production-approved.
 4. Continue engine platform/application and resource foundations without prematurely locking renderer/ECS/physics.
