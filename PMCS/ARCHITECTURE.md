@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Initial C++ core, logger and diagnostics are CI-verified. Event dispatcher and job system are implemented and awaiting CI validation.
+**Status:** Initial C++ core, logger, diagnostics, event dispatcher and job system are CI-verified. ChaiScript direct AST evaluation proof passes on Linux; Android compatibility and runtime safety remain open.
 
 ## High-level modules
 - **Platform:** desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
