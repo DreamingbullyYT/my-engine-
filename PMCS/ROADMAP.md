@@ -47,7 +47,7 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 ## P5 — DMod
 - [x] In-memory manifest model and validation.
 - [x] Required/optional dependency resolution and deterministic topological order.
-- [x] Missing dependency, incompatible version, duplicate ID and cycle rejection tests (CI pending).
+- [x] Missing dependency, incompatible version, duplicate ID and cycle rejection tests (run 45705412340).
 - [ ] Choose interpreter only after Android cross-compile and runtime safety audit.
 - [ ] Manifest serialization parser and .dmod package/container format.
 - [ ] Safe archive reading, path validation, size limits and trust/signature policy.
