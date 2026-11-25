@@ -9,6 +9,7 @@ project(DreamEngine
 option(DREAM_BUILD_TESTS "Build Dream Engine tests" ON)
 
 add_library(dream_core STATIC
+    engine/core/src/log.cpp
     engine/core/src/version.cpp
 )
 
@@ -28,11 +29,14 @@ set_target_properties(dream_core PROPERTIES
 
 if(DREAM_BUILD_TESTS AND NOT ANDROID)
     enable_testing()
+
     add_executable(dream_core_tests
         tests/core/version_tests.cpp
+        tests/core/log_tests.cpp
     )
     target_link_libraries(dream_core_tests PRIVATE DreamEngine::Core)
     target_compile_features(dream_core_tests PRIVATE cxx_std_20)
     set_target_properties(dream_core_tests PROPERTIES CXX_EXTENSIONS OFF)
-    add_test(NAME dream.core.version COMMAND dream_core_tests)
+
+    add_test(NAME dream.core.contracts COMMAND dream_core_tests)
 endif()

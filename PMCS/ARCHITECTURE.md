@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Planning baseline; initial CMake/core scaffold implemented, build verification pending.
+**Status:** Initial C++ core scaffold implemented and CI-verified; logging/diagnostics additions are awaiting CI.
 
 ## High-level modules
 - **Platform:** desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
@@ -12,6 +12,12 @@
 - **DMod:** package validation, dependency resolver, load order, source interpreter, bindings, hooks, lifecycle, permissions and hot reload.
 - **Game project:** game-specific systems, content, assets, UI and scripts.
 - **Tools/editor:** editor and debugging tools consume engine APIs but are not required by runtime.
+
+## Core contracts implemented
+- Engine identity/version API.
+- Logger instance with severity filtering and replaceable sink. Sink configuration is synchronized; user callback is invoked outside the lock to avoid callback-induced deadlock.
+- Structured diagnostic value carrying severity, stable code, message and source location string.
+- No process-global singleton is imposed; callers own logger instances and inject them where needed.
 
 ## Dependency direction
 Platform adapters implement platform interfaces. Backends implement engine-owned rendering/physics/audio interfaces. Game systems depend on public engine APIs. DMods depend on versioned DMod APIs and granted capabilities. Core must not depend on a particular game, renderer or physics library.
@@ -34,7 +40,7 @@ Platform adapters implement platform interfaces. Backends implement engine-owned
 Plan for before/after/around/replace hooks, explicit priorities, deterministic ordering, recursion protection, error isolation and API-version checks. Do not promise arbitrary patching of every private C++ function. Deep access is provided through deliberate engine extension points.
 
 ## Source execution contract
-The desired DMod runtime reads script source and interprets its AST directly. A conventional VM that turns source into bytecode violates the strict requirement, even if it avoids native machine-code compilation. WASM binaries and native plugins are not zero-compilation source mods. A C++-like interpreted language is not actual C++.
+The desired DMod runtime reads script source and evaluates its AST directly. A conventional VM that turns source into bytecode violates the strict requirement, even if it avoids native machine-code compilation. WASM binaries and native plugins are not zero-compilation source mods. A C++-like interpreted language is not actual C++.
 
 ## API stability
 - Stable: documented contracts intended for broad mod compatibility.

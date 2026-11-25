@@ -7,18 +7,20 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [x] Confirm 2D and 3D as first-class.
 - [x] Confirm C++ as primary engine language.
 - [x] Record strict DMod no-compilation requirement.
-- [x] Configure initial CMake project and GitHub Actions build/test workflow (implementation exists; green run pending).
-- [x] Configure Android NDK cross-build for `arm64-v8a` (implementation exists; green run pending).
-- [ ] Verify Linux GCC and Clang builds and CTest in Actions.
-- [ ] Verify Android ARM64 NDK cross-build in Actions.
+- [x] Configure CMake and GitHub Actions for Linux GCC/Clang and Android ARM64.
+- [x] Verify Linux GCC build and CTest in Actions.
+- [x] Verify Linux Clang build and CTest in Actions.
+- [x] Verify Android ARM64 NDK cross-build in Actions.
 - [ ] Select final supported C++ standard/compiler matrix.
 - [ ] Prove direct source/AST interpretation for DMod.
 
 ## P1 — Foundation
+- [x] Initial core library and version API.
+- [x] Core logging API with severity filter and configurable sink (CI verification pending for latest changes).
+- [x] Structured diagnostic value type (CI verification pending for latest changes).
 - [ ] Platform abstraction and application lifecycle.
-- [ ] Logging, diagnostics and assertion strategy.
 - [ ] Memory/handle/resource identity strategy.
-- [ ] Job system and event model.
+- [ ] Event model and job system.
 - [ ] Expand automated contract tests for desktop and Android build.
 
 ## P2 — World and core runtime
