@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <span>
 #include <vector>
 
 namespace dream::platform {
@@ -33,6 +34,7 @@ struct DirectoryEntry final {
 
 // Paths are UTF-8 virtual paths relative to a backend-defined root.
 // They must use '/' separators and may not escape that root.
+// Implementations should leave output unchanged when a read/list operation fails.
 [[nodiscard]] bool is_valid_virtual_path(std::string_view path) noexcept;
 
 class IFileSystem {
@@ -43,7 +45,7 @@ public:
         std::string_view path, std::vector<std::byte>& output,
         FileError& error) const = 0;
     [[nodiscard]] virtual bool write_file(
-        std::string_view path, const std::byte* data, std::size_t size,
+        std::string_view path, std::span<const std::byte> data,
         FileError& error) = 0;
     [[nodiscard]] virtual bool exists(
         std::string_view path, bool& result, FileError& error) const = 0;
