@@ -204,8 +204,9 @@ std::unique_ptr<PackageReader> PackageReader::open(
         const auto host_os = static_cast<unsigned char>(stat.m_version_made_by >> 8);
         const auto unix_mode = stat.m_external_attr >> 16;
         const auto unix_type = unix_mode & 0170000u;
-        if (host_os == 3 && unix_type != 0 &&
-            unix_type != 0100000u && unix_type != 0040000u) {
+        if ((host_os == 0 && (stat.m_external_attr & 0x400u) != 0) ||
+            (host_os == 3 && unix_type != 0 &&
+             unix_type != 0100000u && unix_type != 0040000u)) {
             return fail("Archive contains a link or unsupported special file.");
         }
 
@@ -277,6 +278,7 @@ std::unique_ptr<PackageReader> PackageReader::open(
     const auto manifest_bytes = package->read_file("manifest.toml");
     if (!manifest_bytes.success()) return fail("Could not read manifest.toml: " + manifest_bytes.error);
 
+    if (manifest_bytes.bytes.empty()) return fail("manifest.toml is empty.");
     const std::string manifest_text(
         reinterpret_cast<const char*>(manifest_bytes.bytes.data()), manifest_bytes.bytes.size());
     const auto parsed = parse_manifest(manifest_text);
@@ -292,7 +294,8 @@ std::unique_ptr<PackageReader> PackageReader::open(
     }
     const auto entry_script = package->impl_->by_path.find(entry_key);
     if (entry_script == package->impl_->by_path.end() ||
-        entry_script->second.public_entry.directory) {
+        entry_script->second.public_entry.directory ||
+        entry_script->second.public_entry.path != package->impl_->manifest.entry_script) {
         return fail("Manifest entry_script does not refer to a package file.");
     }
 
@@ -315,7 +318,8 @@ PackageFileResult PackageReader::read_file(std::string_view path) const {
         return result;
     }
     const auto found = impl_->by_path.find(key);
-    if (found == impl_->by_path.end() || found->second.public_entry.directory) {
+    if (found == impl_->by_path.end() || found->second.public_entry.directory ||
+        found->second.public_entry.path != path) {
         result.error = "Package file does not exist.";
         return result;
     }
