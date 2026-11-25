@@ -1,10 +1,9 @@
 #include <dream/dmod/resolver.hpp>
 
-#include <algorithm>
+#include <functional>
 #include <map>
 #include <queue>
 #include <set>
-#include <unordered_map>
 
 namespace dream::dmod {
 namespace {
