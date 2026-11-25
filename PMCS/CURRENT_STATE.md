@@ -6,7 +6,7 @@
 
 ## Implemented
 - CMake project with separate dream_core, dream_platform and dream_dmod static libraries.
-- Core version API, logger, diagnostics, typed event dispatcher and worker job system.
+- Core version API, logger, diagnostics, typed event dispatcher, worker job system and typed generational handle foundation (new handle work awaits CI).
 - Platform application lifecycle with initialization/update/shutdown callbacks, stop requests, frame delta clamping and cleanup on failure.
 - Backend-neutral window configuration/metrics/events and opaque window IDs.
 - Native render-surface bridge with borrowed native handles and opaque surface IDs.
@@ -19,6 +19,8 @@
 - GitHub Actions for Linux GCC/Clang, Android ARM64 cross-build and ChaiScript AST proof.
 
 ## Verified CI
+- Run [45710274229](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45710274229) completed successfully for all four jobs: Linux GCC, Linux Clang, DMod AST proof and Android ARM64 cross-build.
+- This run verifies the window/surface/input/filesystem contracts and their Linux tests; Android remains cross-compilation, not physical-device execution.
 - Run [45708669112](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45708669112) completed successfully for commit 0706b05976fd5cb03ffd3d2fa2d169ac099aa478.
 - Linux GCC and Clang: configure, build and all CTest tests passed, including application lifecycle tests.
 - Android NDK: engine core, DMod, miniz and application lifecycle code cross-build passed for arm64-v8a (ARMv8-A).
@@ -26,8 +28,7 @@
 - Android proof is cross-compilation, not physical-device execution.
 
 ## Pending verification
-- Window, surface, input and filesystem contracts plus virtual-path tests have been added to CMake.
-- The latest CI run for these additions has not completed; do not mark these interfaces verified until Linux GCC/Clang tests and Android ARM64 cross-build pass.
+- Typed generational handle foundation and its CTest coverage have been added after run 45710274229; wait for the next CI run before marking them verified.
 
 ## Dependency pins
 - miniz: richgel999/miniz, commit 77d0dce8627735138c51770d1799a1ef48f2117d, upstream LICENSE is MIT.
@@ -53,10 +54,10 @@
 
 ## Other engine work not yet implemented
 - Concrete desktop/Android platform backends and physical-device tests.
-- Memory/handle/resource identity strategy, renderer, ECS/world, physics, asset pipeline, audio, serialization, editor and profiling.
+- Renderer, ECS/world, physics, asset pipeline, audio, serialization, editor and profiling. Handle identity has an initial implementation; resource ownership/registry remain unimplemented.
 
 ## Immediate next actions
-1. Verify the new platform contracts in Linux GCC/Clang and Android ARM64 CI.
-2. Define signature/trust and package-format versioning policy.
-3. Continue ChaiScript runtime, lifecycle and security audit before adopting it.
-4. Proceed with resource foundations and renderer API without locking a graphics backend prematurely.
+1. Verify typed generational handles in Linux GCC/Clang and Android ARM64 CI.
+2. Extend handle lifetime/concurrency tests and define resource ownership/registry contracts.
+3. Compare renderer candidates and define an engine-owned 2D/3D API without locking a backend prematurely.
+4. Continue DMod signature/trust, format-versioning and interpreter security work.
