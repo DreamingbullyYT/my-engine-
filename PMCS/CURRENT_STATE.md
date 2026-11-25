@@ -5,46 +5,41 @@
 **Default branch:** main
 
 ## Implemented
-- CMake project and `dream_core` static library.
-- Public engine version/name API.
-- Core logger with severity filtering and replaceable, thread-safe sink configuration.
-- Structured diagnostic value type with severity, code, message and source.
-- Typed event dispatcher with RAII subscriptions, priority ordering, re-entrant dispatch, callback execution outside locks and exception isolation.
-- Job system with worker threads, futures, exception propagation, idle waiting and drain-on-shutdown semantics.
-- Dependency-free tests for version, logging, diagnostics, event ordering/disconnection/failure isolation, and job execution/failure/draining.
-- GitHub Actions workflow for Linux GCC/Clang build+CTest and Android NDK cross-build for `arm64-v8a`.
+- CMake project with separate dream_core and dream_dmod static libraries.
+- Core version API, logger, diagnostics, typed event dispatcher and worker job system.
+- DMod manifest data model: ID, name, semantic version, engine API range, entry script, dependencies and requested capabilities.
+- Manifest validation for IDs, metadata bounds, safe relative entry paths, traversal, duplicate dependencies/capabilities and version ranges.
+- Deterministic dependency resolver with required/optional dependencies, version checks, duplicate package detection, missing dependency errors, cycle detection and stable topological ordering.
+- Tests for core services and DMod manifest/resolver contracts.
+- GitHub Actions for Linux GCC/Clang, Android ARM64 cross-build and ChaiScript AST proof.
 
 ## Verified CI
-- Run [45702432586](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45702432586) completed successfully.
+- Run [45704291464](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45704291464) completed successfully.
 - Linux GCC and Clang: configure, build and CTest passed.
-- Android NDK: configure and core cross-build passed for `arm64-v8a` (ARMv8-A).
-- ChaiScript direct AST proof: compiled and executed on Linux; the script returned 42 and no `Compiled` AST nodes were present.
-- Event and job services are CI-verified.
-- Android remains cross-compilation only; the ChaiScript proof has not yet been cross-compiled for Android.
+- Android NDK: core cross-build passed for arm64-v8a (ARMv8-A).
+- ChaiScript direct AST proof passed on Linux and cross-compiled for Android ARM64. The proof evaluates a script to 42 and confirms no Compiled AST nodes.
+- Android proof is cross-compilation, not physical-device execution.
+- New DMod manifest/resolver code is awaiting its next CI run; do not mark it verified yet.
 
 ## Build and test policy
-- The user has no PC available. GitHub Actions is the primary build/test environment.
-- Android target ABI is `arm64-v8a` (ARMv8-A); other ABIs are not currently required.
-- C++20 is a provisional implementation baseline, not a final accepted compiler-support policy.
+- GitHub Actions is the primary build/test environment because the user has no PC available.
+- Android target ABI is arm64-v8a (ARMv8-A).
+- C++20 is a provisional implementation baseline, not a final compiler-support decision.
 
 ## Accepted direction
-- General-purpose C++ game engine.
-- 2D and 3D are first-class.
-- PC development through CI; Android target is `arm64-v8a`.
-- DMod dynamic source execution with strict no-compilation/no-bytecode requirement.
+- General-purpose C++ engine; 2D and 3D are first-class.
+- DMod source/AST execution only: no native compilation and no generated runtime bytecode.
+- Native C++ plugins are not the ordinary DMod format.
 
 ## Not yet implemented
-- Platform abstraction and application lifecycle.
-- Memory/handles/resource identity.
-- Renderer and graphics backend.
-- ECS/world/scene model.
-- 2D/3D physics integration.
-- DMod package loader, sandbox/resource controls and interpreter integration (ChaiScript AST proof passes on Linux; Android compatibility remains to be checked).
-- Asset pipeline, audio, input, serialization.
-- Editor and profiling.
+- .dmod archive reader, secure extraction limits, manifest text parser and signature/trust policy.
+- Interpreter integration, safe host bindings, per-mod context and enforced capabilities.
+- Runtime memory/time quotas and robust sandbox isolation.
+- Hooks/registries, lifecycle, unload/reload and diagnostics integration.
+- Platform abstraction, application lifecycle, handles/resources, renderer, ECS/world, physics, asset pipeline, audio, input, serialization, editor and profiling.
 
 ## Immediate next actions
-1. Cross-compile the pinned ChaiScript AST proof for Android ARM64.
-2. Research ChaiScript execution limits, sandbox boundaries and lifecycle safety before any dependency adoption.
-3. Continue concurrency stress/lifecycle tests for event and job services.
-4. Keep dependency choices open until technical and licensing audits are complete.
+1. Run and fix CI for the new DMod manifest/resolver.
+2. Audit manifest serialization and .dmod container options; enforce size/path limits before extraction.
+3. Continue ChaiScript runtime, lifecycle and security audit before adopting it.
+4. Implement DMod context/capability enforcement after package validation contracts stabilize.
