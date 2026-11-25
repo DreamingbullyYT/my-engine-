@@ -45,7 +45,8 @@ public:
         return handle;
     }
 
-    // Destroys the resource before making its identity reusable.
+    // Invalidates the identity while holding the registry lock, then destroys
+    // the object before another registry operation can reuse or access the slot.
     [[nodiscard]] bool destroy(handle_type handle) {
         if (!handle) return false;
         std::unique_lock lock(mutex_);
@@ -54,9 +55,14 @@ public:
             return false;
         }
 
+        // HandlePool::release() may allocate while growing its free list. Do it
+        // before destroying the resource so an allocation failure leaves the
+        // live registry entry intact. The exclusive registry lock prevents any
+        // other operation from reusing or observing the slot until reset ends.
+        if (!handles_.release(handle)) return false;
         slots_[handle.index()].reset();
         --active_count_;
-        return handles_.release(handle);
+        return true;
     }
 
     [[nodiscard]] bool contains(handle_type handle) const {
