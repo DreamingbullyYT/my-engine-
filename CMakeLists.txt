@@ -75,6 +75,19 @@ add_library(dream_core STATIC
 )
 add_library(DreamEngine::Core ALIAS dream_core)
 
+add_library(dream_platform STATIC
+    engine/platform/src/application.cpp
+)
+add_library(DreamEngine::Platform ALIAS dream_platform)
+target_include_directories(dream_platform PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/platform/include>
+)
+target_compile_features(dream_platform PUBLIC cxx_std_20)
+set_target_properties(dream_platform PROPERTIES
+    CXX_EXTENSIONS OFF
+    POSITION_INDEPENDENT_CODE ON
+)
+
 add_library(dream_dmod STATIC
     engine/dmod/src/manifest.cpp
     engine/dmod/src/manifest_parser.cpp
@@ -124,6 +137,18 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     set_target_properties(dream_core_event_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.core.events COMMAND dream_core_event_tests)
 
+    add_executable(dream_core_job_system_tests tests/core/job_system_tests.cpp)
+    target_link_libraries(dream_core_job_system_tests PRIVATE DreamEngine::Core)
+    target_compile_features(dream_core_job_system_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_core_job_system_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.core.jobs COMMAND dream_core_job_system_tests)
+
+    add_executable(dream_platform_application_tests tests/platform/application_tests.cpp)
+    target_link_libraries(dream_platform_application_tests PRIVATE DreamEngine::Platform)
+    target_compile_features(dream_platform_application_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_platform_application_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.platform.application COMMAND dream_platform_application_tests)
+
     add_executable(dream_dmod_manifest_tests tests/dmod/manifest_tests.cpp)
     target_link_libraries(dream_dmod_manifest_tests PRIVATE DreamEngine::DMod)
     target_compile_features(dream_dmod_manifest_tests PRIVATE cxx_std_20)
@@ -143,10 +168,4 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_dmod_package_reader_tests PRIVATE cxx_std_20)
     set_target_properties(dream_dmod_package_reader_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.dmod.package_reader COMMAND dream_dmod_package_reader_tests)
-
-    add_executable(dream_core_job_system_tests tests/core/job_system_tests.cpp)
-    target_link_libraries(dream_core_job_system_tests PRIVATE DreamEngine::Core)
-    target_compile_features(dream_core_job_system_tests PRIVATE cxx_std_20)
-    set_target_properties(dream_core_job_system_tests PROPERTIES CXX_EXTENSIONS OFF)
-    add_test(NAME dream.core.jobs COMMAND dream_core_job_system_tests)
 endif()
