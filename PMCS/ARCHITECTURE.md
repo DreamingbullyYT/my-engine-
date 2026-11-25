@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Core services, application lifecycle, backend-neutral platform contracts and initial DMod package pipeline are CI-verified. Typed generational handle foundation is implemented and awaiting CI verification.
+**Status:** Core services, application lifecycle, backend-neutral platform contracts, initial DMod package pipeline, typed generational handles and owning ResourceRegistry are CI-verified.
 
 ## High-level modules
 - Platform: desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
@@ -31,7 +31,7 @@
 - Filesystem contract uses UTF-8 relative virtual paths rooted by the backend, rejects traversal/absolute paths and invalid/nonportable names, and exposes read/write/existence/directory operations.
 - These are interfaces only; no concrete SDL, Win32, X11, Wayland, Android or Apple backend has been selected or implemented.
 - Window/surface/input/filesystem contracts and virtual-path tests passed Linux GCC, Linux Clang, DMod AST proof and Android ARM64 cross-build in [run 45710274229](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45710274229). Android is cross-compiled, not device-tested.
-- The typed handle foundation is a separate follow-up change and still awaits CI.
+- The typed handle pool and owning ResourceRegistry are verified in [run 45715295194](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715295194). Android is cross-compiled, not device-tested.
 
 ## DMod contracts implemented and verified
 - Manifest model includes package ID/name/version, engine API range, relative entry script, dependencies and requested capabilities.
