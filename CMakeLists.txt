@@ -73,12 +73,12 @@ add_library(dream_core STATIC
     engine/core/src/log.cpp
     engine/core/src/version.cpp
 )
-
 add_library(DreamEngine::Core ALIAS dream_core)
 
 add_library(dream_dmod STATIC
     engine/dmod/src/manifest.cpp
     engine/dmod/src/manifest_parser.cpp
+    engine/dmod/src/package_reader.cpp
     engine/dmod/src/resolver.cpp
 )
 add_library(DreamEngine::DMod ALIAS dream_dmod)
@@ -97,9 +97,7 @@ target_include_directories(dream_core
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/core/include>
 )
-
 target_compile_features(dream_core PUBLIC cxx_std_20)
-
 set_target_properties(dream_core PROPERTIES
     CXX_EXTENSIONS OFF
     POSITION_INDEPENDENT_CODE ON
@@ -137,6 +135,14 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_dmod_manifest_parser_tests PRIVATE cxx_std_20)
     set_target_properties(dream_dmod_manifest_parser_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.dmod.manifest_parser COMMAND dream_dmod_manifest_parser_tests)
+
+    add_executable(dream_dmod_package_reader_tests tests/dmod/package_reader_tests.cpp)
+    target_link_libraries(dream_dmod_package_reader_tests
+        PRIVATE DreamEngine::DMod DreamEngine::Miniz
+    )
+    target_compile_features(dream_dmod_package_reader_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_dmod_package_reader_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.dmod.package_reader COMMAND dream_dmod_package_reader_tests)
 
     add_executable(dream_core_job_system_tests tests/core/job_system_tests.cpp)
     target_link_libraries(dream_core_job_system_tests PRIVATE DreamEngine::Core)
