@@ -12,7 +12,7 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [x] Verify Linux Clang build and CTest in Actions.
 - [x] Verify Android ARM64 NDK cross-build in Actions.
 - [ ] Select final supported C++ standard/compiler matrix.
-- [ ] Prove direct source/AST interpretation for DMod (pinned ChaiScript proof is in CI; pending first result).
+- [x] Prove direct source/AST interpretation for DMod on Linux using pinned ChaiScript commit and identity optimizer (run 45702432586).
 
 ## P1 — Foundation
 - [x] Initial core library and version API.
@@ -47,7 +47,7 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [ ] Animation and navigation integration.
 
 ## P5 — DMod
-- [ ] Choose interpreter only after source-level and Android proof (ChaiScript direct AST test pending).
+- [ ] Choose interpreter only after Android cross-compile and runtime safety audit (Linux AST proof passed).
 - [ ] .dmod manifest and package validation.
 - [ ] Dependency resolution and deterministic load order.
 - [ ] C++ host bindings and mod contexts.
