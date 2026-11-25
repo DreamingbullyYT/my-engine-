@@ -30,6 +30,7 @@ Do not expose third-party physics types throughout engine/game APIs.
 - The pinned proof injects an identity optimizer and verifies no AST_Node_Type::Compiled nodes.
 - Proof uses an AST evaluation step budget and explicit no-module/no-external-script/no-IO configuration.
 - Run [45704291464](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45704291464) passed Linux proof and Android ARM64 cross-compilation.
+- Run [45705412340](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45705412340) also passed the full current CI matrix, including DMod library/tests on Linux and Android cross-build.
 - This does not prove physical Android execution, memory quotas, safe native host bindings, unload safety or complete sandboxing. Step limits are not memory limits; exposed C++ host functions can block or mutate engine state. Do not integrate until these risks are addressed.
 
 ### Lua
@@ -41,12 +42,12 @@ Its module workflows involve script compilation/bytecode and likely conflict wit
 ### Custom AST interpreter
 Fallback only if existing runtimes fail. It requires substantial language, parser, runtime, diagnostics, security and tooling maintenance.
 
-## DMod package contracts currently implemented
+## DMod package contracts currently implemented and verified
 - Manifest model includes package ID/name/version, engine API range, relative entry script, dependency constraints and requested capabilities.
 - Validation rejects invalid IDs, unsafe entry paths, duplicate dependencies/capabilities and empty/reversed version ranges.
 - Resolver checks engine API compatibility, duplicate installed IDs, required dependency presence/version, optional dependencies, cycles and deterministic topological order.
+- Linux GCC/Clang CI and Android ARM64 cross-build passed in run 45705412340.
 - These contracts are in-memory only. No manifest text parser, .dmod archive reader, signature verification, interpreter integration or capability enforcement exists yet.
-- New DMod tests are awaiting integrated CI verification.
 
 ## Required DMod proof
 For each interpreter, inspect exact source/version:
