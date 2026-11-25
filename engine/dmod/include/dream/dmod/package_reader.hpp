@@ -39,6 +39,7 @@ class PackageReader final {
 public:
     // The caller must keep archive_bytes alive and unchanged for this reader's lifetime.
     // The reader never extracts package entries to the filesystem.
+    // A single PackageReader instance is not safe for concurrent read_file() calls.
     [[nodiscard]] static std::unique_ptr<PackageReader> open(
         std::span<const std::byte> archive_bytes,
         std::vector<std::string>& errors,
