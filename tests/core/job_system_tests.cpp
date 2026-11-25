@@ -50,6 +50,15 @@ int main() {
     }
     require(rejected, "new work is rejected after shutdown");
 
+    std::atomic<int> drained{0};
+    {
+        JobSystem draining(1);
+        for (int i = 0; i < 16; ++i)
+            (void)draining.submit([&drained] { drained.fetch_add(1); });
+        draining.shutdown();
+    }
+    require(drained.load() == 16, "shutdown drains queued tasks before joining");
+
     std::cout << "Dream Engine job system tests passed.\n";
     return EXIT_SUCCESS;
 }
