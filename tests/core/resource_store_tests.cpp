@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <string_view>
+#include <stdexcept>
 
 namespace {
 void require(bool condition, std::string_view message) {
@@ -18,9 +19,25 @@ struct Texture final {
     int width;
     int height;
 };
+struct FragileTag;
+struct FragileResource final {
+    explicit FragileResource(bool fail) {
+        if (fail) throw std::runtime_error("intentional construction failure");
+    }
+};
 }
 
 int main() {
+    dream::core::ResourceStore<FragileResource, FragileTag> fragile;
+    try {
+        (void)fragile.emplace("assets/retry", true);
+        require(false, "resource construction failure propagates");
+    } catch (const std::runtime_error&) {
+        require(fragile.size() == 0, "failed construction removes placeholder key");
+    }
+    const auto retried = fragile.emplace("assets/retry", false);
+    require(static_cast<bool>(retried), "key can be retried after construction failure");
+
     dream::core::ResourceStore<Texture, TextureTag> textures;
 
     require(!textures.contains("textures/player"), "missing key is absent");
