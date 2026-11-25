@@ -1,12 +1,17 @@
 # Current State
 
-**Last checked:** 2026-11-25  
+**Last checked:** 2026-11-26  
 **Repository:** DreamingbullyYT/my-engine-  
 **Default branch:** main
 
 ## Implemented
-- CMake project with separate dream_core and dream_dmod static libraries.
+- CMake project with separate dream_core, dream_platform and dream_dmod static libraries.
 - Core version API, logger, diagnostics, typed event dispatcher and worker job system.
+- Platform application lifecycle with initialization/update/shutdown callbacks, stop requests, frame delta clamping and cleanup on failure.
+- Backend-neutral window configuration/metrics/events and opaque window IDs.
+- Native render-surface bridge with borrowed native handles and opaque surface IDs.
+- Input event contract for USB HID keyboard usages, Unicode text, mouse/touch/pen pointers, scrolling and gamepad controls.
+- Virtual filesystem contract with UTF-8 relative paths, traversal rejection and portable filename validation.
 - DMod manifest model, validation, deterministic dependency resolver and tests.
 - TOML manifest parser with format-version check, strict MAJOR.MINOR.PATCH parsing, dependency/capability parsing and a 64 KiB input cap.
 - Read-only in-memory ZIP package reader. It does not extract package paths to disk, validates all local ZIP headers against the central directory, validates UTF-8 paths and case-collisions, rejects links/encryption/unsupported methods, enforces archive/per-entry/total-size and compression-ratio limits, reads the root manifest and checks the declared entry script exists.
@@ -14,11 +19,15 @@
 - GitHub Actions for Linux GCC/Clang, Android ARM64 cross-build and ChaiScript AST proof.
 
 ## Verified CI
-- Run [45708233794](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45708233794) completed successfully for commit b7afa2582ce0d217f23ae9f2fd05450613e98f97.
-- Linux GCC and Clang: configure, build and all CTest tests passed, including package reader adversarial tests.
-- Android NDK: engine core, DMod and miniz cross-build passed for arm64-v8a (ARMv8-A).
+- Run [45708669112](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45708669112) completed successfully for commit 0706b05976fd5cb03ffd3d2fa2d169ac099aa478.
+- Linux GCC and Clang: configure, build and all CTest tests passed, including application lifecycle tests.
+- Android NDK: engine core, DMod, miniz and application lifecycle code cross-build passed for arm64-v8a (ARMv8-A).
 - ChaiScript direct AST proof passed on Linux and cross-compiled for Android ARM64.
 - Android proof is cross-compilation, not physical-device execution.
+
+## Pending verification
+- Window, surface, input and filesystem contracts plus virtual-path tests have been added to CMake.
+- The latest CI run for these additions has not completed; do not mark these interfaces verified until Linux GCC/Clang tests and Android ARM64 cross-build pass.
 
 ## Dependency pins
 - miniz: richgel999/miniz, commit 77d0dce8627735138c51770d1799a1ef48f2117d, upstream LICENSE is MIT.
@@ -34,6 +43,7 @@
 - General-purpose C++ engine; 2D and 3D are first-class.
 - DMod source/AST execution only: no native compilation and no generated runtime bytecode.
 - Native C++ plugins are not the ordinary DMod format.
+- Platform contracts must not require a particular windowing or graphics backend.
 
 ## Remaining DMod work
 - Package signature/trust policy and explicit package-format versioning.
@@ -42,9 +52,11 @@
 - Hooks/registries, lifecycle, unload/reload and diagnostics integration.
 
 ## Other engine work not yet implemented
-- Platform abstraction, application lifecycle, handles/resources, renderer, ECS/world, physics, asset pipeline, audio, input, serialization, editor and profiling.
+- Concrete desktop/Android platform backends and physical-device tests.
+- Memory/handle/resource identity strategy, renderer, ECS/world, physics, asset pipeline, audio, serialization, editor and profiling.
 
 ## Immediate next actions
-1. Define signature/trust and package-format versioning policy.
-2. Continue ChaiScript runtime, lifecycle and security audit before adopting it.
-3. Proceed with engine platform/application and resource foundations without locking renderer/ECS/physics prematurely.
+1. Verify the new platform contracts in Linux GCC/Clang and Android ARM64 CI.
+2. Define signature/trust and package-format versioning policy.
+3. Continue ChaiScript runtime, lifecycle and security audit before adopting it.
+4. Proceed with resource foundations and renderer API without locking a graphics backend prematurely.
