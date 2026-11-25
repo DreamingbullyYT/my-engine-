@@ -52,7 +52,7 @@ public:
 
     // Returns an invalid handle when the key is absent.
     [[nodiscard]] handle_type find(std::string_view key) const {
-        if (key.empty()) return {};
+        if (key.empty() || key.size() > 4096) return {};
         std::shared_lock lock(mutex_);
         const auto entry = entries_.find(std::string(key));
         return entry == entries_.end() ? handle_type{} : entry->second;
@@ -63,7 +63,7 @@ public:
     }
 
     [[nodiscard]] bool erase(std::string_view key) {
-        if (key.empty()) return false;
+        if (key.empty() || key.size() > 4096) return false;
         std::unique_lock lock(mutex_);
         const auto entry = entries_.find(std::string(key));
         if (entry == entries_.end()) return false;
@@ -76,19 +76,21 @@ public:
 
     // Resource callbacks must not re-enter this same store; the shared lock
     // protects the key mapping and the underlying registry lifetime.
-    [[nodiscard]] bool with_resource(handle_type handle, auto&& function) const {
+    template <typename Function>
+    [[nodiscard]] bool with_resource(handle_type handle, Function&& function) const {
         std::shared_lock lock(mutex_);
-        return resources_.with_resource(handle, std::forward<decltype(function)>(function));
+        return resources_.with_resource(handle, std::forward<Function>(function));
     }
 
+    template <typename Function>
     [[nodiscard]] bool with_resource(
-        std::string_view key, auto&& function) const {
-        if (key.empty()) return false;
+        std::string_view key, Function&& function) const {
+        if (key.empty() || key.size() > 4096) return false;
         std::shared_lock lock(mutex_);
         const auto entry = entries_.find(std::string(key));
         if (entry == entries_.end()) return false;
         return resources_.with_resource(
-            entry->second, std::forward<decltype(function)>(function));
+            entry->second, std::forward<Function>(function));
     }
 
     [[nodiscard]] std::size_t size() const {
