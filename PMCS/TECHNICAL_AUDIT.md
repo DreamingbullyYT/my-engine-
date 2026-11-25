@@ -2,6 +2,13 @@
 
 **Status:** Core dependencies for DMod package parsing and the first read-only ZIP package reader are CI-verified. ChaiScript remains a proof-only candidate; no script runtime has been approved for production use.
 
+## Core resource identity
+- Initial typed handle design is a tag-typed `(index, generation)` pair. Tag types prevent accidental interchange between domains such as textures and buffers at compile time.
+- `HandlePool<Tag>` synchronizes allocation, release and liveness checks; releasing increments the generation so stale handles are rejected after slot reuse.
+- The pool tracks identity only: it does not own resource objects, define destruction order, or provide cross-pool identity. A registry/resource owner must define those semantics before resources are stored behind handles.
+- Generation is 32-bit and skips zero; after a full generation wrap, an extremely old stale handle could theoretically alias. Evaluate wider generations or pool identity if lifetime requirements demand it.
+- New handle implementation and tests are pending CI; do not call it verified yet.
+
 ## Engine references
 - Luanti: study runtime modding, API exposure, package lifecycle and server/client boundaries.
 - O3DE: study modular engine architecture, components, buses and extensibility.
