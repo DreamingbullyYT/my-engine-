@@ -9,6 +9,13 @@
 - Generation is 32-bit and skips zero; after a full generation wrap, an extremely old stale handle could theoretically alias. Evaluate wider generations or pool identity if lifetime requirements demand it.
 - New handle implementation and tests are pending CI; do not call it verified yet.
 
+## Resource ownership registry
+- Initial ResourceRegistry<T, Tag> owns each resource through unique_ptr and couples it to a typed generational handle.
+- Creation constructs the resource before reserving an identity; allocation/storage failures release any reserved handle.
+- Access is callback-scoped under a shared lock; destruction takes exclusive ownership, waits for active callbacks, destroys the object, then releases the handle.
+- Callbacks must not re-enter the same registry. The API does not expose raw pointers or references beyond the callback contract.
+- Registry implementation and tests are pending CI; review lock behavior, exception paths, destruction ordering and concurrent access before expanding it.
+
 ## Engine references
 - Luanti: study runtime modding, API exposure, package lifecycle and server/client boundaries.
 - O3DE: study modular engine architecture, components, buses and extensibility.
