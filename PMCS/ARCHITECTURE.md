@@ -20,7 +20,8 @@
 - Typed event dispatcher with RAII connections, priority ordering, stable registration order, snapshot dispatch, re-entrancy and per-listener exception isolation.
 - Job system with worker pool, futures, exception propagation, idle wait and drain-on-shutdown. Lifecycle operations are not safe to call concurrently or from a worker thread.
 - No process-global singleton is imposed; callers own service instances.
-- Typed generational handles use tag types to prevent cross-domain type mixing; a synchronized handle pool detects stale handles after release/reuse. The pool tracks identity only and does not own resource storage or destruction.
+- Typed generational handles use tag types to prevent cross-domain type mixing; a synchronized handle pool detects stale handles after release/reuse.
+- ResourceRegistry<T, Tag> owns resources with unique_ptr, provides scoped callback access under a shared lock, rejects stale handles and destroys objects before releasing their identities. Callbacks must not re-enter the same registry; do not retain resource references outside the callback.
 
 ## Platform contracts
 - Application lifecycle owns initialization, frame polling/update and shutdown sequencing; stop requests are atomic and frame delta is clamped.
