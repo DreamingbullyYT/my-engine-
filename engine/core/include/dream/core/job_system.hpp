@@ -23,8 +23,8 @@ public:
 
     template <typename Function, typename... Args>
     auto submit(Function&& function, Args&&... args)
-        -> std::future<std::invoke_result_t<Function, Args...>> {
-        using Result = std::invoke_result_t<Function, Args...>;
+        -> std::future<std::invoke_result_t<std::decay_t<Function>, std::decay_t<Args>...>> {
+        using Result = std::invoke_result_t<std::decay_t<Function>, std::decay_t<Args>...>;
         auto task = std::make_shared<std::packaged_task<Result()>>(
             [fn = std::forward<Function>(function),
              ... captured = std::forward<Args>(args)]() mutable -> Result {
