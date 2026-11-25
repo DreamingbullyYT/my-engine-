@@ -24,7 +24,7 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - Update PMCS whenever implementation state or verified decisions change.
 
 ## Current implementation
-- dream_core: version API, logging, diagnostics, event dispatcher, worker job system and typed generational handle pool (latest handle change awaits CI).
+- dream_core: version API, logging, diagnostics, event dispatcher, worker job system, typed generational handle pool (verified in run 45714411879) and owning ResourceRegistry (awaiting CI).
 - dream_platform: application lifecycle, window/surface/input contracts and virtual filesystem path validation.
 - dream_dmod: manifest model, validation, dependency resolver, TOML parser and read-only in-memory ZIP package reader with local-header validation.
 - Pinned dependencies: miniz 3.1.2 at 77d0dce8627735138c51770d1799a1ef48f2117d; toml++ 3.5.1 at efd80e03356af65c7d4e61c56ffb326b34f8d0f4.
