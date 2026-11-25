@@ -40,12 +40,13 @@ struct InputEvent final {
     std::uint64_t device_id{0};
     std::uint64_t pointer_id{0};
 
-    // Key values are backend-neutral platform key codes. Text arrives separately as Unicode.
-    std::int32_t key_code{0};
+    // Keyboard values use USB HID Keyboard/Keypad usage IDs, not OS virtual-key codes.
+    std::uint16_t key_code{0};
     char32_t codepoint{U'\0'};
     InputModifiers modifiers{};
 
     PointerKind pointer_kind{PointerKind::Unknown};
+    // Pointer positions use logical window pixels; deltas on Scroll are scroll units.
     float x{0.0F};
     float y{0.0F};
     float delta_x{0.0F};
