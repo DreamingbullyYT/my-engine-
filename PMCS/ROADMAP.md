@@ -24,7 +24,7 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [x] Portable keyboard, pointer/touch and gamepad input contract; Linux GCC/Clang tests and Android ARM64 cross-build passed in run 45710274229.
 - [x] Virtual filesystem contract and path validation; Linux GCC/Clang tests and Android ARM64 cross-build passed in run 45710274229.
 - [ ] Concrete desktop/Android backend implementations.
-- [ ] Complete memory/handle/resource identity strategy; typed generational handle pool verified, initial owning ResourceRegistry implemented and pending CI.
+- [x] Initial typed generational handle pool and owning ResourceRegistry; verified in run 45715295194.
 - [ ] Expand event/job concurrency, lifetime and shutdown stress tests.
 
 ## P2 — World and core runtime
@@ -32,7 +32,7 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [ ] Entity/component model.
 - [ ] Transform hierarchy.
 - [ ] Serialization and save/load contracts.
-- [ ] Resource and asset registry.
+- [ ] Higher-level resource/asset manager, asset keys, loading policy and dependency tracking (built on the verified ResourceRegistry).
 
 ## P3 — Rendering
 - [ ] Compare renderer candidates.
