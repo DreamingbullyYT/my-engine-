@@ -21,7 +21,8 @@
 - Job system with worker pool, futures, exception propagation, idle wait and drain-on-shutdown. Lifecycle operations are not safe to call concurrently or from a worker thread.
 - No process-global singleton is imposed; callers own service instances.
 - Typed generational handles use tag types to prevent cross-domain type mixing; a synchronized handle pool detects stale handles after release/reuse.
-- ResourceRegistry<T, Tag> owns resources with unique_ptr, provides scoped callback access under a shared lock, rejects stale handles and destroys objects before releasing their identities. Callbacks must not re-enter the same registry; do not retain resource references outside the callback.
+- ResourceRegistry<T, Tag> owns resources with unique_ptr, provides scoped callback access under a shared lock, rejects stale handles and safely invalidates identities before destruction. Callbacks must not re-enter the same registry; do not retain resource references outside the callback.
+- ResourceStore<T, Tag> adds a case-sensitive string-key mapping over ResourceRegistry, with insert/find/erase and scoped access by key or handle. It is intentionally not a loader: file I/O, decoding, async scheduling, dependency tracking and GPU upload belong to higher-level asset systems. Store callbacks must not re-enter the same store.
 
 ## Platform contracts
 - Application lifecycle owns initialization, frame polling/update and shutdown sequencing; stop requests are atomic and frame delta is clamped.
