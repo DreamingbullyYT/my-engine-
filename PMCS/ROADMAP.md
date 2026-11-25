@@ -19,7 +19,11 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [x] Core logging and structured diagnostics.
 - [x] Typed event dispatcher with RAII subscriptions, priority order and exception isolation.
 - [x] Worker job system with futures, idle wait and drain-on-shutdown.
-- [ ] Platform abstraction and application lifecycle.
+- [x] Application lifecycle contract and tests (run 45708669112).
+- [ ] Backend-neutral window and surface contracts; verify current CI.
+- [ ] Portable keyboard, pointer/touch and gamepad input contract; verify current CI.
+- [ ] Virtual filesystem contract and path validation; verify current CI.
+- [ ] Concrete desktop/Android backend implementations.
 - [ ] Memory/handle/resource identity strategy.
 - [ ] Expand event/job concurrency, lifetime and shutdown stress tests.
 
@@ -80,5 +84,5 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 
 ## Out of scope until justified
 - Native C++ plugins as the ordinary user mod format.
-- Custom script language before existing interpreters are tested.
+- Custom script language before existing runtimes are tested.
 - Premature renderer/ECS/physics lock-in.
