@@ -12,7 +12,7 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [x] Verify Android ARM64 NDK core cross-build.
 - [ ] Select final supported C++ standard/compiler matrix.
 - [x] Prove direct ChaiScript AST evaluation on Linux with identity optimizer.
-- [x] Cross-compile the pinned ChaiScript AST proof for Android ARM64 (run 45704291464).
+- [x] Cross-compile the pinned ChaiScript AST proof for Android ARM64.
 
 ## P1 — Foundation
 - [x] Initial core library and version API.
@@ -47,12 +47,12 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 ## P5 — DMod
 - [x] In-memory manifest model and validation.
 - [x] Required/optional dependency resolution and deterministic topological order.
-- [x] TOML manifest parser, strict version fields and malformed/oversized input tests (run 45706951573).
-- [x] Pin miniz ZIP library and toml++ TOML parser to immutable upstream commits (run 45706951573).
-- [x] Initial read-only in-memory ZIP package reader with root manifest parsing, entry-script validation and bounded reads (run 45707512573).
-- [x] Validate ZIP local headers against central-directory metadata before indexing package entries (run 45707911163).
-- [x] Test archive/per-file/total decompressed-size limits, entry-count limits, compression-ratio limits, path traversal, case collisions, missing entry script, malformed local header and invalid ZIP data (run 45707911163).
-- [ ] Add symlink/reparse-point, duplicate-path, unsupported-method and CRC-corruption tests.
+- [x] TOML manifest parser, strict version fields and malformed/oversized input tests.
+- [x] Pin miniz ZIP library and toml++ TOML parser to immutable upstream commits.
+- [x] Initial read-only in-memory ZIP package reader with root manifest parsing, entry-script validation and bounded reads.
+- [x] Validate ZIP local headers against central-directory metadata before indexing package entries.
+- [x] Test archive/per-file/total decompressed-size limits, entry-count limits, compression-ratio limits, path traversal, case collisions, missing entry script, malformed local header and invalid ZIP data.
+- [x] Test exact duplicate paths, Unix symlink rejection, unsupported compression methods and CRC/decompression error reporting (run 45708233794).
 - [ ] Package signature/trust policy and explicit package-format versioning.
 - [ ] Choose interpreter only after Android cross-compile and runtime safety audit.
 - [ ] C++ host bindings, mod contexts and enforced capabilities.
