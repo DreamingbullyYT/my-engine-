@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 #include <dream/platform/window.hpp>
 
@@ -40,7 +41,7 @@ public:
 
     [[nodiscard]] virtual bool acquire_surface(
         WindowId window, SurfaceId& result, NativeSurface& native,
-        WindowMetrics& metrics, const char*& error) = 0;
+        WindowMetrics& metrics, std::string& error) = 0;
     virtual void release_surface(SurfaceId surface) noexcept = 0;
     [[nodiscard]] virtual bool refresh_surface_metrics(
         SurfaceId surface, WindowMetrics& metrics) const noexcept = 0;
