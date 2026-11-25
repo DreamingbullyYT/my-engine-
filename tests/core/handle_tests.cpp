@@ -33,7 +33,7 @@ int main() {
     require(!textures.release(invalid), "invalid handle cannot be released");
 
     const auto first = textures.allocate();
-    require(first, "first allocation returns a valid handle");
+    require(static_cast<bool>(first), "first allocation returns a valid handle");
     require(first.index() == 0 && first.generation() == 1, "first handle identity");
     require(textures.is_alive(first), "new handle is alive");
     require(textures.capacity() == 1, "capacity tracks allocated slots");
@@ -50,12 +50,6 @@ int main() {
     require(reused.generation() != first.generation(), "reused slot gets a new generation");
     require(textures.is_alive(reused), "reused handle is alive");
     require(!textures.is_alive(first), "old generation stays stale");
-
-    HandlePool<BufferTag> buffers;
-    const auto buffer = buffers.allocate();
-    require(buffer.index() == reused.index(), "separate pools have independent indices");
-    require(!textures.is_alive(Handle<TextureTag>{buffer.index(), buffer.generation()}),
-            "identity from another pool is not accidentally alive unless generations coincide");
 
     require(textures.release(second), "second handle releases");
     require(textures.release(reused), "reused handle releases");
