@@ -65,6 +65,6 @@ int main() {
     const auto cycle = dmod::resolve_load_order({cycle_a, cycle_b}, {0, 1, 0});
     require(!cycle.success(), "dependency cycle rejected");
 
-    std::cout << "Dream Engine DMod manifest tests passed.\\n";
+    std::cout << "Dream Engine DMod manifest tests passed." << std::endl;
     return EXIT_SUCCESS;
 }
