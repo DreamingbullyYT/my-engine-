@@ -14,7 +14,14 @@
 - Creation constructs the resource before reserving an identity; allocation/storage failures release any reserved handle.
 - Access is callback-scoped under a shared lock; destruction takes the exclusive lock, invalidates the handle, then destroys the object before the slot can be reused. The lock prevents registry operations from observing the intermediate state. Handle invalidation occurs before destruction so a free-list allocation failure leaves the resource intact.
 - Callbacks must not re-enter the same registry. The API does not expose raw pointers or references beyond the callback contract.
-- Registry implementation and tests passed in [run 45715295194](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715295194), including construction failure and exactly-once destruction. Callback-vs-destroy synchronization stress coverage remains desirable.
+- Registry implementation and tests passed in [run 45715803430](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715803430), including construction failure and exactly-once destruction. Callback-vs-destroy synchronization stress coverage remains desirable.
+
+## Keyed resource store
+- Initial ResourceStore<T, Tag> maps case-sensitive, non-empty string keys (maximum 4096 bytes) to typed generational handles.
+- Duplicate keys and invalid keys are rejected; callers can find a handle, erase a key, or access a resource through a scoped callback by key or handle.
+- Key-map insertion uses an inaccessible placeholder before constructing the resource, so a failed resource construction removes the placeholder and does not leave an orphaned resource.
+- The store does not interpret keys as filesystem paths and performs no I/O, decoding, async work, dependency tracking, cache eviction or GPU upload. Those are separate asset-pipeline responsibilities.
+- Callbacks must not re-enter the same store. CI verification is pending.
 
 ## Engine references
 - Luanti: study runtime modding, API exposure, package lifecycle and server/client boundaries.
