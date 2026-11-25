@@ -50,7 +50,7 @@ bool valid_utf8(std::string_view text) noexcept {
 
 bool is_valid_virtual_path(std::string_view path) noexcept {
     if (path.empty() || path.size() > 4096 || path.front() == '/' ||
-        path.find('\\\\') != std::string_view::npos ||
+        path.find('\\') != std::string_view::npos ||
         path.find(':') != std::string_view::npos ||
         path.find('\0') != std::string_view::npos ||
         !valid_utf8(path)) {
