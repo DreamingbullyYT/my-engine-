@@ -28,15 +28,16 @@
 - Deterministic resolver checks engine API compatibility, duplicate installed IDs, required dependency presence/version, optional dependencies and cycles.
 - Read-only in-memory ZIP reader indexes package files without filesystem extraction, requires root manifest.toml, validates every local header against central-directory metadata, validates relative UTF-8 paths, rejects traversal/case-collisions/links/encryption/unsupported methods, applies configured archive/per-entry/total-size and compression-ratio limits, parses the manifest and checks that its entry script exists.
 - File bytes are read into bounded memory buffers and CRC/decompression errors are returned to the caller.
-- Linux GCC/Clang tests and Android ARM64 cross-build passed in [run 45707911163](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45707911163).
-- Broader link/duplicate/unsupported-method/CRC adversarial tests, package signature/trust, interpreter execution and capability enforcement remain future work.
+- Linux GCC/Clang tests and Android ARM64 cross-build passed in [run 45708233794](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45708233794).
+- Package tests cover valid packages, traversal, duplicate/case-colliding paths, Unix symlink metadata, unsupported compression, malformed local headers, entry count and size/ratio limits, missing entry scripts, invalid archives and CRC/decompression failures.
+- Package signature/trust, interpreter execution and capability enforcement remain future work.
 
 ## DMod package proposal
 - .dmod is planned as a ZIP container with a root manifest.toml and relative paths for scripts/assets.
 - The package reader is read-only and must not extract untrusted paths to the filesystem.
 - The reader validates archive metadata, local headers, entry types, UTF-8 paths, duplicate/case-colliding paths, entry count, compressed/uncompressed sizes and compression ratios before exposing entries.
 - Only stored and deflate entries are supported initially. Encryption, links, absolute paths and traversal are rejected.
-- The current in-memory reader is a first implementation; broader adversarial coverage remains pending.
+- The current in-memory reader is a first implementation; package signature/trust and versioning remain pending.
 
 ## Dependency direction
 Platform adapters implement platform interfaces. Backends implement engine-owned rendering/physics/audio interfaces. Game systems depend on public engine APIs. DMods depend on versioned DMod APIs and granted capabilities. Core must not depend on a particular game or backend.
