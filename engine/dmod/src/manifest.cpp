@@ -32,7 +32,7 @@ bool valid_id(const std::string& id) {
 }
 
 bool valid_relative_script_path(const std::string& path) {
-    if (path.empty() || path.size() > 512 || path.front() == '/' ||
+    if (path.empty() || path.size() > 512 || path.front() == '/' || path.back() == '/' ||
         path.find('\\') != std::string::npos || path.find(':') != std::string::npos) {
         return false;
     }
