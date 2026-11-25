@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <string_view>
+#include <stdexcept>
 #include <type_traits>
 
 namespace {
@@ -18,6 +19,14 @@ struct BufferTag;
 struct Resource final {
     explicit Resource(int initial) : value(initial) {}
     int value;
+};
+struct ThrowingResource final {
+    ThrowingResource() { throw std::runtime_error("construction failed"); }
+};
+struct TrackedResource final {
+    explicit TrackedResource(int& destructions) : destructions(destructions) {}
+    ~TrackedResource() { ++destructions; }
+    int& destructions;
 };
 }
 
@@ -55,6 +64,24 @@ int main() {
     require(second.generation() != first.generation(), "reused slot gets new generation");
     require(!textures.contains(first), "old handle remains stale");
     require(textures.contains(second), "new resource is present");
+
+    ResourceRegistry<ThrowingResource, struct ThrowingTag> throwing;
+    try {
+        (void)throwing.emplace();
+        require(false, "throwing constructor propagates its exception");
+    } catch (const std::runtime_error&) {
+        require(throwing.size() == 0, "failed construction does not reserve a resource");
+    }
+
+    int destructions = 0;
+    {
+        ResourceRegistry<TrackedResource, struct TrackedTag> tracked;
+        const auto tracked_handle = tracked.emplace(destructions);
+        require(tracked.contains(tracked_handle), "tracked resource is registered");
+        require(tracked.destroy(tracked_handle), "tracked resource can be destroyed");
+        require(destructions == 1, "destroy releases the object exactly once");
+    }
+    require(destructions == 1, "registry destruction does not double-destroy released objects");
 
     ResourceRegistry<std::string, BufferTag> buffers;
     const auto text = buffers.emplace("mesh data");
