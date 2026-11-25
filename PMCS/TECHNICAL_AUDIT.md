@@ -1,20 +1,20 @@
 # Technical Audit
 
-**Status:** Core dependencies for DMod package parsing and the first read-only ZIP package reader are CI-verified. ChaiScript remains a proof-only candidate; no script runtime has been approved for production use.
+**Status:** Core services, typed resource identity/ownership and DMod package parsing are CI-verified. ChaiScript remains a proof-only candidate; no script runtime has been approved for production use.
 
 ## Core resource identity
 - Initial typed handle design is a tag-typed `(index, generation)` pair. Tag types prevent accidental interchange between domains such as textures and buffers at compile time.
 - `HandlePool<Tag>` synchronizes allocation, release and liveness checks; releasing increments the generation so stale handles are rejected after slot reuse.
 - The pool tracks identity only: it does not own resource objects, define destruction order, or provide cross-pool identity. A registry/resource owner must define those semantics before resources are stored behind handles.
 - Generation is 32-bit and skips zero; after a full generation wrap, an extremely old stale handle could theoretically alias. Evaluate wider generations or pool identity if lifetime requirements demand it.
-- New handle implementation and tests are pending CI; do not call it verified yet.
+- Handle implementation and tests passed in [run 45714411879](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45714411879).
 
 ## Resource ownership registry
 - Initial ResourceRegistry<T, Tag> owns each resource through unique_ptr and couples it to a typed generational handle.
 - Creation constructs the resource before reserving an identity; allocation/storage failures release any reserved handle.
-- Access is callback-scoped under a shared lock; destruction takes exclusive ownership, waits for active callbacks, destroys the object, then releases the handle.
+- Access is callback-scoped under a shared lock; destruction takes the exclusive lock, invalidates the handle, then destroys the object before the slot can be reused. The lock prevents registry operations from observing the intermediate state. Handle invalidation occurs before destruction so a free-list allocation failure leaves the resource intact.
 - Callbacks must not re-enter the same registry. The API does not expose raw pointers or references beyond the callback contract.
-- Registry implementation and tests are pending CI; review lock behavior, exception paths, destruction ordering and concurrent access before expanding it.
+- Registry implementation and tests passed in [run 45715295194](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715295194), including construction failure and exactly-once destruction. Callback-vs-destroy synchronization stress coverage remains desirable.
 
 ## Engine references
 - Luanti: study runtime modding, API exposure, package lifecycle and server/client boundaries.
