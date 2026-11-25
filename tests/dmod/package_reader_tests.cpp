@@ -82,6 +82,8 @@ int main() {
     require(std::string(reinterpret_cast<const char*>(script_result.bytes.data()),
                         script_result.bytes.size()) == script,
             "entry script contents match");
+    require(!package->read_file("Scripts/main.dms").success(),
+            "package reads require exact path casing");
 
     errors.clear();
     auto traversal_zip = make_zip({
@@ -131,6 +133,24 @@ int main() {
     ratio_limit.max_compression_ratio = 2;
     require(open_package(ratio_zip, errors, ratio_limit) == nullptr,
             "compression ratio limit is enforced");
+
+    errors.clear();
+    PackageLimits small_entry_count;
+    small_entry_count.max_entries = 2;
+    require(open_package(valid_zip, errors, small_entry_count) == nullptr,
+            "entry count limit is enforced");
+
+    errors.clear();
+    PackageLimits small_total_limit;
+    small_total_limit.max_total_uncompressed_bytes = 4;
+    require(open_package(valid_zip, errors, small_total_limit) == nullptr,
+            "total decompressed size limit is enforced");
+
+    errors.clear();
+    auto malformed_header_zip = valid_zip;
+    malformed_header_zip[0] = std::byte{0x00};
+    require(open_package(malformed_header_zip, errors) == nullptr,
+            "malformed local ZIP header is rejected");
 
     errors.clear();
     const std::vector<std::byte> invalid_zip{std::byte{0x01}, std::byte{0x02}};
