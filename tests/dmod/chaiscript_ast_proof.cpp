@@ -63,7 +63,8 @@ int main() {
         std::move(parser),
         {},
         {},
-        chaiscript::default_options(),
+        {chaiscript::Options::No_Load_Modules,
+         chaiscript::Options::No_External_Scripts},
         true);
 
     auto ast = chai.parse("var answer = 6 * 7; answer");
