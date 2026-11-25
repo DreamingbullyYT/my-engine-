@@ -21,8 +21,14 @@ Do not expose third-party physics types throughout engine/game APIs.
 - **EnTT** and **Flecs:** compare storage, queries, signals, reflection, serialization, scheduler integration, performance and Android build cost. ECS choice does not automatically solve world lifecycle or job scheduling.
 
 ## DMod runtime candidates — highest risk
-### ChaiScript
-C++-embeddable, C++-inspired scripting candidate. Inspect the exact source parser, AST and evaluator implementation. Verify whether source is evaluated directly or transformed into bytecode/intermediate instructions. Test Android NDK compatibility, maintenance, memory, binary size, native bindings and hot reload. Do not assume syntax guarantees execution semantics.
+### ChaiScript — promising, not yet approved
+- Audited upstream `develop` commit: `f635b51e3f8e95868210edfc66fdbd8e475710f5`.
+- License: BSD-3-Clause; upstream documents C++17 as its compiler baseline.
+- Source path: `ChaiScript_Basic::do_eval()` calls `m_parser->parse(...)` and then evaluates the returned AST with `p->eval(...)`.
+- Important caveat: upstream's default `Optimizer_Default` can replace AST nodes with `Compiled_AST_Node` objects holding `std::function` callables. These are not bytecode instructions, but they are optimized callable AST nodes and may not meet the strictest reading of zero compilation.
+- The parser accepts an optimizer template parameter. An empty `optimizer::Optimizer<>` performs no optimizer passes (its fold expression is empty), leaving ordinary AST node implementations to evaluate themselves. `ChaiScript_Basic` accepts an injected parser, so this configuration can be used without adopting the default optimizer.
+- Added `tests/dmod/chaiscript_ast_proof.cpp` and a CI job pinned to the audited commit. The test checks that parsing and evaluating `var answer = 6 * 7; answer` yields 42 and that no `AST_Node_Type::Compiled` nodes exist when the empty optimizer is used.
+- This proof is pending its first CI result. It does not yet prove Android NDK compatibility, memory limits, sandboxing, safe unload/hot reload or runtime performance. Do not integrate or approve ChaiScript until those checks and the user's zero-compilation interpretation are satisfied.
 
 ### Lua
 Mature embedded scripting and C API. Conventional Lua parses source into VM instructions; it may avoid native compilation but does not meet the strict no-runtime-bytecode requirement. Consider only if user explicitly relaxes that requirement.
