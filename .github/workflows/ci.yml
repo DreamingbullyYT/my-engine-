@@ -48,6 +48,30 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+  chaiscript-ast-proof:
+    name: DMod / ChaiScript direct AST proof
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Dream Engine
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned ChaiScript source
+        run: |
+          git init /tmp/chaiscript
+          git -C /tmp/chaiscript remote add origin https://github.com/ChaiScript/ChaiScript.git
+          git -C /tmp/chaiscript fetch --depth 1 origin f635b51e3f8e95868210edfc66fdbd8e475710f5
+          git -C /tmp/chaiscript checkout --detach FETCH_HEAD
+
+      - name: Build direct AST interpreter proof
+        run: |
+          c++ -std=c++20 -DCHAISCRIPT_NO_DYNLOAD \
+            -I/tmp/chaiscript/include \
+            tests/dmod/chaiscript_ast_proof.cpp \
+            -pthread -o /tmp/chaiscript-ast-proof
+
+      - name: Verify direct AST evaluation without compiled AST nodes
+        run: /tmp/chaiscript-ast-proof
+
   android-arm64:
     name: Android / arm64-v8a (ARMv8-A)
     runs-on: ubuntu-24.04
