@@ -6,7 +6,7 @@
 
 ## Implemented
 - CMake project with separate dream_core, dream_platform and dream_dmod static libraries.
-- Core version API, logger, diagnostics, typed event dispatcher, worker job system and typed generational handle pool and owning ResourceRegistry (verified in run 45715295194).
+- Core version API, logger, diagnostics, typed event dispatcher, worker job system and typed generational handle pool and owning ResourceRegistry (verified in run 45715803430); initial typed ResourceStore implementation and tests added, pending CI.
 - Platform application lifecycle with initialization/update/shutdown callbacks, stop requests, frame delta clamping and cleanup on failure.
 - Backend-neutral window configuration/metrics/events and opaque window IDs.
 - Native render-surface bridge with borrowed native handles and opaque surface IDs.
@@ -51,10 +51,10 @@
 
 ## Other engine work not yet implemented
 - Concrete desktop/Android platform backends and physical-device tests.
-- Renderer, ECS/world, physics, asset pipeline, audio, serialization, editor and profiling. Typed handle identity and initial resource ownership/registry are implemented; higher-level asset management remains unimplemented.
+- Renderer, ECS/world, physics, asset pipeline, audio, serialization, editor and profiling. Typed handle identity and initial resource ownership/registry are implemented; ResourceStore now provides an initial key-to-handle layer; actual asset loading/decoding/dependency tracking remains unimplemented.
 
 ## Immediate next actions
 1. Verify typed generational handles in Linux GCC/Clang and Android ARM64 CI.
 2. Verify ResourceRegistry, then extend resource lifetime/concurrency tests.
 3. Compare renderer candidates and define an engine-owned 2D/3D API without locking a backend prematurely.
-4. Build a higher-level resource/asset manager on the verified registry, then continue renderer research and DMod security work.
+4. Verify ResourceStore, then design asset loading/decoding and dependency tracking as separate layers.
