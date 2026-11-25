@@ -12,7 +12,7 @@ struct ExecutionLimitExceeded final : std::runtime_error {
     ExecutionLimitExceeded() : std::runtime_error("DMod execution budget exceeded") {}
 };
 
-struct ExecutionBudgetTracer final {
+struct ExecutionBudgetTracer {
     std::shared_ptr<std::atomic<std::size_t>> steps;
     std::size_t maximum_steps;
 
@@ -38,7 +38,7 @@ bool contains_compiled_node(const chaiscript::AST_Node& node) {
     }
 
     for (const auto& child : node.get_children()) {
-        if (contains_compiled_node(*child)) {
+        if (contains_compiled_node(child.get())) {
             return true;
         }
     }
