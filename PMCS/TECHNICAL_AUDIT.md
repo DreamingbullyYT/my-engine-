@@ -1,46 +1,55 @@
 # Technical Audit
 
-**Status:** Research notes and candidates only. No dependency is approved or integrated.
+**Status:** Research notes and candidates only. No third-party runtime dependency is approved or integrated.
 
 ## Engine references
-- **Luanti:** study runtime modding, API exposure, package lifecycle and server/client boundaries.
-- **O3DE:** study modular engine architecture, components, buses and extensibility.
-- **Cocos2d-x:** study C++ mobile engine structure and scripting integration.
-These are references for comparison, not code-copy permissions or automatic adoption decisions.
+- Luanti: study runtime modding, API exposure, package lifecycle and server/client boundaries.
+- O3DE: study modular engine architecture, components, buses and extensibility.
+- Cocos2d-x: study C++ mobile engine structure and scripting integration.
+These are references, not code-copy permissions or automatic adoption decisions.
 
 ## Rendering candidates
-- **bgfx:** cross-platform rendering abstraction; verify current API, backends, Android support, license and integration model.
-- Compare Vulkan/OpenGL ES and other practical Android/desktop backends before selecting.
+- bgfx: cross-platform rendering abstraction; verify API, backends, Android support, license and integration.
+- Compare Vulkan/OpenGL ES and practical Android/desktop backends before selecting.
 
 ## Physics candidates
-- **Jolt Physics:** 3D rigid-body physics candidate; verify Android ARM64, license, required features and adapter boundary.
-- **Box2D:** 2D physics candidate; verify current release, API and license.
+- Jolt Physics: 3D rigid-body candidate; verify Android ARM64, license, features and adapter boundary.
+- Box2D: 2D physics candidate; verify current release, API and license.
 Do not expose third-party physics types throughout engine/game APIs.
 
 ## ECS candidates
-- **EnTT** and **Flecs:** compare storage, queries, signals, reflection, serialization, scheduler integration, performance and Android build cost. ECS choice does not automatically solve world lifecycle or job scheduling.
+- EnTT and Flecs: compare storage, queries, signals, reflection, serialization, scheduler integration, performance and Android build cost.
 
 ## DMod runtime candidates — highest risk
-### ChaiScript — promising, not yet approved
-- Audited upstream `develop` commit: `f635b51e3f8e95868210edfc66fdbd8e475710f5`.
-- License: BSD-3-Clause; upstream documents C++17 as its compiler baseline.
-- Source path: `ChaiScript_Basic::do_eval()` calls `m_parser->parse(...)` and then evaluates the returned AST with `p->eval(...)`.
-- Important caveat: upstream's default `Optimizer_Default` can replace AST nodes with `Compiled_AST_Node` objects holding `std::function` callables. These are not bytecode instructions, but they are optimized callable AST nodes and may not meet the strictest reading of zero compilation.
-- The parser accepts an optimizer template parameter. A custom identity optimizer whose `optimize(node)` returns the node unchanged bypasses optimizer passes and leaves ordinary AST node implementations to evaluate themselves. An initial CI attempt showed that `Optimizer<>` itself is not instantiable in this upstream revision because its zero-argument constructors collide; the proof now uses the explicit identity optimizer. `ChaiScript_Basic` accepts an injected parser, so this configuration can be used without adopting the default optimizer.
-- Added `tests/dmod/chaiscript_ast_proof.cpp` and a CI job pinned to the audited commit. Run [45702432586](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45702432586) passed: parsing and evaluating `var answer = 6 * 7; answer` yields 42, and no `AST_Node_Type::Compiled` nodes are present with the identity optimizer.
-- This confirms direct AST evaluation for this test path on Linux. It does not yet prove Android NDK compatibility, memory limits, sandboxing, safe unload/hot reload or runtime performance. Do not integrate or approve ChaiScript until those checks and the user's zero-compilation interpretation are satisfied.
+
+### ChaiScript — promising, not approved
+- Audited upstream commit: f635b51e3f8e95868210edfc66fdbd8e475710f5.
+- License: BSD-3-Clause; upstream documents C++17 baseline.
+- ChaiScript_Basic::do_eval() parses source then evaluates returned AST nodes.
+- Default Optimizer_Default can replace AST nodes with Compiled_AST_Node callable wrappers. These are not bytecode, but violate the strictest no-transformation interpretation.
+- The pinned proof injects an identity optimizer and verifies no AST_Node_Type::Compiled nodes.
+- Proof uses an AST evaluation step budget and explicit no-module/no-external-script/no-IO configuration.
+- Run [45704291464](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45704291464) passed Linux proof and Android ARM64 cross-compilation.
+- This does not prove physical Android execution, memory quotas, safe native host bindings, unload safety or complete sandboxing. Step limits are not memory limits; exposed C++ host functions can block or mutate engine state. Do not integrate until these risks are addressed.
 
 ### Lua
-Mature embedded scripting and C API. Conventional Lua parses source into VM instructions; it may avoid native compilation but does not meet the strict no-runtime-bytecode requirement. Consider only if user explicitly relaxes that requirement.
+Conventional Lua parses source into VM instructions. It does not meet the strict no-runtime-bytecode requirement unless the user relaxes that requirement.
 
 ### AngelScript
-C++-like language and host bindings, but documented module workflows involve script compilation/bytecode. Likely conflicts with strict no-bytecode requirement; do not select without source-level proof and user approval.
+Its module workflows involve script compilation/bytecode and likely conflict with strict no-bytecode requirements. Do not select without source-level proof and approval.
 
 ### Custom AST interpreter
-Fallback only if existing runtimes fail. It could parse source into an AST and evaluate nodes directly, but creates substantial language, parser, type/runtime, diagnostics, security and tooling maintenance.
+Fallback only if existing runtimes fail. It requires substantial language, parser, runtime, diagnostics, security and tooling maintenance.
+
+## DMod package contracts currently implemented
+- Manifest model includes package ID/name/version, engine API range, relative entry script, dependency constraints and requested capabilities.
+- Validation rejects invalid IDs, unsafe entry paths, duplicate dependencies/capabilities and empty/reversed version ranges.
+- Resolver checks engine API compatibility, duplicate installed IDs, required dependency presence/version, optional dependencies, cycles and deterministic topological order.
+- These contracts are in-memory only. No manifest text parser, .dmod archive reader, signature verification, interpreter integration or capability enforcement exists yet.
+- New DMod tests are awaiting integrated CI verification.
 
 ## Required DMod proof
-For each candidate, record exact version/commit and inspect source:
+For each interpreter, inspect exact source/version:
 - Does source parse to AST?
 - Is AST interpreted directly?
 - Is bytecode or another executable intermediate generated?
@@ -63,4 +72,4 @@ For each candidate, record exact version/commit and inspect source:
 - Networking: ENet or standalone Asio.
 
 ## License/provenance gate
-Before adoption, pin repository, tag/commit and exact license files; inspect transitive dependencies and bundled assets; record local modifications; preserve required notices; confirm compatibility with the project's distribution plans. The repository currently contains an MIT LICENSE; do not silently change it.
+Before adoption, pin repository, tag/commit and exact license files; inspect transitive dependencies and bundled assets; record modifications; preserve notices; confirm compatibility with distribution plans. The repository currently contains an MIT LICENSE; do not silently change it.
