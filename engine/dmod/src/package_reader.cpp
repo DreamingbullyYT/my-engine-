@@ -177,6 +177,9 @@ std::unique_ptr<PackageReader> PackageReader::open(
     if (file_count == 0 || file_count > limits.max_entries) {
         return fail("Archive entry count is zero or exceeds the configured limit.");
     }
+    if (!mz_zip_validate_archive(&impl->archive, MZ_ZIP_FLAG_VALIDATE_HEADERS_ONLY)) {
+        return fail("ZIP local headers do not match the central directory.");
+    }
 
     std::uint64_t total_uncompressed = 0;
     impl->entries.reserve(file_count);
