@@ -14,12 +14,12 @@
 - GitHub Actions for Linux GCC/Clang, Android ARM64 cross-build and ChaiScript AST proof.
 
 ## Verified CI
-- Run [45704291464](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45704291464) completed successfully.
-- Linux GCC and Clang: configure, build and CTest passed.
-- Android NDK: core cross-build passed for arm64-v8a (ARMv8-A).
-- ChaiScript direct AST proof passed on Linux and cross-compiled for Android ARM64. The proof evaluates a script to 42 and confirms no Compiled AST nodes.
+- Run [45705412340](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45705412340) completed successfully for commit `21362dfbb0af28125857c78fe074b72c82b2049d`.
+- Linux GCC: configure, build and CTest passed.
+- Linux Clang: configure, build and CTest passed.
+- Android NDK: engine core and DMod cross-build passed for arm64-v8a (ARMv8-A).
+- ChaiScript direct AST proof passed on Linux and cross-compiled for Android ARM64. The proof evaluates a script to 42, confirms no Compiled AST nodes, and checks the AST step-budget interruption path.
 - Android proof is cross-compilation, not physical-device execution.
-- New DMod manifest/resolver code is awaiting its next CI run; do not mark it verified yet.
 
 ## Build and test policy
 - GitHub Actions is the primary build/test environment because the user has no PC available.
@@ -32,14 +32,14 @@
 - Native C++ plugins are not the ordinary DMod format.
 
 ## Not yet implemented
-- .dmod archive reader, secure extraction limits, manifest text parser and signature/trust policy.
+- .dmod archive reader, secure archive limits, manifest text parser and signature/trust policy.
 - Interpreter integration, safe host bindings, per-mod context and enforced capabilities.
 - Runtime memory/time quotas and robust sandbox isolation.
 - Hooks/registries, lifecycle, unload/reload and diagnostics integration.
 - Platform abstraction, application lifecycle, handles/resources, renderer, ECS/world, physics, asset pipeline, audio, input, serialization, editor and profiling.
 
 ## Immediate next actions
-1. Run and fix CI for the new DMod manifest/resolver.
-2. Audit manifest serialization and .dmod container options; enforce size/path limits before extraction.
+1. Define and test the .dmod package contract and manifest text format.
+2. Audit candidate archive/parser libraries for license, Android ARM64 support and security controls before adoption.
 3. Continue ChaiScript runtime, lifecycle and security audit before adopting it.
 4. Implement DMod context/capability enforcement after package validation contracts stabilize.
