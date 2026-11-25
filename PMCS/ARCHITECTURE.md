@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Core services and initial DMod package pipeline are CI-verified: manifest model/validation, dependency resolution, TOML parsing and read-only in-memory ZIP package reading. ChaiScript direct AST proof passed on Linux and Android ARM64 cross-compilation.
+**Status:** Core services, application lifecycle and initial DMod package pipeline are CI-verified. Backend-neutral window/surface, input and filesystem contracts are implemented but awaiting CI verification.
 
 ## High-level modules
 - Platform: desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
@@ -20,6 +20,15 @@
 - Typed event dispatcher with RAII connections, priority ordering, stable registration order, snapshot dispatch, re-entrancy and per-listener exception isolation.
 - Job system with worker pool, futures, exception propagation, idle wait and drain-on-shutdown. Lifecycle operations are not safe to call concurrently or from a worker thread.
 - No process-global singleton is imposed; callers own service instances.
+
+## Platform contracts
+- Application lifecycle owns initialization, frame polling/update and shutdown sequencing; stop requests are atomic and frame delta is clamped.
+- Window contract uses opaque IDs, logical/pixel dimensions, DPI scale, focus/minimized state and lifecycle events.
+- Surface contract separates a window from its native render surface. Native display/window pointers are borrowed and valid only until the surface is released or platform surface is destroyed.
+- Input contract separates physical keyboard usage IDs (USB HID Keyboard/Keypad), Unicode text, mouse/touch/pen pointer identity, scroll and normalized gamepad axes.
+- Filesystem contract uses UTF-8 relative virtual paths rooted by the backend, rejects traversal/absolute paths and invalid/nonportable names, and exposes read/write/existence/directory operations.
+- These are interfaces only; no concrete SDL, Win32, X11, Wayland, Android or Apple backend has been selected or implemented.
+- Current window/surface/input/filesystem additions are pending CI; do not describe them as verified until the run succeeds.
 
 ## DMod contracts implemented and verified
 - Manifest model includes package ID/name/version, engine API range, relative entry script, dependencies and requested capabilities.
