@@ -16,6 +16,8 @@ void require(bool condition, std::string_view message) {
 }
 struct TextureTag;
 struct BufferTag;
+struct ThrowingTag;
+struct TrackedTag;
 struct Resource final {
     explicit Resource(int initial) : value(initial) {}
     int value;
@@ -65,7 +67,7 @@ int main() {
     require(!textures.contains(first), "old handle remains stale");
     require(textures.contains(second), "new resource is present");
 
-    ResourceRegistry<ThrowingResource, struct ThrowingTag> throwing;
+    ResourceRegistry<ThrowingResource, ThrowingTag> throwing;
     try {
         (void)throwing.emplace();
         require(false, "throwing constructor propagates its exception");
@@ -75,7 +77,7 @@ int main() {
 
     int destructions = 0;
     {
-        ResourceRegistry<TrackedResource, struct TrackedTag> tracked;
+        ResourceRegistry<TrackedResource, TrackedTag> tracked;
         const auto tracked_handle = tracked.emplace(destructions);
         require(tracked.contains(tracked_handle), "tracked resource is registered");
         require(tracked.destroy(tracked_handle), "tracked resource can be destroyed");
