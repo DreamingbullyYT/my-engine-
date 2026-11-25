@@ -30,9 +30,9 @@ Do not expose third-party physics types throughout engine/game APIs.
 - C implementation; ZIP APIs support reading an archive from memory and incremental file extraction. No external runtime dependency is needed for the selected build.
 - The project CMake compiles miniz sources as a static library with stdio disabled.
 - Dream Engine reads ZIP packages from caller-owned memory and never extracts archive paths to disk.
-- Run [45707512573](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45707512573) passed GCC, Clang and Android ARM64 cross-build plus Linux package-reader tests.
-- Current protections: archive/per-file/total decompressed-size caps, compression-ratio cap, entry-count cap, path normalization, UTF-8 validation, traversal/backslash/drive rejection, case-collision rejection, Unix special-file and Windows reparse-point rejection, encryption and unsupported-method rejection, root manifest validation and CRC/decompression error reporting.
-- Remaining security work: call miniz local-header validation for the full archive; add tests for links, duplicate paths, unsupported methods, malformed local headers, entry count and total uncompressed limits; design signature/trust policy.
+- Run [45707911163](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45707911163) passed GCC, Clang and Android ARM64 cross-build plus Linux package-reader tests.
+- Current protections: archive/per-file/total decompressed-size caps, compression-ratio cap, entry-count cap, path normalization, UTF-8 validation, traversal/backslash/drive rejection, case-collision rejection, Unix special-file and Windows reparse-point rejection, encryption and unsupported-method rejection, root manifest validation, full local-header/central-directory validation and CRC/decompression error reporting.
+- Remaining security work: add tests for links, duplicate paths, unsupported methods and CRC corruption; design signature/trust policy.
 
 ### toml++ — pinned for manifest parsing
 - Upstream: marzer/tomlplusplus.
