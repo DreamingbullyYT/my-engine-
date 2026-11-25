@@ -7,6 +7,13 @@
 
 namespace {
 
+struct Identity_Optimizer final {
+    template <typename T>
+    auto optimize(chaiscript::eval::AST_Node_Impl_Ptr<T> node) {
+        return node;
+    }
+};
+
 bool contains_compiled_node(const chaiscript::AST_Node& node) {
     if (node.identifier == chaiscript::AST_Node_Type::Compiled) {
         return true;
@@ -25,7 +32,7 @@ bool contains_compiled_node(const chaiscript::AST_Node& node) {
 int main() {
     using Parser = chaiscript::parser::ChaiScript_Parser<
         chaiscript::eval::Noop_Tracer,
-        chaiscript::optimizer::Optimizer<>>;
+        Identity_Optimizer>;
 
     chaiscript::ChaiScript_Basic chai(
         chaiscript::Std_Lib::library(),
