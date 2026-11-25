@@ -8,6 +8,8 @@ project(DreamEngine
 
 option(DREAM_BUILD_TESTS "Build Dream Engine tests" ON)
 
+find_package(Threads REQUIRED)
+
 add_library(dream_core STATIC
     engine/core/src/job_system.cpp
     engine/core/src/log.cpp
@@ -15,6 +17,7 @@ add_library(dream_core STATIC
 )
 
 add_library(DreamEngine::Core ALIAS dream_core)
+target_link_libraries(dream_core PUBLIC Threads::Threads)
 
 target_include_directories(dream_core
     PUBLIC
