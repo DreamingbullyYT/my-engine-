@@ -20,11 +20,11 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [x] Typed event dispatcher with RAII subscriptions, priority order and exception isolation.
 - [x] Worker job system with futures, idle wait and drain-on-shutdown.
 - [x] Application lifecycle contract and tests (run 45708669112).
-- [ ] Backend-neutral window and surface contracts; verify current CI.
-- [ ] Portable keyboard, pointer/touch and gamepad input contract; verify current CI.
-- [ ] Virtual filesystem contract and path validation; verify current CI.
+- [x] Backend-neutral window and surface contracts; Linux GCC/Clang tests and Android ARM64 cross-build passed in run 45710274229.
+- [x] Portable keyboard, pointer/touch and gamepad input contract; Linux GCC/Clang tests and Android ARM64 cross-build passed in run 45710274229.
+- [x] Virtual filesystem contract and path validation; Linux GCC/Clang tests and Android ARM64 cross-build passed in run 45710274229.
 - [ ] Concrete desktop/Android backend implementations.
-- [ ] Memory/handle/resource identity strategy.
+- [ ] Complete memory/handle/resource identity strategy; initial typed generational handle pool implemented, pending CI.
 - [ ] Expand event/job concurrency, lifetime and shutdown stress tests.
 
 ## P2 — World and core runtime
