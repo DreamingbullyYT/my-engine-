@@ -24,7 +24,8 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - Update PMCS whenever implementation state or verified decisions change.
 
 ## Current implementation
-- ResourceRegistry<T, Tag> owns resources through unique_ptr, provides callback-scoped access, rejects stale handles and uses exception-safe identity invalidation during destruction; tests passed in [run 45715295194](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715295194).
+- ResourceRegistry<T, Tag> owns resources through unique_ptr, provides callback-scoped access and rejects stale handles; tests passed in [run 45715803430](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715803430).
+- Initial ResourceStore<T, Tag> maps case-sensitive string keys to typed handles, supports find/erase and scoped access; implementation/tests are awaiting CI. It intentionally does not load or decode assets.
 - dream_core: version API, logging, diagnostics, event dispatcher, worker job system, typed generational handle pool and owning ResourceRegistry (verified in run 45715295194).
 - dream_platform: application lifecycle, window/surface/input contracts and virtual filesystem path validation.
 - dream_dmod: manifest model, validation, dependency resolver, TOML parser and read-only in-memory ZIP package reader with local-header validation.
@@ -35,9 +36,10 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - C++20 remains a provisional implementation baseline.
 
 ## Next work
-1. Expand ResourceRegistry lifetime/concurrency tests and design a higher-level asset manager without mixing it into the low-level registry.
-2. Research renderer candidates and define engine-owned 2D/3D rendering interfaces before selecting a backend.
-3. Continue DMod package trust/versioning and interpreter security audit.
+1. Verify ResourceStore and expand resource lifetime/concurrency tests.
+2. Design a separate asset loading pipeline for file I/O, decoding, async scheduling and dependency tracking.
+3. Research renderer candidates and define engine-owned 2D/3D rendering interfaces before selecting a backend.
+4. Continue DMod package trust/versioning and interpreter security audit.
 
 ## Handoff requirements
 Update CURRENT_STATE.md, ARCHITECTURE.md, TECHNICAL_AUDIT.md and ROADMAP.md as work progresses. Update DECISIONS.md only for explicitly accepted decisions. Never label work VERIFIED without reproducible evidence.
