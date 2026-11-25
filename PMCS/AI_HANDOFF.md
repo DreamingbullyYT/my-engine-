@@ -27,15 +27,14 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - dream_core: version API, logging, diagnostics, event dispatcher and worker job system.
 - dream_dmod: manifest model, validation, dependency resolver, TOML parser and read-only in-memory ZIP package reader with local-header validation.
 - Pinned dependencies: miniz 3.1.2 at 77d0dce8627735138c51770d1799a1ef48f2117d; toml++ 3.5.1 at efd80e03356af65c7d4e61c56ffb326b34f8d0f4.
-- CI run [45707911163](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45707911163) passed Linux GCC, Linux Clang, Android ARM64 cross-build, package-reader tests and ChaiScript AST proof.
+- CI run [45708233794](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45708233794) passed Linux GCC, Linux Clang, Android ARM64 cross-build, package-reader adversarial tests and ChaiScript AST proof.
 - Android result is cross-compilation, not physical-device execution.
 - C++20 remains a provisional implementation baseline.
 
 ## Next work
-1. Add adversarial tests for links, duplicate paths, unsupported compression and CRC corruption.
-2. Define signature/trust and package-format versioning policy.
-3. Continue the ChaiScript runtime/security audit; do not declare it sandboxed or production-approved.
-4. Continue engine platform/application and resource foundations without prematurely locking renderer/ECS/physics.
+1. Define package-format versioning and signature/trust policy.
+2. Continue the ChaiScript runtime/security audit; do not declare it sandboxed or production-approved.
+3. Continue engine platform/application and resource foundations without prematurely locking renderer/ECS/physics.
 
 ## Handoff requirements
 Update CURRENT_STATE.md, ARCHITECTURE.md, TECHNICAL_AUDIT.md and ROADMAP.md as work progresses. Update DECISIONS.md only for explicitly accepted decisions. Never label work VERIFIED without reproducible evidence.
