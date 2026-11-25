@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <string_view>
 
 namespace dream::core {
@@ -21,6 +22,6 @@ struct Version final {
     return "Dream Engine";
 }
 
-[[nodiscard]] std::string_view version_string() noexcept;
+[[nodiscard]] std::string version_string();
 
 } // namespace dream::core
