@@ -37,6 +37,7 @@ public:
                 slots_.resize(static_cast<std::size_t>(handle.index()) + 1);
             }
             slots_[handle.index()] = std::move(resource);
+            ++active_count_;
         } catch (...) {
             (void)handles_.release(handle);
             throw;
@@ -54,6 +55,7 @@ public:
         }
 
         slots_[handle.index()].reset();
+        --active_count_;
         return handles_.release(handle);
     }
 
