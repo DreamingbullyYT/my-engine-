@@ -9,6 +9,7 @@ project(DreamEngine
 option(DREAM_BUILD_TESTS "Build Dream Engine tests" ON)
 
 add_library(dream_core STATIC
+    engine/core/src/job_system.cpp
     engine/core/src/log.cpp
     engine/core/src/version.cpp
 )
@@ -41,4 +42,16 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_core_log_tests PRIVATE cxx_std_20)
     set_target_properties(dream_core_log_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.core.logging COMMAND dream_core_log_tests)
+
+    add_executable(dream_core_event_tests tests/core/event_tests.cpp)
+    target_link_libraries(dream_core_event_tests PRIVATE DreamEngine::Core)
+    target_compile_features(dream_core_event_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_core_event_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.core.events COMMAND dream_core_event_tests)
+
+    add_executable(dream_core_job_system_tests tests/core/job_system_tests.cpp)
+    target_link_libraries(dream_core_job_system_tests PRIVATE DreamEngine::Core)
+    target_compile_features(dream_core_job_system_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_core_job_system_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.core.jobs COMMAND dream_core_job_system_tests)
 endif()
