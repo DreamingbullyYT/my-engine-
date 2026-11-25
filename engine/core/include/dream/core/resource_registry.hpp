@@ -72,8 +72,9 @@ public:
     // the lifetime guard.
     template <typename Function>
     [[nodiscard]] bool with_resource(handle_type handle, Function&& function) const {
-        static_assert(std::is_invocable_r_v<void, Function, T&>,
-                      "Resource callback must accept T& and return void");
+        static_assert(std::is_invocable_v<Function, T&> &&
+                      std::is_same_v<std::invoke_result_t<Function, T&>, void>,
+                      "Resource callback must accept T& and return exactly void");
         if (!handle) return false;
 
         std::shared_lock lock(mutex_);
