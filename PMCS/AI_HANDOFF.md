@@ -14,27 +14,28 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 
 ## Non-negotiable direction
 - C++ is the engine language. Do not switch to Rust.
-- Do not turn the engine into a game-specific framework.
+- Keep the engine reusable; game-specific systems belong in game projects.
 - 2D and 3D are both first-class.
 - The user has no PC available: use GitHub Actions for builds and tests.
-- Android ABI target: `arm64-v8a` (ARMv8-A); do not add other ABIs unless requested.
-- Reuse appropriate libraries after source/license/platform audit.
+- Android ABI target: arm64-v8a (ARMv8-A).
 - Ordinary DMods must not require native compilation, engine/game/APK rebuild, or generated runtime bytecode.
 - Prove interpreter behavior from source and tests; do not make unsupported claims.
+- Preserve the root MIT license; record third-party notices separately.
+- Update PMCS whenever implementation state or verified decisions change.
 
 ## Current implementation
-- Root CMake project and a small `dream_core` static library exist.
-- A core version API and dependency-free smoke test exist.
-- CI workflow has Linux GCC/Clang test jobs and Android NDK `arm64-v8a` cross-build.
-- The initial workflow has not yet been confirmed green. Treat all build/test status as pending until Actions evidence is inspected.
-- C++20 is currently used provisionally; the final standard/compiler matrix remains open.
+- dream_core: version API, logging, diagnostics, event dispatcher and worker job system.
+- dream_dmod: manifest model, validation, dependency resolver and TOML manifest parser.
+- Pinned dependencies: miniz 3.1.2 at 77d0dce8627735138c51770d1799a1ef48f2117d; toml++ 3.5.1 at efd80e03356af65c7d4e61c56ffb326b34f8d0f4.
+- CI run [45706951573](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45706951573) passed Linux GCC, Linux Clang, Android ARM64 cross-build and ChaiScript AST proof.
+- Android result is cross-compilation, not physical-device execution.
+- C++20 remains a provisional implementation baseline.
 
 ## Next work
-1. Inspect the first GitHub Actions run; fix failures before expanding the engine.
-2. Add focused core tests and services in small, independently testable modules.
-3. Prototype candidate DMod interpreters and inspect parser/evaluator internals.
-4. Build a .dmod proof that loads source, binds a C++ host function, invokes a callback, reports errors and reloads safely.
-5. Decide dependencies only after measured evidence.
+1. Implement a read-only ZIP-backed .dmod reader with strict path and decompression limits.
+2. Connect ZIP contents to the manifest parser and verify the declared entry script exists.
+3. Add adversarial archive tests before exposing package data to the script runtime.
+4. Continue the ChaiScript runtime/security audit; do not declare it sandboxed or production-approved.
 
 ## Handoff requirements
-Update CURRENT_STATE.md with actual files, builds and tests. Update DECISIONS.md only when a choice is explicitly made. Update TECHNICAL_AUDIT.md with exact versions, source evidence and licensing. Never label work VERIFIED without reproducible evidence.
+Update CURRENT_STATE.md, ARCHITECTURE.md, TECHNICAL_AUDIT.md and ROADMAP.md as work progresses. Update DECISIONS.md only for explicitly accepted decisions. Never label work VERIFIED without reproducible evidence.
