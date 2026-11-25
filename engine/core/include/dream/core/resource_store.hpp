@@ -3,6 +3,7 @@
 #include <dream/core/resource_registry.hpp>
 
 #include <cstddef>
+#include <mutex>
 #include <shared_mutex>
 #include <string>
 #include <string_view>
@@ -73,6 +74,8 @@ public:
         return true;
     }
 
+    // Resource callbacks must not re-enter this same store; the shared lock
+    // protects the key mapping and the underlying registry lifetime.
     [[nodiscard]] bool with_resource(handle_type handle, auto&& function) const {
         std::shared_lock lock(mutex_);
         return resources_.with_resource(handle, std::forward<decltype(function)>(function));
