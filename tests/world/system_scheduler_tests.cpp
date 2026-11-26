@@ -21,7 +21,7 @@ int main() {
     Scene scene("Main");
     require(scene.name() == "Main", "scene retains its name");
     const auto entity = scene.world().create_entity();
-    require(entity, "scene owns an independent entity world");
+    require(static_cast<bool>(entity), "scene owns an independent entity world");
 
     std::vector<std::string> order;
     auto pre_high = scene.systems().add_system(
@@ -121,7 +121,7 @@ int main() {
             require(nested.error == SystemUpdateError::AlreadyUpdating,
                     "recursive update is rejected without deadlock");
         });
-    require(recursive, "recursive guard system registers");
+    require(static_cast<bool>(recursive), "recursive guard system registers");
     const auto guarded = reentrant.update(dynamic_world, 0.0F);
     require(guarded.error == SystemUpdateError::None && guarded.executed == 1,
             "outer update completes");
