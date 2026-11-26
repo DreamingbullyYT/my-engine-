@@ -1,5 +1,7 @@
 #include <dream/assets/asset_loader.hpp>
 
+#include <array>
+
 #include <atomic>
 #include <cstdlib>
 #include <iostream>
