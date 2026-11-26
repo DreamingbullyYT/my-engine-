@@ -96,6 +96,14 @@ add_library(dream_dmod STATIC
     engine/dmod/src/resolver.cpp
 )
 add_library(DreamEngine::DMod ALIAS dream_dmod)
+
+add_library(dream_assets INTERFACE)
+add_library(DreamEngine::Assets ALIAS dream_assets)
+target_include_directories(dream_assets INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/assets/include>
+)
+target_compile_features(dream_assets INTERFACE cxx_std_20)
+target_link_libraries(dream_assets INTERFACE DreamEngine::Core DreamEngine::Platform)
 target_link_libraries(dream_dmod
     PUBLIC DreamEngine::Core
     PRIVATE DreamEngine::Miniz DreamEngine::TomlPlusPlus
@@ -161,6 +169,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_core_resource_store_tests PRIVATE cxx_std_20)
     set_target_properties(dream_core_resource_store_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.core.resource_store COMMAND dream_core_resource_store_tests)
+
+    add_executable(dream_assets_loader_tests tests/assets/asset_loader_tests.cpp)
+    target_link_libraries(dream_assets_loader_tests PRIVATE DreamEngine::Assets)
+    target_compile_features(dream_assets_loader_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_assets_loader_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.assets.loader COMMAND dream_assets_loader_tests)
 
     add_executable(dream_platform_application_tests tests/platform/application_tests.cpp)
     target_link_libraries(dream_platform_application_tests PRIVATE DreamEngine::Platform)
