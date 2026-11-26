@@ -1,12 +1,17 @@
 #pragma once
 
 #include <dream/platform/surface.hpp>
+
+#include <algorithm>
 #include <dream/render/render_types.hpp>
 
 #include <cstddef>
 #include <limits>
+#include <map>
 #include <span>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace dream::render {
 
@@ -115,8 +120,11 @@ public:
 // backend. It is intentionally single-threaded; call it from the render thread.
 class RenderDevice final {
 public:
-    RenderDevice(platform::ISurfaceSystem& surfaces, IRenderBackend& backend) noexcept
-        : surfaces_(surfaces), backend_(backend) {}
+    explicit RenderDevice(
+        platform::ISurfaceSystem& surfaces, IRenderBackend& backend,
+        std::size_t retained_resource_budget_bytes = 256U * 1024U * 1024U) noexcept
+        : surfaces_(surfaces), backend_(backend),
+          retained_resource_budget_bytes_(retained_resource_budget_bytes) {}
 
     RenderDevice(const RenderDevice&) = delete;
     RenderDevice& operator=(const RenderDevice&) = delete;
@@ -124,6 +132,21 @@ public:
     ~RenderDevice() { shutdown(); }
 
     [[nodiscard]] bool initialized() const noexcept { return initialized_; }
+
+    // CPU copies are retained so device/surface recreation can rebuild GPU
+    // resources. The budget applies to retained upload payloads, not driver
+    // allocations; changing it below the currently retained size is rejected.
+    [[nodiscard]] std::size_t retained_resource_bytes() const noexcept {
+        return retained_resource_bytes_;
+    }
+    [[nodiscard]] std::size_t retained_resource_budget_bytes() const noexcept {
+        return retained_resource_budget_bytes_;
+    }
+    [[nodiscard]] bool set_retained_resource_budget(std::size_t bytes) noexcept {
+        if (bytes < retained_resource_bytes_) return false;
+        retained_resource_budget_bytes_ = bytes;
+        return true;
+    }
 
     [[nodiscard]] const RenderCapabilities& capabilities() const noexcept {
         return capabilities_;
@@ -170,6 +193,15 @@ public:
 
         window_ = window;
         initialized_ = true;
+        if (!restore_retained_resources(error)) {
+            backend_.shutdown();
+            initialized_ = false;
+            capabilities_ = {};
+            surface_info_ = {};
+            window_ = {};
+            reset_surface_lease();
+            return {RenderError::BackendResourceFailed, {}, std::move(error)};
+        }
         return {};
     }
 
@@ -230,25 +262,51 @@ public:
             };
         }
 
+        if (textures_.contains(texture_id))
+            return {RenderError::InvalidResource, {}, "Texture ID is already retained"};
+        if (pixels.size() > retained_resource_budget_bytes_ -
+                std::min(retained_resource_bytes_, retained_resource_budget_bytes_))
+            return {RenderError::InvalidResource, {}, "Retained GPU asset CPU-copy budget exceeded"};
+
+        RetainedTexture retained;
+        retained.extent = extent;
+        try {
+            retained.pixels.assign(pixels.begin(), pixels.end());
+            textures_.emplace(texture_id, std::move(retained));
+        } catch (...) {
+            return {RenderError::BackendResourceFailed, {},
+                    "Unable to retain a CPU copy of the texture"};
+        }
+
         std::string error;
         if (!backend_.create_texture_rgba8(texture_id, extent, pixels, error)) {
+            textures_.erase(texture_id);
             return {RenderError::BackendResourceFailed, {}, std::move(error)};
         }
+        retained_resource_bytes_ += pixels.size();
         return {};
     }
 
     [[nodiscard]] RenderResult destroy_texture(RenderAssetId texture_id) {
-        if (!initialized_)
-            return {RenderError::NotInitialized, {}, "RenderDevice is not initialized"};
         if (texture_id == 0U)
-            return {
-                RenderError::InvalidResource, {},
-                "Texture ID zero is reserved for the backend white texture"
-            };
-
-        std::string error;
-        if (!backend_.destroy_texture(texture_id, error))
-            return {RenderError::BackendResourceFailed, {}, std::move(error)};
+            return {RenderError::InvalidResource, {},
+                    "Texture ID zero is reserved for the backend white texture"};
+        const auto found = textures_.find(texture_id);
+        if (found == textures_.end())
+            return {RenderError::InvalidResource, {}, "Texture ID is not retained"};
+        for (const auto& [id, material] : materials_) {
+            (void)id;
+            if (material.texture_id == texture_id)
+                return {RenderError::InvalidResource, {},
+                        "Texture is referenced by a retained material"};
+        }
+        if (initialized_) {
+            std::string error;
+            if (!backend_.destroy_texture(texture_id, error))
+                return {RenderError::BackendResourceFailed, {}, std::move(error)};
+        }
+        retained_resource_bytes_ -= found->second.pixels.size();
+        textures_.erase(found);
         return {};
     }
 
@@ -260,20 +318,57 @@ public:
         if (mesh_id == 0U || validation != FrameValidationError::None)
             return {RenderError::InvalidResource, validation,
                     "Mesh ID, vertices or indices are invalid"};
+        if (meshes_.contains(mesh_id))
+            return {RenderError::InvalidResource, {}, "Mesh ID is already retained"};
+        if (mesh.vertices.size() >
+                std::numeric_limits<std::size_t>::max() / sizeof(Vertex3D) ||
+            mesh.indices.size() >
+                std::numeric_limits<std::size_t>::max() / sizeof(std::uint32_t))
+            return {RenderError::InvalidResource, {}, "Mesh retained size overflows"};
+        const std::size_t vertex_bytes = mesh.vertices.size() * sizeof(Vertex3D);
+        const std::size_t index_bytes = mesh.indices.size() * sizeof(std::uint32_t);
+        if (index_bytes > std::numeric_limits<std::size_t>::max() - vertex_bytes)
+            return {RenderError::InvalidResource, {}, "Mesh retained size overflows"};
+        const std::size_t retained_bytes = vertex_bytes + index_bytes;
+        if (retained_bytes > retained_resource_budget_bytes_ -
+                std::min(retained_resource_bytes_, retained_resource_budget_bytes_))
+            return {RenderError::InvalidResource, {}, "Retained GPU asset CPU-copy budget exceeded"};
+
+        RetainedMesh retained;
+        try {
+            retained.vertices.assign(mesh.vertices.begin(), mesh.vertices.end());
+            retained.indices.assign(mesh.indices.begin(), mesh.indices.end());
+            meshes_.emplace(mesh_id, std::move(retained));
+        } catch (...) {
+            return {RenderError::BackendResourceFailed, {},
+                    "Unable to retain CPU copies of the mesh buffers"};
+        }
+        const auto& stored = meshes_.at(mesh_id);
+        const MeshDescription stored_description{stored.vertices, stored.indices};
         std::string error;
-        if (!backend_.create_mesh(mesh_id, mesh, error))
+        if (!backend_.create_mesh(mesh_id, stored_description, error)) {
+            meshes_.erase(mesh_id);
             return {RenderError::BackendResourceFailed, {}, std::move(error)};
+        }
+        retained_resource_bytes_ += retained_bytes;
         return {};
     }
 
     [[nodiscard]] RenderResult destroy_mesh(RenderAssetId mesh_id) {
-        if (!initialized_)
-            return {RenderError::NotInitialized, {}, "RenderDevice is not initialized"};
         if (mesh_id == 0U)
             return {RenderError::InvalidResource, {}, "Mesh ID zero is reserved"};
-        std::string error;
-        if (!backend_.destroy_mesh(mesh_id, error))
-            return {RenderError::BackendResourceFailed, {}, std::move(error)};
+        const auto found = meshes_.find(mesh_id);
+        if (found == meshes_.end())
+            return {RenderError::InvalidResource, {}, "Mesh ID is not retained"};
+        if (initialized_) {
+            std::string error;
+            if (!backend_.destroy_mesh(mesh_id, error))
+                return {RenderError::BackendResourceFailed, {}, std::move(error)};
+        }
+        retained_resource_bytes_ -=
+            found->second.vertices.size() * sizeof(Vertex3D) +
+            found->second.indices.size() * sizeof(std::uint32_t);
+        meshes_.erase(found);
         return {};
     }
 
@@ -283,20 +378,42 @@ public:
             return {RenderError::NotInitialized, {}, "RenderDevice is not initialized"};
         if (material_id == 0U || !valid_material_description(material))
             return {RenderError::InvalidResource, {}, "Material ID or properties are invalid"};
+        if (materials_.contains(material_id))
+            return {RenderError::InvalidResource, {}, "Material ID is already retained"};
+        if (material.texture_id != 0U && !textures_.contains(material.texture_id))
+            return {RenderError::InvalidResource, {},
+                    "Material texture ID is not present in the retained texture registry"};
+        if (sizeof(MaterialDescription) > retained_resource_budget_bytes_ -
+                std::min(retained_resource_bytes_, retained_resource_budget_bytes_))
+            return {RenderError::InvalidResource, {}, "Retained GPU asset CPU-copy budget exceeded"};
         std::string error;
-        if (!backend_.create_material(material_id, material, error))
+        try {
+            materials_.emplace(material_id, material);
+        } catch (...) {
+            return {RenderError::BackendResourceFailed, {},
+                    "Unable to retain the material description"};
+        }
+        if (!backend_.create_material(material_id, material, error)) {
+            materials_.erase(material_id);
             return {RenderError::BackendResourceFailed, {}, std::move(error)};
+        }
+        retained_resource_bytes_ += sizeof(MaterialDescription);
         return {};
     }
 
     [[nodiscard]] RenderResult destroy_material(RenderAssetId material_id) {
-        if (!initialized_)
-            return {RenderError::NotInitialized, {}, "RenderDevice is not initialized"};
         if (material_id == 0U)
             return {RenderError::InvalidResource, {}, "Material ID zero is reserved"};
-        std::string error;
-        if (!backend_.destroy_material(material_id, error))
-            return {RenderError::BackendResourceFailed, {}, std::move(error)};
+        const auto found = materials_.find(material_id);
+        if (found == materials_.end())
+            return {RenderError::InvalidResource, {}, "Material ID is not retained"};
+        if (initialized_) {
+            std::string error;
+            if (!backend_.destroy_material(material_id, error))
+                return {RenderError::BackendResourceFailed, {}, std::move(error)};
+        }
+        retained_resource_bytes_ -= sizeof(MaterialDescription);
+        materials_.erase(found);
         return {};
     }
 
@@ -333,9 +450,35 @@ public:
         surface_info_ = {};
         window_ = {};
         reset_surface_lease();
+        // Keep the CPU copies alive: a later initialize() restores every
+        // texture, mesh and material in dependency order.
     }
 
 private:
+    struct RetainedTexture final {
+        Extent2D extent{};
+        std::vector<std::byte> pixels;
+    };
+    struct RetainedMesh final {
+        std::vector<Vertex3D> vertices;
+        std::vector<std::uint32_t> indices;
+    };
+
+    [[nodiscard]] bool restore_retained_resources(std::string& error) {
+        for (const auto& [id, texture] : textures_) {
+            if (!backend_.create_texture_rgba8(
+                    id, texture.extent, texture.pixels, error)) return false;
+        }
+        for (const auto& [id, mesh] : meshes_) {
+            const MeshDescription description{mesh.vertices, mesh.indices};
+            if (!backend_.create_mesh(id, description, error)) return false;
+        }
+        for (const auto& [id, material] : materials_) {
+            if (!backend_.create_material(id, material, error)) return false;
+        }
+        return true;
+    }
+
     [[nodiscard]] static RenderSurfaceInfo make_surface_info(
         const platform::WindowMetrics& metrics) noexcept {
         return {
@@ -362,6 +505,11 @@ private:
     platform::SurfaceId surface_id_{};
     RenderSurfaceInfo surface_info_{};
     RenderCapabilities capabilities_{};
+    std::map<RenderAssetId, RetainedTexture> textures_;
+    std::map<RenderAssetId, RetainedMesh> meshes_;
+    std::map<RenderAssetId, MaterialDescription> materials_;
+    std::size_t retained_resource_bytes_{0U};
+    std::size_t retained_resource_budget_bytes_{0U};
     bool initialized_{false};
 };
 

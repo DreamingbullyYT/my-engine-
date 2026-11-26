@@ -292,6 +292,9 @@ int main() {
                 "valid indexed mesh upload is forwarded");
         require(device.destroy_mesh(50U)&&backend.mesh_destroy_calls==1,
                 "mesh destruction is forwarded");
+        require(static_cast<bool>(device.create_texture_rgba8(
+                    42U,{2U,2U},texture_pixels)),
+                "texture can be re-uploaded after an explicit destroy");
         MaterialDescription material;
         material.base_color={0.8F,0.7F,0.6F,1.0F};
         material.texture_id=42U;
@@ -379,6 +382,84 @@ int main() {
     require(never_started.initialize({8U}).error ==
                 RenderError::SurfaceAcquisitionFailed,
             "surface acquisition failure is surfaced");
+
+
+    // Resources survive RenderDevice shutdown and are replayed in dependency
+    // order on the next native surface/context initialization.
+    FakeSurfaceSystem recovery_surfaces;
+    FakeRenderBackend recovery_backend;
+    RenderDevice recovery_device(recovery_surfaces,recovery_backend,1024U);
+    require(static_cast<bool>(recovery_device.initialize({9U})),"recovery render device initializes");
+    const std::array<std::byte,4> recovery_pixels{
+        std::byte{1},std::byte{2},std::byte{3},std::byte{4}};
+    const std::array<Vertex3D,3> recovery_vertices{{
+        {{0,0,0},{0,0,1},{0,0}},
+        {{1,0,0},{0,0,1},{1,0}},
+        {{0,1,0},{0,0,1},{0,1}}
+    }};
+    const std::array<std::uint32_t,3> recovery_indices{{0U,1U,2U}};
+    require(static_cast<bool>(recovery_device.create_texture_rgba8(81U,{1U,1U},recovery_pixels)),
+            "recovery test retains a texture CPU copy");
+    require(static_cast<bool>(recovery_device.create_mesh(82U,MeshDescription{
+        recovery_vertices,recovery_indices})),
+        "recovery test retains mesh CPU buffers");
+    MaterialDescription recovery_material;
+    recovery_material.texture_id=81U;
+    require(static_cast<bool>(recovery_device.create_material(83U,recovery_material)),
+            "recovery test retains material after its texture");
+    const auto retained_bytes=recovery_device.retained_resource_bytes();
+    require(retained_bytes==recovery_pixels.size()+
+            recovery_vertices.size()*sizeof(Vertex3D)+
+            recovery_indices.size()*sizeof(std::uint32_t)+sizeof(MaterialDescription),
+            "retained resource byte accounting includes texture, mesh and material data");
+    recovery_device.shutdown();
+    require(recovery_device.retained_resource_bytes()==retained_bytes,
+            "device shutdown preserves CPU resource copies");
+
+    recovery_backend.resource_create_ok=false;
+    require(recovery_device.initialize({9U}).error==RenderError::BackendResourceFailed,
+            "failed partial GPU restoration is reported");
+    require(!recovery_device.initialized()&&
+            recovery_device.retained_resource_bytes()==retained_bytes,
+            "failed restoration releases the device but preserves every CPU resource");
+    recovery_backend.resource_create_ok=true;
+    require(static_cast<bool>(recovery_device.initialize({9U})),
+            "device retries and restores retained resources after a failed attempt");
+    require(recovery_backend.texture_create_calls==3&&
+            recovery_backend.mesh_create_calls==3&&
+            recovery_backend.material_create_calls==2,
+            "reinitialization uploads textures, meshes and materials a second time");
+    require(recovery_backend.last_texture_pixels==
+                std::vector<std::byte>(recovery_pixels.begin(),recovery_pixels.end())&&
+            recovery_backend.last_mesh_vertex_count==3U&&
+            recovery_backend.last_material.texture_id==81U,
+            "recreated GPU resources preserve their original upload descriptions");
+    require(recovery_device.destroy_material(83U)&&
+            recovery_device.destroy_mesh(82U)&&
+            recovery_device.destroy_texture(81U)&&
+            recovery_device.retained_resource_bytes()==0U,
+            "retained resources can be explicitly released after recreation");
+    recovery_device.shutdown();
+
+    FakeSurfaceSystem budget_surfaces;
+    FakeRenderBackend budget_backend;
+    RenderDevice budget_device(budget_surfaces,budget_backend,3U);
+    require(static_cast<bool>(budget_device.initialize({10U})),"budget test device initializes");
+    require(budget_device.create_texture_rgba8(91U,{1U,1U},recovery_pixels).error==
+                RenderError::InvalidResource,
+            "retained CPU payload cannot exceed the configured budget");
+    require(budget_device.retained_resource_bytes()==0U&&
+            budget_backend.texture_create_calls==0,
+            "rejected resource neither consumes budget nor reaches the GPU");
+    require(budget_device.set_retained_resource_budget(4U)&&
+            budget_device.create_texture_rgba8(91U,{1U,1U},recovery_pixels),
+            "resource succeeds once its retained memory budget is increased");
+    require(!budget_device.set_retained_resource_budget(3U),
+            "budget cannot be reduced below current retained usage");
+    budget_device.shutdown();
+    require(static_cast<bool>(budget_device.destroy_texture(91U))&&
+            budget_device.retained_resource_bytes()==0U,
+            "retained CPU resource can be dropped while the GPU device is offline");
 
     std::cout << "Dream Engine render contract tests passed.\n";
     return EXIT_SUCCESS;
