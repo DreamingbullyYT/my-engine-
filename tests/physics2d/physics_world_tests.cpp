@@ -214,18 +214,23 @@ int main() {
     require(filtered_report && filtered_report.contact_count == 1U,
             "mutually permitted category and mask bits collide");
 
-    require(filtering.set_transform(filtered_b.handle, {1, 0}, 0),
-            "filtered body transform remains valid");
-    CollisionFilter2D denied_mask{0x2U, 0x4U, 0};
-    const auto mask_body = filtering.create_body(BodyDescription2D{
-        .type = BodyType::Static,
-        .position = {0.5F, 0},
-        .collider = CircleCollider2D{{}, 0.5F},
-        .collision_filter = denied_mask
+    PhysicsWorld2D mask_filtering(PhysicsSettings2D{.gravity = {0, 0}});
+    const auto mask_a = mask_filtering.create_body(BodyDescription2D{
+        .type = BodyType::Dynamic,
+        .position = {0, 0},
+        .mass = 1.0F,
+        .collider = CircleCollider2D{{}, 1.0F},
+        .collision_filter = CollisionFilter2D{0x1U, 0x2U, 0}
     });
-    require(mask_body, "mask-filter test body is created");
-    filtered_report = filtering.update(1.0 / 60.0);
-    require(filtered_report.contact_count == 0U,
+    const auto mask_b = mask_filtering.create_body(BodyDescription2D{
+        .type = BodyType::Static,
+        .position = {1, 0},
+        .collider = CircleCollider2D{{}, 1.0F},
+        .collision_filter = CollisionFilter2D{0x2U, 0x4U, 0}
+    });
+    require(mask_a && mask_b, "mask-filter bodies are created");
+    const auto denied_report = mask_filtering.update(1.0 / 60.0);
+    require(denied_report && denied_report.contact_count == 0U,
             "collision is rejected unless both masks permit it");
 
     PhysicsWorld2D grouped(PhysicsSettings2D{.gravity = {0, 0}});
