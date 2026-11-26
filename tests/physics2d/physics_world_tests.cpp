@@ -83,9 +83,11 @@ int main() {
     auto state = world.body_state(dynamic_body.handle);
     require(state && near(state->linear_velocity.x, 2.0F),
             "central impulse changes linear velocity by impulse over mass");
-    const auto movement = world.update(0.5);
-    require(movement && near(
-                world.body_state(dynamic_body.handle)->position.x, 1.0F),
+    const auto movement_first = world.update(0.25);
+    const auto movement_second = world.update(0.25);
+    require(static_cast<bool>(movement_first) &&
+            static_cast<bool>(movement_second) &&
+            near(world.body_state(dynamic_body.handle)->position.x, 1.0F),
             "semi-implicit integration advances position from velocity");
 
     const auto off_center = world.create_body(BodyDescription2D{
@@ -114,8 +116,8 @@ int main() {
             near(world.body_state(kinematic.handle)->position.x, 20.5F),
             "kinematic body moves using assigned velocity");
 
-    require(world.update(0.0), "zero delta is a valid no-op");
-    require(world.update(0.25), "maximum delta is accepted");
+    require(static_cast<bool>(world.update(0.0)), "zero delta is a valid no-op");
+    require(static_cast<bool>(world.update(0.25)), "maximum delta is accepted");
     require(world.update(0.251).error == PhysicsStepError::DeltaTooLarge,
             "oversized delta is rejected");
     require(world.update(-0.1).error == PhysicsStepError::InvalidDelta,
@@ -147,16 +149,16 @@ int main() {
     const auto ground = falling.create_body(BodyDescription2D{
         .type = BodyType::Static,
         .position = {0, -0.5F},
-        .collider = BoxCollider2D{{}, {5.0F, 0.5F}, 0.0F},
-        .friction = 0.8F
+        .friction = 0.8F,
+        .collider = BoxCollider2D{{}, {5.0F, 0.5F}, 0.0F}
     });
     const auto ball = falling.create_body(BodyDescription2D{
         .type = BodyType::Dynamic,
         .position = {0, 2.0F},
         .mass = 1.0F,
-        .collider = CircleCollider2D{{}, 0.5F},
         .friction = 0.8F,
-        .restitution = 0.0F
+        .restitution = 0.0F,
+        .collider = CircleCollider2D{{}, 0.5F}
     });
     require(ground && ball, "ground and falling ball are created");
 
