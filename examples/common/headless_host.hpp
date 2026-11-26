@@ -2,10 +2,12 @@
 
 #include <dream/platform/surface.hpp>
 #include <dream/render/render_backend.hpp>
+#include <dream/ui/ui_runtime.hpp>
 
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 namespace dream::examples {
 
