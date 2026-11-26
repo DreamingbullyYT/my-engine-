@@ -26,7 +26,8 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 ## Current implementation
 - ResourceRegistry<T, Tag> owns resources through unique_ptr, provides callback-scoped access and rejects stale handles; tests passed in [run 45715803430](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715803430).
 - ResourceStore<T, Tag> maps case-sensitive string keys (non-empty, maximum 4096 bytes) to typed generational handles. Duplicate/invalid keys are rejected; find/erase and callback-scoped access by key or handle are supported. Linux tests and Android ARM64 cross-compilation passed in [run 45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493).
-- ResourceStore is not an asset loader: it does not do filesystem I/O, decode, schedule asynchronous loads, track dependencies or upload GPU resources.
+- ResourceStore is not an asset loader; it remains a key-to-handle owner.
+- Initial dream_assets helper schedules virtual filesystem reads on JobSystem, invokes a caller-provided decoder, and registers the decoded object in ResourceStore. Its CI run is pending. It deliberately has no dependency graph, cancellation, cache policy or GPU upload yet.
 - dream_core: version API, logging, diagnostics, event dispatcher, worker job system, typed generational handle pool, ResourceRegistry and ResourceStore.
 - dream_platform: application lifecycle, window/surface/input contracts and virtual filesystem path validation.
 - dream_dmod: manifest model, validation, dependency resolver, TOML parser and read-only in-memory ZIP package reader with local-header validation.
