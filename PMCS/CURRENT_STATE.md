@@ -18,9 +18,11 @@
 - Pinned build dependencies: miniz 3.1.2 and toml++ 3.5.1, each fetched from an immutable upstream commit.
 - GitHub Actions for Linux GCC/Clang, Android ARM64 cross-build, ChaiScript AST proof and Android cross-compilation of selected header-only tests.
 - `dream_assets` async loader: bounded virtual-file read (default 64 MiB, configurable), caller-provided worker-thread decoder and ResourceStore registration. `load_async_cached` optionally targets AssetCache, checks for a cache hit before I/O, and accepts a caller-provided CPU-memory estimator. Both paths support cooperative cancellation through `AssetCancellationSource` / `AssetCancellationToken`, with checkpoints before I/O/cache hits, after reads, after decoding and (cached path) after size estimation. Cancellation cannot interrupt an in-progress filesystem read or decoder call. Borrowed filesystem/cache/store/JobSystem lifetime and decoder/estimator thread-safety are caller responsibilities. Run 45769042275 passed all four CI jobs.
+- `AssetRequestCoordinator<Result>` plus `load_async_coordinated` / `load_async_cached_coordinated` deduplicate matching in-flight request IDs and return a shared future/result. Completed entries are lazily pruned; this is not a result cache. The caller must namespace request IDs correctly. The first caller owns the operation's decoder and cancellation token; later callers share its result and cannot independently cancel it. Run 45770215802 passed all four CI jobs.
 - Asset dependency planner in `engine/assets/include/dream/assets/dependency_graph.hpp`: deterministic dependency-first order, required/optional missing dependency reporting, duplicate/invalid key rejection and cycle detection. Verified in run 45766502045.
 
 ## Verified CI
+- Run [45770215802](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45770215802) completed successfully for all four jobs. It verifies in-flight asset request deduplication, one read/decode for concurrent identical request IDs, shared result/handle behavior and Android ARM64 cross-compilation.
 - Run [45768508344](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768508344) completed successfully for all four jobs. It verifies optional AssetCache-backed async loading, cache-hit I/O avoidance, estimator accounting and cache budget rejection; Android is cross-compilation only.
 - Run [45768090059](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768090059) completed successfully for all four jobs, verifying AssetCache LRU behavior and exception safety.
 - Run [45766502045](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45766502045) completed successfully for all four jobs, verifying the asset dependency planner.
@@ -56,10 +58,10 @@
 
 ## Other engine work not yet implemented
 - Concrete desktop/Android platform backends and physical-device tests.
-- Renderer, ECS/world, physics, asset cache policy/GPU upload, audio, serialization, editor and profiling. The async asset loader is CI-verified; dependency planner is implemented but pending CI. ResourceStore remains only a key-to-handle layer.
+- Renderer, ECS/world, physics, GPU upload/residency, audio, serialization, editor and profiling. The async asset loader, dependency planner, CPU AssetCache, cooperative cancellation and in-flight request deduplication are CI-verified. ResourceStore remains only a key-to-handle layer.
 
 ## Immediate next actions
-1. Add in-flight asset request deduplication to close the same-key check-then-load race; define explicit shutdown/lifetime behavior.
+1. Define explicit async service shutdown/lifetime behavior and decide how independent subscribers should cancel shared requests.
 2. Strengthen cache concurrency/lifetime tests and define how dependency-plan execution coordinates with loading.
 3. Compare renderer candidates and define an engine-owned 2D/3D API without prematurely locking a backend; later add GPU upload/residency.
 4. Continue DMod package trust/signatures, capability enforcement and interpreter integration/security review.
