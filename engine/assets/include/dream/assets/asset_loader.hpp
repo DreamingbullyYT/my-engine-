@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dream/assets/asset_cache.hpp>
+#include <dream/assets/asset_request_coordinator.hpp>
 #include <dream/core/job_system.hpp>
 #include <dream/core/resource_store.hpp>
 #include <dream/platform/filesystem.hpp>
@@ -251,6 +252,58 @@ template <typename T, typename Tag, typename Decoder, typename SizeEstimator>
             }
             return {AssetLoadStatus::Loaded, inserted.handle, platform::FileError::None, {}};
         });
+}
+
+
+/*
+ * Coordinated variants deduplicate requests that share request_id while the
+ * first operation is still pending. request_id is a caller-defined identity;
+ * include source/type/version information when it distinguishes requests.
+ *
+ * The first caller owns the operation's cancellation token and decoder. Later
+ * callers with the same pending request_id receive its shared result; their
+ * factory arguments and cancellation tokens are not used.
+ */
+template <typename T, typename Tag, typename Decoder>
+[[nodiscard]] auto load_async_coordinated(
+    AssetRequestCoordinator<AssetLoadResult<core::Handle<Tag>>>& coordinator,
+    std::string request_id,
+    core::JobSystem& jobs,
+    const platform::IFileSystem& filesystem,
+    core::ResourceStore<T, Tag>& store,
+    std::string key,
+    std::string virtual_path,
+    Decoder&& decoder,
+    std::size_t max_file_bytes = 64u * 1024u * 1024u,
+    AssetCancellationToken cancellation = {})
+    -> AssetRequestCoordinator<AssetLoadResult<core::Handle<Tag>>>::SharedResult {
+    return coordinator.request(std::move(request_id), [&]() mutable {
+        return load_async<T, Tag>(
+            jobs, filesystem, store, std::move(key), std::move(virtual_path),
+            std::forward<Decoder>(decoder), max_file_bytes, std::move(cancellation));
+    });
+}
+
+template <typename T, typename Tag, typename Decoder, typename SizeEstimator>
+[[nodiscard]] auto load_async_cached_coordinated(
+    AssetRequestCoordinator<AssetLoadResult<core::Handle<Tag>>>& coordinator,
+    std::string request_id,
+    core::JobSystem& jobs,
+    const platform::IFileSystem& filesystem,
+    AssetCache<T, Tag>& cache,
+    std::string key,
+    std::string virtual_path,
+    Decoder&& decoder,
+    SizeEstimator&& estimate_bytes,
+    std::size_t max_file_bytes = 64u * 1024u * 1024u,
+    AssetCancellationToken cancellation = {})
+    -> AssetRequestCoordinator<AssetLoadResult<core::Handle<Tag>>>::SharedResult {
+    return coordinator.request(std::move(request_id), [&]() mutable {
+        return load_async_cached<T, Tag>(
+            jobs, filesystem, cache, std::move(key), std::move(virtual_path),
+            std::forward<Decoder>(decoder), std::forward<SizeEstimator>(estimate_bytes),
+            max_file_bytes, std::move(cancellation));
+    });
 }
 
 } // namespace dream::assets
