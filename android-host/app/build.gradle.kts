@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace = "dev.dreamengine.host"
-    compileSdk = 37
+    compileSdk = 36
     ndkVersion = "28.2.13676358"
 
     defaultConfig {
