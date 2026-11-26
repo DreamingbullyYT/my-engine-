@@ -2,11 +2,19 @@
 #include <dream/dmod/native_mod_manager.hpp>
 #include <dream/dmod/package_reader.hpp>
 #include <miniz.h>
+#include <dream/dmod/package_reader.hpp>
+#include <miniz.h>
 #include <cstdint>
 #include <array>
 #include <cstdlib>
 #include <iostream>
 #include <string_view>
+#include <string>
+#include <vector>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -77,6 +85,68 @@ int main() {
     require(!manager.enable("missing.mod"), "reject unknown module");
     manager.shutdown();
     require(!manager.update(0.01), "reject updates after shutdown");
+
+#if defined(__unix__) || defined(__APPLE__)
+    std::ifstream plugin_file(DREAM_TEST_NATIVE_MOD_PATH, std::ios::binary);
+    require(static_cast<bool>(plugin_file), "read the compiled native test module");
+    const std::string plugin_bytes(
+        (std::istreambuf_iterator<char>(plugin_file)), std::istreambuf_iterator<char>());
+    require(!plugin_bytes.empty(), "native test module has payload bytes");
+
+    const std::string package_manifest =
+        "format_version = 1\n"
+        "runtime = \"native\"\n"
+        "id = \"test.native\"\n"
+        "name = \"Native Test Mod\"\n"
+        "version = \"1.2.3\"\n"
+        "engine_api_min = \"0.1.0\"\n"
+        "native_library = \"lib/linux-x86_64/libtest.so\"\n";
+
+    mz_zip_archive writer{};
+    require(mz_zip_writer_init_heap(&writer, 0, 0) != 0,
+            "create an in-memory native .dmod package");
+    require(mz_zip_writer_add_mem(&writer, "manifest.toml",
+        package_manifest.data(), package_manifest.size(), MZ_DEFAULT_COMPRESSION) != 0,
+        "add native manifest to .dmod");
+    require(mz_zip_writer_add_mem(&writer, "lib/linux-x86_64/libtest.so",
+        plugin_bytes.data(), plugin_bytes.size(), MZ_DEFAULT_COMPRESSION) != 0,
+        "add native library payload to .dmod");
+    void* package_memory = nullptr;
+    std::size_t package_size = 0;
+    require(mz_zip_writer_finalize_heap_archive(&writer, &package_memory, &package_size) != 0,
+            "finalize native .dmod archive");
+    require(mz_zip_writer_end(&writer) != 0, "finish native .dmod writer");
+    std::vector<std::byte> package_bytes(package_size);
+    std::memcpy(package_bytes.data(), package_memory, package_size);
+    mz_free(package_memory);
+
+    std::vector<std::string> package_errors;
+    auto package = PackageReader::open(package_bytes, package_errors);
+    require(package != nullptr && package_errors.empty(),
+            "parse native .dmod package from its archive");
+    const auto install_root = std::filesystem::temp_directory_path() /
+        "dream-native-mod-end-to-end";
+    std::filesystem::remove_all(install_root);
+    std::filesystem::create_directories(install_root);
+
+    counter = 0;
+    NativeModManager installed_manager(host.api());
+    const auto package_load = installed_manager.install_and_load(*package, install_root);
+    require(static_cast<bool>(package_load),
+            "install library from .dmod and load it without rebuilding engine");
+    require(counter == 1 && installed_manager.is_loaded("test.native"),
+            "installed native module can reach live engine host interface");
+    require(static_cast<bool>(installed_manager.enable("test.native")),
+            "enable installed .dmod module");
+    require(installed_manager.update(0.016), "update installed .dmod module");
+    require(static_cast<bool>(installed_manager.unload("test.native")),
+            "unload installed .dmod module");
+    require(counter == 11110,
+            "installed package executes create, enable, update, disable and destroy lifecycle");
+    installed_manager.shutdown();
+    std::filesystem::remove_all(install_root);
+#endif
+
 
 #if defined(__unix__) || defined(__APPLE__)
     std::ifstream plugin_file(DREAM_TEST_NATIVE_MOD_PATH, std::ios::binary);
