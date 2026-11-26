@@ -35,6 +35,16 @@ int main(){
     require(inside&&inside->penetration>0.25F&&near(length(inside->normal),1.0F),
         "sphere inside AABB selects a finite nearest exit face");
 
+    const OrientedBox3D rotated_box{{0,0,0},{1.0F,0.2F,0.2F},
+        {{{0.7071067F,0.7071067F,0},{-0.7071067F,0.7071067F,0},{0,0,1}}}};
+    const auto sphere_obb=collide(Sphere3D{{1.0F,1.0F,0},0.5F},rotated_box);
+    require(sphere_obb&&sphere_obb->penetration>0.0F,
+        "sphere-OBB collision uses the box's rotated local axes");
+    const auto obb_sphere=collide(rotated_box,Sphere3D{{1.0F,1.0F,0},0.5F});
+    require(obb_sphere&&near(obb_sphere->normal.x,-sphere_obb->normal.x)&&
+            near(obb_sphere->normal.y,-sphere_obb->normal.y),
+        "reversed sphere-OBB query flips the contact normal");
+
     const OrientedBox3D obb_a{{0,0,0},{1,1,1}};
     const OrientedBox3D obb_b{{1.5F,0,0},{1,1,1}};
     const auto oo=collide(obb_a,obb_b);

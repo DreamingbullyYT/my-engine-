@@ -190,6 +190,57 @@ struct ContactManifold3D final {
     auto result=collide(sphere,box); if(result) *result=flipped(*result); return result;
 }
 [[nodiscard]] inline std::optional<ContactManifold3D> collide(
+    const Sphere3D& sphere,const OrientedBox3D& box) noexcept {
+    if(!sphere.valid()||!box.valid()) return std::nullopt;
+    const Vec3 delta=sphere.center-box.center;
+    const Vec3 local{
+        dot(delta,box.axes[0]),dot(delta,box.axes[1]),dot(delta,box.axes[2])
+    };
+    const Vec3 clamped{
+        std::clamp(local.x,-box.half_extents.x,box.half_extents.x),
+        std::clamp(local.y,-box.half_extents.y,box.half_extents.y),
+        std::clamp(local.z,-box.half_extents.z,box.half_extents.z)
+    };
+    const Vec3 closest=box.center+box.axes[0]*clamped.x+
+        box.axes[1]*clamped.y+box.axes[2]*clamped.z;
+    const Vec3 toward_box=closest-sphere.center;
+    const float d2=length_squared(toward_box);
+    if(d2>sphere.radius*sphere.radius) return std::nullopt;
+    if(d2>1.0e-12F) {
+        const float distance=std::sqrt(d2);
+        return ContactManifold3D{toward_box/distance,closest,
+            std::max(0.0F,sphere.radius-distance)};
+    }
+
+    const std::array<float,6> face_distances{
+        local.x+box.half_extents.x,box.half_extents.x-local.x,
+        local.y+box.half_extents.y,box.half_extents.y-local.y,
+        local.z+box.half_extents.z,box.half_extents.z-local.z
+    };
+    const auto face=static_cast<std::size_t>(
+        std::min_element(face_distances.begin(),face_distances.end())-
+        face_distances.begin());
+    Vec3 outward{};
+    Vec3 point=closest;
+    switch(face) {
+    case 0: outward=-box.axes[0]; point=point+box.axes[0]*(-box.half_extents.x); break;
+    case 1: outward=box.axes[0]; point=point+box.axes[0]*(box.half_extents.x); break;
+    case 2: outward=-box.axes[1]; point=point+box.axes[1]*(-box.half_extents.y); break;
+    case 3: outward=box.axes[1]; point=point+box.axes[1]*(box.half_extents.y); break;
+    case 4: outward=-box.axes[2]; point=point+box.axes[2]*(-box.half_extents.z); break;
+    default: outward=box.axes[2]; point=point+box.axes[2]*(box.half_extents.z); break;
+    }
+    return ContactManifold3D{-outward,point,
+        sphere.radius+face_distances[face]};
+}
+[[nodiscard]] inline std::optional<ContactManifold3D> collide(
+    const OrientedBox3D& box,const Sphere3D& sphere) noexcept {
+    auto result=collide(sphere,box);
+    if(result) *result=flipped(*result);
+    return result;
+}
+
+[[nodiscard]] inline std::optional<ContactManifold3D> collide(
     const OrientedBox3D& a,const OrientedBox3D& b) noexcept {
     if(!a.valid()||!b.valid()) return std::nullopt;
     const Vec3 delta=b.center-a.center;
