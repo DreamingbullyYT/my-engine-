@@ -149,6 +149,36 @@ int main() {
     require(duplicate.status == assets::AssetLoadStatus::StoreRejected,
             "duplicate resource key is rejected");
 
+    assets::AssetCache<TextAsset, TextAssetTag> cache(16);
+    const auto reads_before_cached_load = filesystem.read_count.load();
+    auto cached = assets::load_async_cached(
+        jobs, filesystem, cache, "text/cached", "assets/hello.txt", decode_text,
+        [](const TextAsset& asset) { return asset.value.size(); }).get();
+    require(cached.loaded() && cached.status == assets::AssetLoadStatus::Loaded,
+            "cached loader decodes and inserts a new asset");
+    require(cache.find("text/cached") == cached.handle,
+            "cached loader returns the cache-owned handle");
+    require(cache.used_bytes() == 5,
+            "cached loader accounts the caller-provided size estimate");
+
+    auto cache_hit = assets::load_async_cached(
+        jobs, filesystem, cache, "text/cached", "assets/missing-on-purpose.txt", decode_text,
+        [](const TextAsset& asset) { return asset.value.size(); }).get();
+    require(cache_hit.loaded() && cache_hit.status == assets::AssetLoadStatus::CacheHit,
+            "existing cached key returns its handle without reading the file");
+    require(cache_hit.handle == cached.handle,
+            "cache hit preserves the existing handle");
+    require(filesystem.read_count.load() == reads_before_cached_load + 1,
+            "cache hit avoids additional filesystem I/O");
+
+    auto cache_too_large = assets::load_async_cached(
+        jobs, filesystem, cache, "text/too-large", "assets/hello.txt", decode_text,
+        [](const TextAsset&) { return std::size_t{17}; }).get();
+    require(cache_too_large.status == assets::AssetLoadStatus::CacheRejected,
+            "asset larger than cache budget is rejected");
+    require(cache_too_large.message.find("byte budget") != std::string::npos,
+            "cache rejection explains the byte budget");
+
     jobs.shutdown();
     std::cout << "Dream Engine asset loader tests passed.\n";
     return EXIT_SUCCESS;
