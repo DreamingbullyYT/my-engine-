@@ -97,6 +97,14 @@ add_library(dream_dmod STATIC
 )
 add_library(DreamEngine::DMod ALIAS dream_dmod)
 
+add_library(dream_world INTERFACE)
+add_library(DreamEngine::World ALIAS dream_world)
+target_include_directories(dream_world INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/world/include>
+)
+target_compile_features(dream_world INTERFACE cxx_std_20)
+target_link_libraries(dream_world INTERFACE DreamEngine::Core)
+
 add_library(dream_assets INTERFACE)
 add_library(DreamEngine::Assets ALIAS dream_assets)
 target_include_directories(dream_assets INTERFACE
@@ -193,6 +201,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_assets_dependency_graph_tests PRIVATE cxx_std_20)
     set_target_properties(dream_assets_dependency_graph_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.assets.dependency_graph COMMAND dream_assets_dependency_graph_tests)
+
+    add_executable(dream_world_tests tests/world/world_tests.cpp)
+    target_link_libraries(dream_world_tests PRIVATE DreamEngine::World)
+    target_compile_features(dream_world_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_world_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.world.ecs COMMAND dream_world_tests)
 
     add_executable(dream_platform_application_tests tests/platform/application_tests.cpp)
     target_link_libraries(dream_platform_application_tests PRIVATE DreamEngine::Platform)
