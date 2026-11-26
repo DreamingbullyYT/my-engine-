@@ -13,6 +13,7 @@
 #include <map>
 #include <optional>
 #include <span>
+#include <set>
 #include <sstream>
 #include <locale>
 #include <string>
@@ -24,8 +25,11 @@
 namespace dream::assets {
 
 inline constexpr std::string_view builtin_obj_importer_id{"dream.builtin.obj"};
+inline constexpr std::string_view builtin_mtl_importer_id{"dream.builtin.mtl"};
 inline constexpr std::uint64_t builtin_mesh_asset_type_v1{0x445245414D4D4553ULL};
 inline constexpr std::uint32_t builtin_mesh_asset_version{1U};
+inline constexpr std::uint64_t builtin_material_asset_type_v1{0x445245414D4D4154ULL};
+inline constexpr std::uint32_t builtin_material_asset_version{1U};
 
 struct BuiltinMeshVertexV1 final {
     std::array<float, 3> position{};
@@ -36,6 +40,22 @@ struct BuiltinMeshVertexV1 final {
 struct BuiltinMeshDataV1 final {
     std::vector<BuiltinMeshVertexV1> vertices;
     std::vector<std::uint32_t> indices;
+};
+
+struct BuiltinMaterialV1 final {
+    std::string name;
+    std::array<float,3> ambient{0.0F,0.0F,0.0F};
+    std::array<float,3> diffuse{1.0F,1.0F,1.0F};
+    std::array<float,3> specular{0.0F,0.0F,0.0F};
+    float shininess{0.0F};
+    float opacity{1.0F};
+    std::string diffuse_map;
+    std::string specular_map;
+    std::string normal_map;
+};
+
+struct BuiltinMaterialDataV1 final {
+    std::vector<BuiltinMaterialV1> materials;
 };
 
 namespace builtin_importer_detail {
@@ -141,6 +161,32 @@ inline void append_float(std::vector<std::byte>& bytes,float value) {
     append_u32(bytes,std::bit_cast<std::uint32_t>(value));
 }
 
+
+[[nodiscard]] inline std::string_view trim_ascii(std::string_view value) noexcept {
+    while(!value.empty()&&(value.front()==' '||value.front()=='\t'))value.remove_prefix(1U);
+    while(!value.empty()&&(value.back()==' '||value.back()=='\t'||value.back()=='\r'))
+        value.remove_suffix(1U);
+    return value;
+}
+
+[[nodiscard]] inline bool resolve_asset_reference(
+    std::string_view source_path,std::string_view reference,std::string& output) {
+    reference=trim_ascii(reference);
+    if(reference.empty()||reference.size()>4096U||reference.front()=='/'||
+       reference.find('\\')!=std::string_view::npos||
+       reference.find(':')!=std::string_view::npos)return false;
+    const auto slash=source_path.find_last_of('/');
+    output=slash==std::string_view::npos
+        ?std::string(reference)
+        :std::string(source_path.substr(0U,slash+1U))+std::string(reference);
+    return output.size()<=4096U&&platform::is_valid_virtual_path(output);
+}
+
+inline void append_string(std::vector<std::byte>& bytes,std::string_view value) {
+    append_u32(bytes,static_cast<std::uint32_t>(value.size()));
+    for(const unsigned char c:value)bytes.push_back(static_cast<std::byte>(c));
+}
+
 [[nodiscard]] inline AssetImporterOutput import_obj(
     std::string_view source_path,std::span<const std::byte> source_bytes,
     std::string_view options) {
@@ -165,6 +211,7 @@ inline void append_float(std::vector<std::byte>& bytes,float value) {
     constexpr std::size_t maximum_mesh_vertices=1'000'000U;
     constexpr std::size_t maximum_mesh_indices=3'000'000U;
     std::uint64_t face_id=0U;
+    std::set<std::string,std::less<>> material_libraries;
 
     for(std::size_t line_begin=0U;line_begin<source.size();) {
         const auto newline=source.find('\n',line_begin);
@@ -217,6 +264,20 @@ inline void append_float(std::vector<std::byte>& bytes,float value) {
             if(texcoords.size()>maximum_source_attributes) {
                 output.error="OBJ source exceeds the texture-coordinate limit";
                 return output;
+            }
+        } else if(command=="mtllib") {
+            for(auto token=next_token();!token.empty()&&token.front()!='#';
+                token=next_token()) {
+                std::string dependency;
+                if(!resolve_asset_reference(source_path,token,dependency)) {
+                    output.error="OBJ mtllib contains an unsafe or invalid relative path";
+                    return output;
+                }
+                material_libraries.emplace(std::move(dependency));
+                if(material_libraries.size()>256U) {
+                    output.error="OBJ references more than 256 material libraries";
+                    return output;
+                }
             }
         } else if(command=="f") {
             std::vector<FaceIndex> face;
@@ -332,6 +393,181 @@ inline void append_float(std::vector<std::byte>& bytes,float value) {
     artifact.type_id=builtin_mesh_asset_type_v1;
     artifact.version=builtin_mesh_asset_version;
     artifact.payload=std::move(payload);
+    artifact.dependencies.assign(material_libraries.begin(),material_libraries.end());
+    output.artifacts.push_back(std::move(artifact));
+    return output;
+}
+
+[[nodiscard]] inline AssetImporterOutput import_mtl(
+    std::string_view source_path,std::span<const std::byte> source_bytes,
+    std::string_view options) {
+    AssetImporterOutput output;
+    if(!options.empty()) {
+        output.error="The built-in MTL importer currently accepts no import options";
+        return output;
+    }
+    if(source_bytes.empty()||source_bytes.size()>16U*1024U*1024U) {
+        output.error="MTL source is empty or exceeds the 16 MiB parser limit";
+        return output;
+    }
+
+    const std::string_view source{
+        reinterpret_cast<const char*>(source_bytes.data()),source_bytes.size()};
+    BuiltinMaterialDataV1 data;
+    std::set<std::string,std::less<>> names;
+    std::set<std::string,std::less<>> dependencies;
+    BuiltinMaterialV1* current=nullptr;
+
+    for(std::size_t line_begin=0U;line_begin<source.size();) {
+        const auto newline=source.find('\n',line_begin);
+        const auto line_end=newline==std::string_view::npos?source.size():newline;
+        auto line=source.substr(line_begin,line_end-line_begin);
+        line_begin=line_end+(newline==std::string_view::npos?0U:1U);
+        if(!line.empty()&&line.back()=='\r')line.remove_suffix(1U);
+        if(line.size()>65536U) {
+            output.error="MTL line exceeds the 64 KiB parser limit";
+            return output;
+        }
+        auto content=trim_ascii(line);
+        if(content.empty()||content.front()=='#')continue;
+        std::size_t cursor=0U;
+        while(cursor<content.size()&&content[cursor]!=' '&&content[cursor]!='\t')++cursor;
+        const auto command=content.substr(0U,cursor);
+        const auto value=trim_ascii(content.substr(cursor));
+
+        if(command=="newmtl") {
+            if(value.empty()||value.size()>256U||value.front()=='#') {
+                output.error="MTL material name is empty or exceeds 256 bytes";
+                return output;
+            }
+            const auto comment=value.find('#');
+            const auto name=trim_ascii(value.substr(0U,comment));
+            if(name.empty()||!names.emplace(name).second||data.materials.size()>=10000U) {
+                output.error="MTL contains an empty/duplicate material name or too many materials";
+                return output;
+            }
+            data.materials.emplace_back();
+            data.materials.back().name=std::string(name);
+            current=&data.materials.back();
+            continue;
+        }
+        if(!current) {
+            output.error="MTL material properties must follow a newmtl declaration";
+            return output;
+        }
+        const auto parse_scalar=[&](float& target,float minimum,float maximum)->bool {
+            return parse_float(value,target)&&target>=minimum&&target<=maximum;
+        };
+        const auto parse_colour=[&](std::array<float,3>& target)->bool {
+            std::istringstream input{std::string(value)};
+            input.imbue(std::locale::classic());
+            if(!(input>>target[0]>>target[1]>>target[2]))return false;
+            std::string extra;
+            if(input>>extra)return false;
+            return std::all_of(target.begin(),target.end(),[](float v) {
+                return std::isfinite(v)&&v>=0.0F&&v<=1.0e6F;
+            });
+        };
+        if(command=="Ka") {
+            if(!parse_colour(current->ambient)) {
+                output.error="MTL Ka ambient colour is invalid";
+                return output;
+            }
+        } else if(command=="Kd") {
+            if(!parse_colour(current->diffuse)) {
+                output.error="MTL Kd diffuse colour is invalid";
+                return output;
+            }
+        } else if(command=="Ks") {
+            if(!parse_colour(current->specular)) {
+                output.error="MTL Ks specular colour is invalid";
+                return output;
+            }
+        } else if(command=="Ns") {
+            if(!parse_scalar(current->shininess,0.0F,1000.0F)) {
+                output.error="MTL Ns shininess must be in the range 0..1000";
+                return output;
+            }
+        } else if(command=="d") {
+            if(!parse_scalar(current->opacity,0.0F,1.0F)) {
+                output.error="MTL d opacity must be in the range 0..1";
+                return output;
+            }
+        } else if(command=="Tr") {
+            float transparency{};
+            if(!parse_scalar(transparency,0.0F,1.0F)) {
+                output.error="MTL Tr transparency must be in the range 0..1";
+                return output;
+            }
+            current->opacity=1.0F-transparency;
+        } else if(command=="map_Kd"||command=="map_Ks"||
+                  command=="map_Bump"||command=="bump") {
+            auto path=value;
+            const auto comment=path.find('#');
+            if(comment!=std::string_view::npos)path=trim_ascii(path.substr(0U,comment));
+            if(path.empty()||path.front()=='-') {
+                output.error="MTL texture maps must use a plain relative path; map options are unsupported";
+                return output;
+            }
+            std::string resolved;
+            if(!resolve_asset_reference(source_path,path,resolved)) {
+                output.error="MTL texture map contains an unsafe or invalid relative path";
+                return output;
+            }
+            if(command=="map_Kd")current->diffuse_map=resolved;
+            else if(command=="map_Ks")current->specular_map=resolved;
+            else current->normal_map=resolved;
+            dependencies.emplace(std::move(resolved));
+            if(dependencies.size()>10000U) {
+                output.error="MTL references too many textures";
+                return output;
+            }
+        }
+        // Unused standard material fields (illum, Ni, Tf, Ke, etc.) are ignored.
+    }
+
+    if(data.materials.empty()) {
+        output.error="MTL file did not declare any materials";
+        return output;
+    }
+
+    std::vector<std::byte> payload;
+    for(const char c:std::array<char,4>{'D','M','A','T'})
+        payload.push_back(static_cast<std::byte>(c));
+    append_u32(payload,builtin_material_asset_version);
+    append_u32(payload,static_cast<std::uint32_t>(data.materials.size()));
+    for(const auto& material:data.materials) {
+        append_string(payload,material.name);
+        for(const auto value:material.ambient)append_float(payload,value);
+        for(const auto value:material.diffuse)append_float(payload,value);
+        for(const auto value:material.specular)append_float(payload,value);
+        append_float(payload,material.shininess);
+        append_float(payload,material.opacity);
+        append_string(payload,material.diffuse_map);
+        append_string(payload,material.specular_map);
+        append_string(payload,material.normal_map);
+        if(payload.size()>64U*1024U*1024U) {
+            output.error="MTL serialized material data exceeds the 64 MiB limit";
+            return output;
+        }
+    }
+
+    std::string output_path(source_path);
+    const auto slash=output_path.find_last_of('/');
+    const auto dot=output_path.find_last_of('.');
+    if(dot!=std::string::npos&&(slash==std::string::npos||dot>slash))
+        output_path.resize(dot);
+    output_path.append(".dmat");
+    if(output_path.size()>4096U) {
+        output.error="MTL output path exceeds the virtual-path limit";
+        return output;
+    }
+    ImportedArtifact artifact;
+    artifact.output_path=std::move(output_path);
+    artifact.type_id=builtin_material_asset_type_v1;
+    artifact.version=builtin_material_asset_version;
+    artifact.payload=std::move(payload);
+    artifact.dependencies.assign(dependencies.begin(),dependencies.end());
     output.artifacts.push_back(std::move(artifact));
     return output;
 }
@@ -412,14 +648,115 @@ inline void append_float(std::vector<std::byte>& bytes,float value) {
     return true;
 }
 
+
+[[nodiscard]] inline bool decode_builtin_material_v1(
+    std::span<const std::byte> payload,BuiltinMaterialDataV1& output,
+    std::string& error) {
+    if(payload.size()<12U||payload.size()>64U*1024U*1024U||
+       payload[0]!=std::byte{'D'}||payload[1]!=std::byte{'M'}||
+       payload[2]!=std::byte{'A'}||payload[3]!=std::byte{'T'}) {
+        error="Material payload has an invalid DMAT header or size";
+        return false;
+    }
+    std::size_t offset=4U;
+    const auto read_u32=[&](std::uint32_t& value)->bool {
+        if(offset>payload.size()||payload.size()-offset<4U)return false;
+        value=0U;
+        for(unsigned byte=0U;byte<4U;++byte)
+            value|=static_cast<std::uint32_t>(
+                static_cast<std::uint8_t>(payload[offset+byte]))<<(byte*8U);
+        offset+=4U;
+        return true;
+    };
+    const auto read_float=[&](float& value)->bool {
+        std::uint32_t bits{};
+        if(!read_u32(bits))return false;
+        value=std::bit_cast<float>(bits);
+        return std::isfinite(value);
+    };
+    const auto read_string=[&](std::string& value,std::size_t maximum)->bool {
+        std::uint32_t length{};
+        if(!read_u32(length)||length>maximum||offset>payload.size()||
+           payload.size()-offset<length)return false;
+        std::string candidate;
+        candidate.reserve(length);
+        for(std::size_t i=0U;i<length;++i) {
+            const char c=static_cast<char>(static_cast<std::uint8_t>(payload[offset+i]));
+            if(c=='\0')return false;
+            candidate.push_back(c);
+        }
+        offset+=length;
+        value=std::move(candidate);
+        return true;
+    };
+
+    std::uint32_t version{},count{};
+    if(!read_u32(version)||!read_u32(count)||
+       version!=builtin_material_asset_version||count==0U||count>10000U) {
+        error="Material payload version or material count is invalid";
+        return false;
+    }
+    BuiltinMaterialDataV1 decoded;
+    decoded.materials.reserve(count);
+    std::set<std::string,std::less<>> names;
+    for(std::uint32_t i=0U;i<count;++i) {
+        BuiltinMaterialV1 material;
+        if(!read_string(material.name,256U)||material.name.empty()||
+           !names.emplace(material.name).second) {
+            error="Material payload contains an invalid or duplicate name";
+            return false;
+        }
+        for(auto& value:material.ambient)if(!read_float(value)||value<0.0F) {
+            error="Material ambient colour is invalid";return false;
+        }
+        for(auto& value:material.diffuse)if(!read_float(value)||value<0.0F) {
+            error="Material diffuse colour is invalid";return false;
+        }
+        for(auto& value:material.specular)if(!read_float(value)||value<0.0F) {
+            error="Material specular colour is invalid";return false;
+        }
+        if(!read_float(material.shininess)||material.shininess<0.0F||
+           material.shininess>1000.0F||!read_float(material.opacity)||
+           material.opacity<0.0F||material.opacity>1.0F||
+           !read_string(material.diffuse_map,4096U)||
+           !read_string(material.specular_map,4096U)||
+           !read_string(material.normal_map,4096U)) {
+            error="Material scalar or texture path is invalid";
+            return false;
+        }
+        for(const auto* path:{&material.diffuse_map,&material.specular_map,&material.normal_map}) {
+            if(!path->empty()&&!platform::is_valid_virtual_path(*path)) {
+                error="Material payload contains an unsafe texture dependency";
+                return false;
+            }
+        }
+        decoded.materials.push_back(std::move(material));
+    }
+    if(offset!=payload.size()) {
+        error="Material payload contains trailing bytes";
+        return false;
+    }
+    output=std::move(decoded);
+    error.clear();
+    return true;
+}
+
 [[nodiscard]] inline AssetImporterRegistryError register_builtin_importers(
     AssetImporterRegistry& registry) {
-    return registry.register_importer(AssetImporterRegistration{
+    const auto obj_status=registry.register_importer(AssetImporterRegistration{
         std::string(builtin_obj_importer_id),
         {".obj"},
         [](std::string_view path,std::span<const std::byte> bytes,
            std::string_view options) {
             return builtin_importer_detail::import_obj(path,bytes,options);
+        }});
+    if(obj_status!=AssetImporterRegistryError::None)return obj_status;
+    return registry.register_importer(AssetImporterRegistration{
+        std::string(builtin_mtl_importer_id),
+        {".mtl"},
+        [](std::string_view path,std::span<const std::byte> bytes,
+           std::string_view options) {
+            return builtin_importer_detail::import_mtl(path,bytes,options);
         }});
 }
 
