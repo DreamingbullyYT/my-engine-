@@ -423,6 +423,31 @@ int main() {
     require(tiny_dynamic.error == BodyCreateError::InvalidInertia,
             "dynamic body with unusably small inertia is rejected");
 
+    PhysicsWorld2D transactional(PhysicsSettings2D{.gravity = {0, 0}});
+    const float near_limit = std::numeric_limits<float>::max() * 0.9F;
+    const auto overflow_candidate = transactional.create_body(BodyDescription2D{
+        .type = BodyType::Dynamic,
+        .position = {near_limit, 0},
+        .mass = 1.0F,
+        .collider = CircleCollider2D{{}, 1.0F}
+    });
+    require(static_cast<bool>(overflow_candidate),
+            "large but finite dynamic body can be created");
+    require(transactional.set_velocity(
+                overflow_candidate.handle, {near_limit, 0}, 0),
+            "large finite velocity can be assigned");
+    const auto before_overflow = transactional.body_state(
+        overflow_candidate.handle);
+    const auto overflow_step = transactional.update(0.25);
+    const auto after_overflow = transactional.body_state(
+        overflow_candidate.handle);
+    require(overflow_step.error == PhysicsStepError::InvalidBodyState,
+            "integration rejects a world-space position overflow");
+    require(before_overflow && after_overflow &&
+            after_overflow->position.x == before_overflow->position.x &&
+            after_overflow->linear_velocity.x == before_overflow->linear_velocity.x,
+            "failed integration leaves every body state unchanged");
+
     std::cout << "Dream Engine 2D physics world tests passed.\n";
     return EXIT_SUCCESS;
 }
