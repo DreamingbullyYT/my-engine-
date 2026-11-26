@@ -41,6 +41,12 @@ struct BoxCollider2D final {
 
 using ColliderShape2D = std::variant<CircleCollider2D, BoxCollider2D>;
 
+struct CollisionFilter2D final {
+    std::uint32_t category_bits{0x00000001U};
+    std::uint32_t mask_bits{0xFFFFFFFFU};
+    std::int16_t group_index{0};
+};
+
 struct BodyDescription2D final {
     BodyType type{BodyType::Static};
     Vec2 position{};
@@ -53,11 +59,14 @@ struct BodyDescription2D final {
     float friction{0.5F};
     float restitution{0.0F};
     ColliderShape2D collider{CircleCollider2D{}};
+    CollisionFilter2D collision_filter{};
+    bool sensor{false};
 };
 
 struct PhysicsSettings2D final {
     Vec2 gravity{0.0F, -9.81F};
     std::uint32_t velocity_iterations{8U};
+    std::uint32_t position_iterations{3U};
     float penetration_slop{0.005F};
     float position_correction_percent{0.8F};
     float maximum_delta_seconds{0.25F};
@@ -103,6 +112,8 @@ struct BodyState2D final {
     float inertia{0.0F};
     float friction{0.0F};
     float restitution{0.0F};
+    bool sensor{false};
+    CollisionFilter2D collision_filter{};
 };
 
 struct PhysicsContact2D final {
@@ -111,6 +122,7 @@ struct PhysicsContact2D final {
     ContactManifold manifold{};
     float normal_impulse{0.0F};
     float tangent_impulse{0.0F};
+    bool sensor{false};
 };
 
 struct PhysicsStepReport2D final {
@@ -200,7 +212,8 @@ public:
         return BodyState2D{
             body->handle, body->type, body->position, body->rotation,
             body->velocity, body->angular_velocity, body->mass,
-            body->inertia, body->friction, body->restitution
+            body->inertia, body->friction, body->restitution,
+            body->sensor, body->collision_filter
         };
     }
 
@@ -328,12 +341,18 @@ public:
             auto* first = find_proxy(pair.first);
             auto* second = find_proxy(pair.second);
             if (first == nullptr || second == nullptr) continue;
-            if (first->inverse_mass == 0.0F &&
+            if (!should_collide(first->collision_filter, second->collision_filter))
+                continue;
+            const bool sensor_pair = first->sensor || second->sensor;
+            if (!sensor_pair && first->inverse_mass == 0.0F &&
                 second->inverse_mass == 0.0F) continue;
 
             const auto manifold = collide_bodies(*first, *second);
             if (!manifold) continue;
-            contacts.push_back({first->handle, second->handle, *manifold});
+            contacts.push_back({
+                first->handle, second->handle, *manifold, 0.0F, 0.0F,
+                sensor_pair
+            });
         }
 
         for (std::uint32_t iteration = 0;
@@ -341,16 +360,23 @@ public:
             for (auto& contact : contacts) {
                 auto* first = find_body(contact.first);
                 auto* second = find_body(contact.second);
-                if (first == nullptr || second == nullptr) continue;
+                if (first == nullptr || second == nullptr || contact.sensor) continue;
                 solve_velocity(*first, *second, contact);
             }
         }
 
-        for (auto& contact : contacts) {
-            auto* first = find_body(contact.first);
-            auto* second = find_body(contact.second);
-            if (first == nullptr || second == nullptr) continue;
-            solve_position(*first, *second, contact.manifold);
+        for (std::uint32_t iteration = 0;
+             iteration < settings_.position_iterations; ++iteration) {
+            for (auto& contact : contacts) {
+                if (contact.sensor) continue;
+                auto* first = find_body(contact.first);
+                auto* second = find_body(contact.second);
+                if (first == nullptr || second == nullptr) continue;
+                const auto manifold = collide_bodies(*first, *second);
+                if (!manifold) continue;
+                contact.manifold = *manifold;
+                solve_position(*first, *second, *manifold);
+            }
         }
 
         for (auto& [index, body] : bodies_) {
@@ -365,7 +391,8 @@ public:
         for (const auto& contact : contacts) {
             report.contacts.push_back({
                 contact.first, contact.second, contact.manifold,
-                contact.normal_impulse, contact.tangent_impulse
+                contact.normal_impulse, contact.tangent_impulse,
+                contact.sensor
             });
         }
         report.contact_count = report.contacts.size();
@@ -391,6 +418,8 @@ private:
         float friction{0.5F};
         float restitution{0.0F};
         ColliderShape2D collider{CircleCollider2D{}};
+        CollisionFilter2D collision_filter{};
+        bool sensor{false};
     };
 
     using WorldShape = std::variant<Circle, OrientedBox>;
@@ -401,7 +430,18 @@ private:
         ContactManifold manifold{};
         float normal_impulse{0.0F};
         float tangent_impulse{0.0F};
+        bool sensor{false};
     };
+
+    [[nodiscard]] static bool should_collide(
+        CollisionFilter2D first, CollisionFilter2D second) noexcept {
+        if (first.group_index != 0 &&
+            first.group_index == second.group_index) {
+            return first.group_index > 0;
+        }
+        return (first.mask_bits & second.category_bits) != 0U &&
+               (second.mask_bits & first.category_bits) != 0U;
+    }
 
     [[nodiscard]] static bool finite(Vec2 value) noexcept {
         return std::isfinite(value.x) && std::isfinite(value.y);
@@ -412,6 +452,8 @@ private:
         return finite(settings.gravity) &&
                settings.velocity_iterations > 0U &&
                settings.velocity_iterations <= 64U &&
+               settings.position_iterations > 0U &&
+               settings.position_iterations <= 32U &&
                std::isfinite(settings.penetration_slop) &&
                settings.penetration_slop >= 0.0F &&
                std::isfinite(settings.position_correction_percent) &&
@@ -487,6 +529,8 @@ private:
         body.friction = description.friction;
         body.restitution = description.restitution;
         body.collider = std::move(description.collider);
+        body.collision_filter = description.collision_filter;
+        body.sensor = description.sensor;
 
         const float inertia = std::visit([&](const auto& collider) {
             using Collider = std::decay_t<decltype(collider)>;
@@ -641,21 +685,23 @@ private:
             point_velocity(second, second_radius) -
             point_velocity(first, first_radius);
         const float normal_speed = dot(relative_velocity, normal);
-        if (normal_speed > 0.0F) return;
+        if (normal_speed < 0.0F) {
+            const float restitution =
+                std::abs(normal_speed) > 0.5F
+                    ? std::max(first.restitution, second.restitution) : 0.0F;
+            const float impulse_delta =
+                -(1.0F + restitution) * normal_speed / denominator;
+            const float old_normal_impulse = contact.normal_impulse;
+            contact.normal_impulse = std::max(
+                old_normal_impulse + impulse_delta, 0.0F);
+            const float applied_normal =
+                contact.normal_impulse - old_normal_impulse;
+            apply_pair_impulse(
+                first, second, normal * applied_normal,
+                first_radius, second_radius);
+        }
 
-        const float restitution =
-            std::abs(normal_speed) > 0.5F
-                ? std::max(first.restitution, second.restitution) : 0.0F;
-        const float impulse_delta =
-            -(1.0F + restitution) * normal_speed / denominator;
-        const float old_normal_impulse = contact.normal_impulse;
-        contact.normal_impulse = std::max(
-            old_normal_impulse + impulse_delta, 0.0F);
-        const float applied_normal = contact.normal_impulse - old_normal_impulse;
-        apply_pair_impulse(
-            first, second, normal * applied_normal,
-            first_radius, second_radius);
-
+        if (contact.normal_impulse <= 0.0F) return;
         relative_velocity =
             point_velocity(second, second_radius) -
             point_velocity(first, first_radius);
@@ -665,8 +711,18 @@ private:
         if (tangent_length <= 1.0e-8F) return;
         tangent = tangent / tangent_length;
 
-        const float friction_delta = -dot(relative_velocity, tangent) / denominator;
-        const float friction = std::sqrt(first.friction * second.friction);
+        const float first_tangent_cross = cross(first_radius, tangent);
+        const float second_tangent_cross = cross(second_radius, tangent);
+        const float tangent_denominator =
+            first.inverse_mass + second.inverse_mass +
+            first_tangent_cross * first_tangent_cross * first.inverse_inertia +
+            second_tangent_cross * second_tangent_cross * second.inverse_inertia;
+        if (tangent_denominator <= 1.0e-12F) return;
+
+        const float friction_delta =
+            -dot(relative_velocity, tangent) / tangent_denominator;
+        const float friction =
+            std::sqrt(first.friction) * std::sqrt(second.friction);
         const float maximum_friction = friction * contact.normal_impulse;
         const float old_tangent_impulse = contact.tangent_impulse;
         contact.tangent_impulse = std::clamp(

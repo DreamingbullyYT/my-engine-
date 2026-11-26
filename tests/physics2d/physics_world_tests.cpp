@@ -190,6 +190,124 @@ int main() {
     require(std::abs(falling.body_state(ball.handle)->linear_velocity.x) < 4.0F,
             "friction impulse reduces horizontal sliding velocity");
 
+    PhysicsWorld2D filtering(PhysicsSettings2D{
+        .gravity = {0, 0},
+        .velocity_iterations = 8U
+    });
+    CollisionFilter2D category_a{0x1U, 0x2U, 0};
+    CollisionFilter2D category_b{0x2U, 0x1U, 0};
+    const auto filtered_a = filtering.create_body(BodyDescription2D{
+        .type = BodyType::Dynamic,
+        .position = {0, 0},
+        .mass = 1.0F,
+        .collider = CircleCollider2D{{}, 1.0F},
+        .collision_filter = category_a
+    });
+    const auto filtered_b = filtering.create_body(BodyDescription2D{
+        .type = BodyType::Static,
+        .position = {1, 0},
+        .collider = CircleCollider2D{{}, 1.0F},
+        .collision_filter = category_b
+    });
+    require(filtered_a && filtered_b, "filtered bodies are created");
+    auto filtered_report = filtering.update(1.0 / 60.0);
+    require(filtered_report && filtered_report.contact_count == 1U,
+            "mutually permitted category and mask bits collide");
+
+    require(filtering.set_transform(filtered_b.handle, {1, 0}, 0),
+            "filtered body transform remains valid");
+    CollisionFilter2D denied_mask{0x2U, 0x4U, 0};
+    const auto mask_body = filtering.create_body(BodyDescription2D{
+        .type = BodyType::Static,
+        .position = {0.5F, 0},
+        .collider = CircleCollider2D{{}, 0.5F},
+        .collision_filter = denied_mask
+    });
+    require(mask_body, "mask-filter test body is created");
+    filtered_report = filtering.update(1.0 / 60.0);
+    require(filtered_report.contact_count == 0U,
+            "collision is rejected unless both masks permit it");
+
+    PhysicsWorld2D grouped(PhysicsSettings2D{.gravity = {0, 0}});
+    const auto group_a = grouped.create_body(BodyDescription2D{
+        .type = BodyType::Dynamic,
+        .position = {0, 0},
+        .mass = 1.0F,
+        .collider = CircleCollider2D{{}, 1.0F},
+        .collision_filter = CollisionFilter2D{0x1U, 0x0U, 7}
+    });
+    const auto group_b = grouped.create_body(BodyDescription2D{
+        .type = BodyType::Static,
+        .position = {1, 0},
+        .collider = CircleCollider2D{{}, 1.0F},
+        .collision_filter = CollisionFilter2D{0x2U, 0x0U, 7}
+    });
+    require(group_a && group_b, "positive-group bodies are created");
+    require(grouped.update(1.0 / 60.0).contact_count == 1U,
+            "same positive group overrides masks to allow collision");
+
+    PhysicsWorld2D ignored_group(PhysicsSettings2D{.gravity = {0, 0}});
+    const auto ignored_a = ignored_group.create_body(BodyDescription2D{
+        .type = BodyType::Dynamic,
+        .position = {0, 0},
+        .mass = 1.0F,
+        .collider = CircleCollider2D{{}, 1.0F},
+        .collision_filter = CollisionFilter2D{0x1U, 0xFFFFFFFFU, -3}
+    });
+    const auto ignored_b = ignored_group.create_body(BodyDescription2D{
+        .type = BodyType::Static,
+        .position = {1, 0},
+        .collider = CircleCollider2D{{}, 1.0F},
+        .collision_filter = CollisionFilter2D{0x1U, 0xFFFFFFFFU, -3}
+    });
+    require(ignored_a && ignored_b, "negative-group bodies are created");
+    require(ignored_group.update(1.0 / 60.0).contact_count == 0U,
+            "same negative group suppresses collision");
+
+    PhysicsWorld2D sensors(PhysicsSettings2D{.gravity = {0, 0}});
+    const auto sensor = sensors.create_body(BodyDescription2D{
+        .type = BodyType::Static,
+        .position = {0, 0},
+        .collider = CircleCollider2D{{}, 1.0F},
+        .sensor = true
+    });
+    const auto sensor_body = sensors.create_body(BodyDescription2D{
+        .type = BodyType::Dynamic,
+        .position = {1, 0},
+        .linear_velocity = {-2, 0},
+        .mass = 1.0F,
+        .collider = CircleCollider2D{{}, 1.0F}
+    });
+    require(sensor && sensor_body, "sensor pair is created");
+    const auto sensor_before = sensors.body_state(sensor_body.handle);
+    const auto sensor_report = sensors.update(1.0 / 60.0);
+    const auto sensor_after = sensors.body_state(sensor_body.handle);
+    require(sensor_report && sensor_report.contact_count == 1U &&
+            sensor_report.contacts[0].sensor,
+            "sensor overlap is reported as a trigger contact");
+    require(sensor_after && sensor_before &&
+            sensor_after->linear_velocity.x == sensor_before->linear_velocity.x,
+            "sensor contact applies no collision impulse");
+
+    PhysicsWorld2D static_sensors(PhysicsSettings2D{.gravity = {0, 0}});
+    const auto static_sensor_a = static_sensors.create_body(BodyDescription2D{
+        .type = BodyType::Static,
+        .position = {0, 0},
+        .collider = CircleCollider2D{{}, 1.0F},
+        .sensor = true
+    });
+    const auto static_sensor_b = static_sensors.create_body(BodyDescription2D{
+        .type = BodyType::Static,
+        .position = {1, 0},
+        .collider = CircleCollider2D{{}, 1.0F}
+    });
+    require(static_sensor_a && static_sensor_b,
+            "static sensor pair can be created");
+    const auto static_sensor_report = static_sensors.update(1.0 / 60.0);
+    require(static_sensor_report.contact_count == 1U &&
+            static_sensor_report.contacts[0].sensor,
+            "static sensor overlaps are reported");
+
     std::cout << "Dream Engine 2D physics world tests passed.\n";
     return EXIT_SUCCESS;
 }
