@@ -405,7 +405,7 @@ int main() {
                 dream::audio::AudioError::None &&
             runtime_audio_output[0] > 0.0F,
             "runtime audio mixer produces stereo PCM");
-    require(runtime.audio().remove_clip(runtime_audio.first),
+    require(static_cast<bool>(runtime.audio().remove_clip(runtime_audio.first)),
             "runtime audio clip releases after playback");
 
     std::string importer_id;
