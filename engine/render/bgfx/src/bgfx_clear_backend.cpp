@@ -54,6 +54,7 @@ std::atomic_flag& bgfx_context_guard() noexcept {
 
 struct BgfxClearBackend::Impl final {
     RenderSurfaceInfo surface{};
+    platform::NativeSurface native_surface{};
     bool initialized{false};
     bool owns_global_context{false};
 };
@@ -116,6 +117,7 @@ bool BgfxClearBackend::initialize(
     }
 
     impl_->surface = surface;
+    impl_->native_surface = native_surface;
     impl_->initialized = true;
 
     // This first backend stage only clears/presents. Do not claim that it can
@@ -141,10 +143,12 @@ bool BgfxClearBackend::resize(
         return false;
     }
 
-    bgfx::reset(
-        surface.pixel_extent.width,
-        surface.pixel_extent.height,
-        BGFX_RESET_VSYNC);
+    bgfx::SwapChain swap_chain;
+    swap_chain.nwh = impl_->native_surface.window;
+    swap_chain.ndt = impl_->native_surface.display;
+    swap_chain.width = surface.pixel_extent.width;
+    swap_chain.height = surface.pixel_extent.height;
+    bgfx::reset(BGFX_RESET_VSYNC, &swap_chain);
     impl_->surface = surface;
     return true;
 }
@@ -187,6 +191,7 @@ void BgfxClearBackend::shutdown() noexcept {
     impl_->initialized = false;
     impl_->owns_global_context = false;
     impl_->surface = {};
+    impl_->native_surface = {};
     bgfx_context_guard().clear(std::memory_order_release);
 }
 
