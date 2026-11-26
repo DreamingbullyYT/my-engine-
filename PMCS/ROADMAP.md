@@ -40,7 +40,8 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [x] Initial CPU-side byte-budgeted LRU AssetCache; all four CI jobs passed in run 45768090059.
 - [x] Optional AssetLoader-to-AssetCache async path with cache-hit short-circuit and caller-provided size estimator; all four CI jobs passed in run 45768508344.
 - [x] Cooperative cancellation tokens/checkpoints for async uncached and cached asset loading; verified in all four CI jobs in run 45769042275. This does not interrupt an active read/decoder.
-- [ ] Define explicit async service shutdown/lifetime policy and add in-flight request deduplication.
+- [x] In-flight asset request coordinator and coordinated uncached/cached loader wrappers; concurrent same-ID calls share one read/decode and result. Verified in all four CI jobs in run 45770215802.
+- [ ] Define explicit async service shutdown/lifetime policy and independent per-subscriber cancellation semantics.
 - [ ] Renderer/GPU upload and GPU resource residency.
 
 ## P3 — Rendering
