@@ -12,6 +12,7 @@
 
 #if defined(__ANDROID__)
 #include <android/native_activity.h>
+#include <android/log.h>
 
 #include <array>
 #include <cstddef>
@@ -427,7 +428,20 @@ void render_demo_frame(
 } // namespace
 
 extern "C" void android_main(android_app* app) {
-    if (app == nullptr || app->activity == nullptr) return;
+    __android_log_write(ANDROID_LOG_INFO, "DreamEngineBoot",
+                        "android_main entered");
+    if (app == nullptr) {
+        __android_log_write(ANDROID_LOG_ERROR, "DreamEngineBoot",
+                            "android_main received null android_app");
+        return;
+    }
+    if (app->activity == nullptr) {
+        __android_log_write(ANDROID_LOG_ERROR, "DreamEngineBoot",
+                            "android_main received null activity");
+        return;
+    }
+    __android_log_write(ANDROID_LOG_INFO, "DreamEngineBoot",
+                        "android_app and activity are valid");
 
     Logger logger;
     std::vector<Logger::Sink> sinks;
@@ -483,6 +497,8 @@ extern "C" void android_main(android_app* app) {
                      "Could not load GLES3 mesh shaders: " + shader_error);
         return;
     }
+    __android_log_write(ANDROID_LOG_INFO, "DreamEngineBoot",
+                        "APK assets and GLES shader binaries loaded");
     logger.write(LogLevel::info, "render.shader",
                  "Loaded pinned GLES 3.0 sprite and mesh shader binaries from APK assets");
 
@@ -523,6 +539,8 @@ extern "C" void android_main(android_app* app) {
 
     dream::platform::ApplicationCallbacks callbacks;
     callbacks.on_initialize = [&]() {
+        __android_log_write(ANDROID_LOG_INFO, "DreamEngineBoot",
+                            "Application on_initialize callback entered");
         dream::platform::WindowConfig config;
         config.title = "Dream Engine";
         config.width = 1280;
@@ -543,8 +561,12 @@ extern "C" void android_main(android_app* app) {
         while (backend.poll_window_event(window_event)) {
             switch (window_event.type) {
             case dream::platform::WindowEventType::SurfaceCreated:
+                __android_log_write(ANDROID_LOG_INFO, "DreamEngineBoot",
+                                    "GameActivity native surface created");
                 logger.write(LogLevel::info, "platform.surface",
                              "Native Android render surface created");
+                __android_log_write(ANDROID_LOG_INFO, "DreamEngineBoot",
+                                    "Starting EngineRuntime/render surface initialization");
                 if (!initialize_render_surface(
                         engine, window, runtime_initialized, renderer_ready,
                         demo, logger)) {
@@ -552,6 +574,8 @@ extern "C" void android_main(android_app* app) {
                                  "Could not initialize/recreate the Android render surface");
                     if (application != nullptr) application->request_stop();
                 } else {
+                    __android_log_write(ANDROID_LOG_INFO, "DreamEngineBoot",
+                                        "EngineRuntime and renderer initialized");
                     start_audio();
                 }
                 break;
@@ -639,6 +663,8 @@ extern "C" void android_main(android_app* app) {
         },
         std::move(callbacks));
     application = &host;
+    __android_log_write(ANDROID_LOG_INFO, "DreamEngineBoot",
+                        "Entering native Application::run loop");
     if (!host.run()) {
         logger.write(LogLevel::critical, "platform.application",
                      "Application loop failed: " + host.error());
