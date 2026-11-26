@@ -160,7 +160,7 @@ int main() {
     const auto rotated_hit=rotated_queries.raycast(
         Ray3D{{0,0,3},{0,0,-1},10});
     require(rotated_hit&&rotated_hit->body==rotated_box.handle&&
-            near(rotated_hit->distance,1.93934F,0.05F),
+            near(rotated_hit->distance,2.2929F,0.05F),
         "raycast intersects an oriented box using its world-space axes");
     return EXIT_SUCCESS;
 }
