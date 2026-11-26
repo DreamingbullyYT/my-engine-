@@ -6,6 +6,7 @@
 #include <dream/render/bgfx/bgfx_clear_backend.hpp>
 #include <dream/render/bgfx/bgfx_shader_assets.hpp>
 #include <dream/runtime/engine_runtime.hpp>
+#include <dream/world/camera.hpp>
 #include <dream/audio/android/aaudio_output.hpp>
 
 #if defined(__ANDROID__)
@@ -197,7 +198,7 @@ bool initialize_render_surface(
 
 void render_demo_frame(
     dream::runtime::EngineRuntime& engine,
-    dream::platform::AndroidGameActivityBackend& platform,
+    dream::platform::AndroidGameActivityBackend& platform_backend,
     dream::platform::WindowId window,
     DemoState& demo,
     double delta_seconds,
@@ -220,7 +221,7 @@ void render_demo_frame(
     if (!renderer_ready || !engine.render_device().initialized()) return;
 
     platform::WindowMetrics metrics{};
-    if (!platform.get_metrics(window, metrics) ||
+    if (!platform_backend.get_metrics(window, metrics) ||
         metrics.pixel_width == 0U || metrics.pixel_height == 0U) {
         logger.write(LogLevel::warning, "platform.window",
                      "Skipping frame because the native window metrics are unavailable");
