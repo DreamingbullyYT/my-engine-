@@ -36,8 +36,11 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [ ] Serialization and save/load contracts.
 - [x] Initial typed ResourceStore key-to-handle layer with duplicate-key rejection and scoped access.
 - [x] Async asset read/decode/register helper with bounded reads; Linux GCC/Clang tests and Android ARM64 cross-compilation passed in run 45765620129.
-- [ ] Deterministic asset dependency planner with required/optional dependency handling and cycle detection; implementation added, CI verification pending.
-- [ ] Asset cancellation/lifetime policy, cache/eviction policy and renderer upload.
+- [x] Deterministic asset dependency planner with required/optional dependency handling and cycle detection; all four CI jobs passed in run 45766502045.
+- [x] Initial CPU-side byte-budgeted LRU AssetCache; all four CI jobs passed in run 45768090059.
+- [x] Optional AssetLoader-to-AssetCache async path with cache-hit short-circuit and caller-provided size estimator; all four CI jobs passed in run 45768508344.
+- [ ] Asset cancellation/lifetime policy and in-flight request deduplication.
+- [ ] Renderer/GPU upload and GPU resource residency.
 
 ## P3 — Rendering
 - [ ] Compare renderer candidates.
