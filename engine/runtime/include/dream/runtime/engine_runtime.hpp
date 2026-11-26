@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dream/core/fixed_step_clock.hpp>
+#include <dream/core/log.hpp>
 #include <dream/animation/animation_runtime.hpp>
 #include <dream/assets/builtin_importers.hpp>
 #include <dream/audio/audio_mixer.hpp>
@@ -32,6 +33,7 @@ struct EngineRuntimeConfig final {
     physics2d::PhysicsSettings2D physics2d{};
     physics3d::PhysicsSettings3D physics3d{};
     render::FrameBuilderLimits frame_builder{};
+    core::Logger* logger{nullptr};
 };
 
 enum class RuntimeState : std::uint8_t {
@@ -255,6 +257,13 @@ public:
             assets::register_builtin_importers(asset_importers_) ==
                 assets::AssetImporterRegistryError::None;
 
+        log_message(
+            configuration_valid_ ? core::LogLevel::info : core::LogLevel::error,
+            "runtime.lifecycle",
+            configuration_valid_
+                ? "EngineRuntime constructed; core services and built-in importers are ready"
+                : "EngineRuntime configuration or service registration validation failed");
+
         const auto physics_system = scene_.systems().add_system(
             "DreamEngine.PhysicsWorld2D",
             world::SystemPhase::Update,
@@ -362,20 +371,35 @@ public:
     }
 
     [[nodiscard]] RuntimeInitResult initialize(platform::WindowId window) {
-        if (state_ == RuntimeState::Initialized)
+        if (state_ == RuntimeState::Initialized) {
+            log_message(core::LogLevel::warning, "runtime.lifecycle",
+                        "initialize rejected: EngineRuntime is already initialized");
             return {RuntimeError::AlreadyInitialized, {}};
-        if (state_ == RuntimeState::Stopped || state_ == RuntimeState::Failed)
+        }
+        if (state_ == RuntimeState::Stopped || state_ == RuntimeState::Failed) {
+            log_message(core::LogLevel::error, "runtime.lifecycle",
+                        "initialize rejected: stopped/failed runtime cannot be restarted");
             return {RuntimeError::NotInitialized, {}};
-        if (!configuration_valid_)
+        }
+        if (!configuration_valid_) {
+            log_message(core::LogLevel::critical, "runtime.lifecycle",
+                        "initialize aborted: runtime configuration is invalid");
             return {RuntimeError::InvalidConfiguration, {}};
+        }
 
+        log_message(core::LogLevel::info, "render.device",
+                    "initializing RenderDevice and acquiring the native surface");
         auto render_result = render_device_.initialize(window);
         if (!render_result) {
+            log_message(core::LogLevel::error, "render.device",
+                        "RenderDevice initialization failed: " + render_result.message);
             state_ = RuntimeState::Failed;
             return {RuntimeError::RenderFailure, std::move(render_result)};
         }
 
         state_ = RuntimeState::Initialized;
+        log_message(core::LogLevel::info, "runtime.lifecycle",
+                    "EngineRuntime initialized successfully");
         return {};
     }
 
@@ -397,6 +421,17 @@ public:
                     call.result.error = RuntimeError::SimulationCallbackFailure;
                 }
             });
+        if (!hook_data.result) {
+            log_message(core::LogLevel::error, "runtime.update",
+                "frame update failed; runtime_error=" +
+                std::to_string(static_cast<unsigned>(hook_data.result.error)) +
+                ", physics2d_error=" +
+                std::to_string(static_cast<unsigned>(hook_data.result.physics_error)) +
+                ", physics3d_error=" +
+                std::to_string(static_cast<unsigned>(hook_data.result.physics3d_error)) +
+                ", system_failures=" +
+                std::to_string(hook_data.result.system_failures));
+        }
         return hook_data.result;
     }
 
@@ -421,6 +456,16 @@ public:
                     call.result.error = RuntimeError::FrameBuilderFailure;
                 }
             });
+        if (!hook_data.result) {
+            log_message(core::LogLevel::error, "render.frame",
+                "begin_render_frame failed; runtime_error=" +
+                std::to_string(static_cast<unsigned>(hook_data.result.error)) +
+                ", frame_error=" +
+                std::to_string(static_cast<unsigned>(hook_data.result.frame_error)) +
+                ", backend_error=" +
+                std::to_string(static_cast<unsigned>(hook_data.result.render.error)) +
+                ", detail=" + hook_data.result.render.message);
+        }
         return hook_data.result;
     }
 
@@ -430,11 +475,18 @@ public:
         const world::Camera2D& camera, ui::UiRect viewport,
         const ui::IUiGlyphProvider* glyph_provider = nullptr,
         std::int32_t layer = 100000) {
-        if (state_ != RuntimeState::Initialized)
+        if (state_ != RuntimeState::Initialized) {
+            log_message(core::LogLevel::warning, "ui.runtime",
+                        "UI draw enqueue rejected: EngineRuntime is not initialized");
             return ui::UiRenderError::RuntimeNotInitialized;
+        }
         ui::UiRenderAdapter adapter(
             frame_builder_, viewport, camera, glyph_provider, layer);
-        if (!adapter.valid()) return adapter.error();
+        if (!adapter.valid()) {
+            log_message(core::LogLevel::error, "ui.render",
+                        "UI render adapter rejected the requested viewport or draw state");
+            return adapter.error();
+        }
         RuntimeUiDrawHookDataV1 hook_data{this, &adapter, ui::UiRenderError::None};
         (void)mod_manager_.dispatch_hooks(
             hook_points::ui_draw,
@@ -444,6 +496,11 @@ public:
                 call.runtime->ui_runtime_.draw(*call.adapter);
                 call.result = call.adapter->error();
             });
+        if (hook_data.result != ui::UiRenderError::None) {
+            log_message(core::LogLevel::error, "ui.render",
+                "UI draw failed; ui_error=" +
+                std::to_string(static_cast<unsigned>(hook_data.result)));
+        }
         return hook_data.result;
     }
 
@@ -519,17 +576,31 @@ public:
                     call.result.error = RuntimeError::RenderFailure;
                 }
             });
+        if (!hook_data.result) {
+            log_message(core::LogLevel::error, "render.frame",
+                "render_frame failed; runtime_error=" +
+                std::to_string(static_cast<unsigned>(hook_data.result.error)) +
+                ", frame_error=" +
+                std::to_string(static_cast<unsigned>(hook_data.result.frame_error)) +
+                ", backend_error=" +
+                std::to_string(static_cast<unsigned>(hook_data.result.render.error)) +
+                ", detail=" + hook_data.result.render.message);
+        }
         return hook_data.result;
     }
 
     void shutdown() noexcept {
         if (state_ == RuntimeState::Stopped) return;
+        log_message(core::LogLevel::info, "runtime.lifecycle",
+                    "EngineRuntime shutdown started");
         mod_manager_.shutdown();
         render_device_.shutdown();
         simulation_clock_.reset();
         frame_builder_.reset();
         action_map_.reset_all();
         state_ = RuntimeState::Stopped;
+        log_message(core::LogLevel::info, "runtime.lifecycle",
+                    "EngineRuntime shutdown completed");
     }
 
     // Native mods can query these interfaces by ID from NativeModHostApiV1.
@@ -599,6 +670,19 @@ public:
     }
 
 private:
+    void log_message(
+        core::LogLevel level,
+        std::string_view category,
+        std::string message,
+        const std::source_location& source = std::source_location::current()) const noexcept {
+        if (config_.logger == nullptr) return;
+        try {
+            config_.logger->write(level, category, message, source);
+        } catch (...) {
+            // Diagnostics must never turn a recoverable engine error into a crash.
+        }
+    }
+
     static void dispatch_scene_system(
         void* context,
         const world::SystemExecutionInfo& system,
