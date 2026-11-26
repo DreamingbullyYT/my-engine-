@@ -58,8 +58,10 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [x] Deterministic host interface enumeration with ID/version reporting ([run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851)).
 - [x] Explicit user decision: native mods run in-process with no sandbox and no capability enforcement.
 - [ ] Expand raw host exposure as additional engine systems are implemented.
-- [ ] Deep hook/replace/mixin system for engine and game behavior.
-- [ ] Track module-owned callbacks/resources/jobs/threads and make unload/hot reload safe.
+- [x] NativeHookRegistry with Before/Around/Replace/After stages, deterministic priority/registration order and repeatable call_next ([run 45810170873](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45810170873)).
+- [x] Manager-owned callback enable/disable/removal and deferred self-unload until hook dispatch exits.
+- [ ] Integrate hook dispatch at actual EngineRuntime, Scene, physics, renderer, World/ECS and asset operations.
+- [ ] Track module-owned resources/jobs/threads and make unload/hot reload safe; hook registrations are currently tracked and removed automatically.
 - [ ] Native package signature/publisher trust policy; signatures verify origin/integrity, not runtime isolation.
 - [ ] Native .dmod load/unload test on a real Android ARM64 device.
 - [ ] Decide whether a separate script runtime adds enough value. ChaiScript is currently proof-only; it is not a production runtime.

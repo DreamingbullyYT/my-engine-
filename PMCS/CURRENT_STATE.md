@@ -3,7 +3,7 @@
 **Last checked:** 2026-11-26  
 **Repository:** DreamingbullyYT/my-engine-  
 **Default branch:** main  
-**Latest verified implementation commit:** 6deb0a76d8143e05c15a0208359087ec626cb9c0
+**Latest verified implementation commit:** e3bd049db2f8b6dcd980840784e96ad39a8ff209
 
 ## Implemented
 
@@ -43,13 +43,18 @@
 - Native shared-library loading through dlopen on POSIX and LoadLibraryW on Windows; native package installer materializes the declared library into an application-private directory. POSIX installation uses openat, O_NOFOLLOW and atomic rename for package-controlled path components.
 - NativeModManager supports dependency-ordered batch loading, rollback on failure, enable/disable/update, reverse-order unload and deferred self-unload after a native callback returns.
 - NativeModHostApiV1 exposes query-by-ID, logging and deterministic interface enumeration. Enumeration snapshots IDs/versions under lock and invokes the visitor outside the registry lock.
-- EngineRuntime currently exposes raw live objects for dream.engine.runtime, dream.engine.scene, dream.engine.world, dream.engine.physics2d, dream.engine.input.actions, dream.engine.clock.fixed, dream.engine.render.frame_builder and dream.engine.render.device.
+- EngineRuntime exposes raw live objects for dream.engine.runtime, dream.engine.scene, dream.engine.world, dream.engine.physics2d, dream.engine.input.actions, dream.engine.clock.fixed, dream.engine.render.frame_builder, dream.engine.render.device, dream.engine.mods.manager and dream.engine.mods.hooks.
+- NativeHookRegistry supports Before, Around, Replace and After callbacks, descending priority with deterministic registration order, and reverse-order After unwinding. Around/Replace callbacks can invoke the remaining chain repeatedly or skip it; Replace can therefore bypass the original operation.
+- Hook invocation carries caller-defined argument/result data through a raw user_data pointer. Hook points define their own C++ context layout; modules and the engine/game must use compatible headers and ABI.
+- Manager tracks owner enable state and removes all callbacks owned by a mod before closing its shared library. Self-unload requested inside a hook is deferred until the entire dispatch chain returns. Invalid hook dispatch falls back to the original operation.
+- The generic hook dispatcher is implemented and tested; automatic dispatch points have not yet been added to every engine subsystem. Engine/game code must call NativeModManager::dispatch_hooks at the operations it wants to expose.
 - Native mods execute in-process with the application's process privileges. There is deliberately **no sandbox and no capability enforcement** for native modules. The archive validator is not a runtime security boundary. Only install native mods the user trusts.
 - Native packages must ship a prebuilt library for the target platform/ABI. The engine does not compile mods on the user's device and does not require an APK/engine/game rebuild to install a package.
 - The script interpreter is not a production runtime yet. ChaiScript direct-AST evaluation remains a proof-only candidate; do not describe script mods as implemented.
 
 ## Verified CI
-- [Run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851) completed successfully for all four jobs on commit 6deb0a76d8143e05c15a0208359087ec626cb9c0. It includes native host interface enumeration tests, native module lifecycle/package tests, Linux GCC/Clang, DMod AST proof and Android ARM64 cross-compilation.
+- [Run 45810170873](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45810170873) completed successfully for all four jobs on commit e3bd049db2f8b6dcd980840784e96ad39a8ff209. It verifies native hook ordering, before/around/replace/after dispatch, repeated continuation calls, fallback to the original operation, and callback removal before native library unload, as well as Linux GCC/Clang, DMod AST proof and Android ARM64 cross-compilation.
+- [Run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851) completed successfully for native host interface enumeration and module lifecycle before hook integration.
 - [Run 45805442161](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45805442161) completed successfully for all four jobs before the interface-enumeration extension.
 - [Run 45790590738](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45790590738) completed successfully for both bgfx backend proof jobs.
 - Android CI is NDK cross-compilation for arm64-v8a (ARMv8-A), not execution on a physical Android device.
@@ -67,7 +72,7 @@
 2. Finish the operational 2D renderer path, runtime shader packaging/loading and GPU resource lifecycle; then implement 3D rendering, meshes, materials, lighting and GPU asset residency.
 3. Harden Physics2D and implement 3D physics.
 4. Audio, animation, UI/runtime services and asset import pipeline.
-5. Expand NativeModHost exposure to the full engine service set; build a first-class hook/replace/mixin API for deep engine/game modification; define module-owned callback/resource cleanup and safe hot reload.
+5. Integrate the verified hook dispatcher at real EngineRuntime, Scene, physics, render, World and asset operations; expand native interfaces as services are implemented; add ownership tracking for mod resources/jobs/threads and safe hot reload.
 6. Define package trust/signature policy and test native .dmod loading on real Android ARM64. Signatures may establish publisher/integrity; they do not sandbox code.
 7. Decide whether a separate script runtime is worth implementing. It is not a prerequisite for the native full-access path.
 

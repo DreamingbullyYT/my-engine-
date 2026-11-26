@@ -78,3 +78,14 @@
 - The native runtime is not safe for untrusted code. A mod may corrupt state, access app-permitted OS resources, deadlock or crash the process. Install only trusted modules.
 - Manifest capability declarations do not restrict native modules. Any future signatures/publisher trust policy verifies package origin/integrity, not runtime isolation.
 - No native compilation happens on the user's device and installing a mod does not require an APK/engine/game rebuild.
+
+
+## ADR-0013 — Native hook pipeline
+**Status:** ACCEPTED AND IMPLEMENTED (2026-11-26)  
+**Decision:** Native DMods can register named Before, Around, Replace and After hooks against engine/game-defined hook points. Hooks use descending explicit priority and deterministic registration order. Around/Replace callbacks may call the remaining chain repeatedly or skip it.  
+**Consequences:**
+- Hook callbacks receive a raw caller-owned context pointer; hook-point argument/result structs are defined by the engine/game and shared with mod authors.
+- Hook registrations are owned by module ID, disabled with the module and removed before its shared library is unloaded.
+- Dispatch is wrapped in NativeModManager's callback-depth guard, so self-unload is deferred until the current dispatch chain finishes.
+- The generic registry is not a binary detour engine. Engine/game methods become hookable when code explicitly calls dispatch_hooks; integration across subsystems is incremental.
+- This remains unrestricted native code in-process. No sandbox or capabilities are introduced.

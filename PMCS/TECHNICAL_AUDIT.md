@@ -179,3 +179,16 @@ Before adoption, pin repository, tag/commit and exact license files; inspect tra
 - Engine-owned render packet validation, RenderDevice surface lifetime/resize handling, RGBA8 texture forwarding and RenderFrameBuilder are implemented. The builder produces indexed 2D sprite quads and supports 3D draw submissions at the contract level.
 - Optional bgfx backend proof compiles for Linux and Android ARM64. CI compiles ESSL 300 and GLSL 330 sprite shaders. The current backend draws 2D sprites only when compatible shader binaries are supplied; there is no 3D mesh/material renderer or physical device proof. Verified in [run 45790590738](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45790590738).
 - PhysicsWorld2D and deterministic sweep-and-prune broadphase have unit coverage. Known limitations include no joints, CCD, sleeping, persistent warm-starting or multiple fixtures per body. Physics3D is not implemented.
+
+
+## Native hook registry — verified 2026-11-26
+
+- Added NativeHookRegistry to the DMod runtime and exposed it through EngineRuntime as dream.engine.mods.hooks; the manager is also exposed as dream.engine.mods.manager.
+- NativeHookStage supports Before, Around, Replace and After. Before runs before the original operation; Around wraps the remaining chain; Replace can omit call_next to skip the original operation; After runs in reverse priority/registration order after the chain returns.
+- Priority order is descending; equal priorities preserve registration order. Around/Replace call_next can be invoked repeatedly to deliberately repeat the remaining chain or original operation.
+- Hook callbacks receive NativeHookInvocationV1 with a raw user_data pointer. Each hook point must define and document its argument/result struct; the caller and module need matching header/compiler ABI.
+- Invalid hook dispatch or snapshot allocation failure falls back to the original operation so the engine does not silently skip its operation.
+- NativeModManager enables/disables hooks with the owning module, removes that module's registrations before unloading the library, and wraps dispatch in its callback-depth guard. If a callback requests self-unload, removal/library close is deferred until the full dispatch chain returns.
+- Tests verify before/around/after sequencing, priority ordering, replace bypass, repeated call_next, invalid-ID fallback, and zero remaining hook registrations after self-unload.
+- [Run 45810170873](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45810170873) passed all four jobs: Linux GCC, Linux Clang, Android arm64-v8a cross-compilation and DMod AST proof.
+- Current limitation: the generic dispatcher does not automatically intercept arbitrary engine C++ methods. Runtime/game code must place dispatch_hooks at each operation to be extensible. Actual EngineRuntime/Scene/Physics2D/Render/World/Asset hook integration remains on the roadmap.

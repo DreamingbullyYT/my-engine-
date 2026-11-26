@@ -33,3 +33,11 @@ The reusable engine provides generic core services, platform adapters, rendering
 - Android cross-build is not physical-device proof.
 - Preserve the repository's MIT license and record third-party notices separately.
 - Update PMCS after every accepted decision and verified implementation milestone.
+
+
+## Native hook implementation — 2026-11-26
+- NativeHookRegistry is part of the full-access native mod runtime. It supports Before/Around/Replace/After, priority ordering, repeated call_next and full replacement.
+- It gives mods raw typed-by-convention context pointers defined by each engine/game hook point, not sandboxed proxies.
+- Hooks are disabled with the owner mod and erased before library unload. Self-unload inside a hook is deferred through NativeModManager until the whole dispatch completes.
+- CI run 45810170873 passed on Linux GCC, Linux Clang and Android arm64-v8a cross-compilation, plus the DMod AST proof.
+- Automatic hook calls still need to be inserted at real EngineRuntime/Scene/physics/render/World/assets operations; generic dispatch alone does not intercept every C++ method.

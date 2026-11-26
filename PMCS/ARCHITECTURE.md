@@ -10,7 +10,7 @@
 - **Rendering:** engine-owned 2D/3D frame and resource contracts with replaceable backends.
 - **Simulation:** Physics2D is implemented initially; Physics3D, solver hardening, animation and navigation remain.
 - **Runtime:** combines Scene, fixed-step updates, input actions, Physics2D and rendering.
-- **DMod:** validated ZIP package, manifest/dependency handling and an unrestricted in-process native runtime. A production script runtime and hook system remain future work.
+- **DMod:** validated ZIP package, manifest/dependency handling, unrestricted in-process native modules and an ordered before/around/replace/after hook registry. Automatic hook insertion throughout the engine/game and a production script runtime remain future work.
 - **Game project:** game-specific systems, content, assets, UI and gameplay code.
 - **Tools/editor:** diagnostics, profiling and editor tools are not required for the initial runtime.
 
@@ -59,6 +59,10 @@
 - NativeLibrary loads the installed binary with dlopen on POSIX or LoadLibraryW on Windows. The installer currently has no Windows implementation.
 - NativeModManager validates descriptor/identity/version, loads dependency order, rolls back failed batches, controls enable/update/disable/unload and defers self-unload until native callbacks return.
 - NativeModHostApiV1 exposes logging, query-by-ID and deterministic interface enumeration. It hands mods raw object pointers; it does not use proxies or a security sandbox.
+- NativeHookRegistry exposes Before, Around, Replace and After callbacks. Hooks are sorted by descending priority and stable registration ID; After hooks unwind in reverse order. Around/Replace callbacks receive a call_next continuation that may be invoked multiple times or omitted to skip the original operation.
+- Hook callback user_data is a caller-defined C++ argument/result context. The engine/game defines each hook point's context structure; modules must compile against matching headers and C++ ABI.
+- NativeModManager tracks whether each owner is enabled, disables its hooks on disable, and removes all owned registrations before dlclose/FreeLibrary. Hook dispatch itself is wrapped in the manager's callback-depth guard, so self-unload waits until the whole hook chain exits. A failed/invalid dispatcher falls back to the original operation.
+- The verified registry is not magic interception of every C++ method. A subsystem/game operation becomes hookable only when its implementation calls NativeModManager::dispatch_hooks; adding those integration points is continuing work.
 - EngineRuntime currently registers dream.engine.runtime, dream.engine.scene, dream.engine.world, dream.engine.physics2d, dream.engine.input.actions, dream.engine.clock.fixed, dream.engine.render.frame_builder and dream.engine.render.device.
 - Native code runs inside the game process with the app's OS privileges. There is no sandbox, no capability enforcement and no promise of crash/memory isolation. A ZIP path validator only validates package data; it does not make executable code safe.
 - Native code can access any registered object and can also use its normal in-process/OS capabilities. Not every future engine subsystem or private implementation detail is automatically registered today. The roadmap includes broader engine service exposure and hook/replace/mixin points.
@@ -75,7 +79,7 @@
 - Stable, advanced and experimental are compatibility/documentation tiers, not security boundaries.
 - Native ABI structs use a size/version contract. V1 extensions must be append-only and existing fields must retain their meaning.
 - Because mods receive raw C++ object pointers, modules need compatible headers, architecture, toolchain/runtime ABI and engine API range. Raw pointer access is powerful but not a promise that every private C++ symbol has a stable cross-version ABI.
-- A future hook API should support deterministic registration, before/after/around/replace behavior, explicit priority, ownership tracking, recursion protection, error diagnostics and safe unregistration. Hooks must not impose a sandbox on native mods.
+- Remaining hook work: integrate dispatch into EngineRuntime update/render, Scene scheduler, PhysicsWorld2D, World/ECS mutation, asset lifecycle and other public/internal operations; define strongly typed context structs for these points; add resource/job/thread ownership tracking. Native hooks do not impose a sandbox.
 
 ## Dependency direction
 - Platform adapters implement platform interfaces.
