@@ -50,6 +50,30 @@ struct CameraMatrices3D final {
     Matrix4x4 view_projection{};
 };
 
+namespace detail {
+
+[[nodiscard]] inline Vec3 rotate_by_quaternion(
+    Vec3 value, Quaternion rotation) noexcept {
+    const Vec3 axis{rotation.x, rotation.y, rotation.z};
+    const Vec3 first{
+        axis.y * value.z - axis.z * value.y,
+        axis.z * value.x - axis.x * value.z,
+        axis.x * value.y - axis.y * value.x
+    };
+    const Vec3 second{
+        axis.y * first.z - axis.z * first.y,
+        axis.z * first.x - axis.x * first.z,
+        axis.x * first.y - axis.y * first.x
+    };
+    return {
+        value.x + 2.0F * (rotation.w * first.x + second.x),
+        value.y + 2.0F * (rotation.w * first.y + second.y),
+        value.z + 2.0F * (rotation.w * first.z + second.z)
+    };
+}
+
+} // namespace detail
+
 // The engine camera convention is right-handed with camera forward along -Z.
 // Projection depth is [0, 1], matching Vulkan/Direct3D. Backends using a
 // different clip-space convention must convert at the backend boundary.
@@ -146,13 +170,13 @@ struct CameraMatrices3D final {
     inverse_rotation.z *= inverse_length;
     inverse_rotation.w *= inverse_length;
 
-    const Vec3 right = rotate(Vec3{1.0F, 0.0F, 0.0F}, inverse_rotation);
-    const Vec3 up = rotate(Vec3{0.0F, 1.0F, 0.0F}, inverse_rotation);
-    const Vec3 backward = rotate(Vec3{0.0F, 0.0F, 1.0F}, inverse_rotation);
+    const Vec3 right = detail::rotate_by_quaternion(Vec3{1.0F, 0.0F, 0.0F}, inverse_rotation);
+    const Vec3 up = detail::rotate_by_quaternion(Vec3{0.0F, 1.0F, 0.0F}, inverse_rotation);
+    const Vec3 backward = detail::rotate_by_quaternion(Vec3{0.0F, 0.0F, 1.0F}, inverse_rotation);
     const Vec3 negative_position{
         -camera.position.x, -camera.position.y, -camera.position.z
     };
-    const Vec3 translated = rotate(negative_position, inverse_rotation);
+    const Vec3 translated = detail::rotate_by_quaternion(negative_position, inverse_rotation);
 
     CameraMatrices3D result;
     result.view.at(0, 0) = right.x;
