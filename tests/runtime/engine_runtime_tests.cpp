@@ -154,7 +154,7 @@ int main() {
         "game.post", SystemPhase::PostUpdate, 0,
         [&phases](World&, const SystemContext&) { phases.emplace_back("post"); });
     require(pre && update && post, "runtime scene accepts application systems");
-    require(runtime.physics_system(),
+    require(static_cast<bool>(runtime.physics_system()),
             "runtime registers its built-in PhysicsWorld2D system");
 
     InputEvent key_down;
@@ -179,7 +179,8 @@ int main() {
     require(moved && std::abs(moved->position.x - 10.2F) < 0.001F,
             "built-in physics system advances bodies at the fixed simulation rate");
 
-    require(runtime.begin_render_frame({0.05F, 0.1F, 0.15F, 1.0F}),
+    require(static_cast<bool>(runtime.begin_render_frame(
+                {0.05F, 0.1F, 0.15F, 1.0F})),
             "runtime starts a render frame using the acquired framebuffer size");
     require(runtime.frame_builder().set_camera_2d(CameraMatrices2D{}) ==
                 FrameBuilderError::None,
@@ -207,7 +208,8 @@ int main() {
     require(jump && !jump->down && jump->just_released,
             "runtime resets frame edges and processes the release event");
 
-    require(runtime.begin_render_frame(), "runtime can begin another empty frame");
+    require(static_cast<bool>(runtime.begin_render_frame()),
+            "runtime can begin another empty frame");
     require(static_cast<bool>(runtime.render_frame()),
             "runtime renders an empty frame");
     require(backend.render_calls == 2 && backend.last_2d_draws == 0U,
@@ -229,6 +231,25 @@ int main() {
     runtime.shutdown();
     require(surfaces.released == 1,
             "runtime shutdown is idempotent");
+
+    FakeSurfaceSystem resize_surfaces;
+    FakeRenderBackend resize_backend;
+    EngineRuntime resize_runtime(resize_surfaces, resize_backend, config);
+    require(static_cast<bool>(resize_runtime.initialize({17U})),
+            "resize runtime initializes");
+    resize_surfaces.metrics.pixel_width = 1600U;
+    resize_surfaces.metrics.pixel_height = 1200U;
+    require(static_cast<bool>(resize_runtime.begin_render_frame()),
+            "runtime refreshes the surface before building a resized frame");
+    require(resize_backend.resize_calls == 1 &&
+            resize_runtime.frame_builder().finalize() == FrameBuilderError::None,
+            "backend resized before frame packet construction");
+    require(resize_runtime.frame_builder().packet().framebuffer_extent ==
+                Extent2D{1600U, 1200U},
+            "new frame packet uses the new physical framebuffer extent");
+    require(static_cast<bool>(resize_runtime.render_frame()),
+            "resized frame renders without a stale-extent failure");
+    resize_runtime.shutdown();
 
     FakeSurfaceSystem invalid_surfaces;
     FakeRenderBackend invalid_backend;

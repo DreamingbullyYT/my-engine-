@@ -187,7 +187,7 @@ public:
         action_map_.begin_frame();
         for (const auto& event : input_events) {
             if (action_map_.process_event(event))
-                saturating_add(result.input_events_handled, 1U);
+                saturating_add(result.input_events_handled, std::size_t{1});
         }
 
         try {
@@ -223,6 +223,13 @@ public:
         bool clear_depth_buffer = true) {
         if (state_ != RuntimeState::Initialized)
             return {RuntimeError::NotInitialized, {}, {}};
+
+        auto surface_result = render_device_.refresh_surface();
+        if (!surface_result)
+            return {
+                RuntimeError::RenderFailure, {},
+                std::move(surface_result)
+            };
 
         const auto extent = render_device_.surface_info().pixel_extent;
         const auto error = frame_builder_.begin_frame(

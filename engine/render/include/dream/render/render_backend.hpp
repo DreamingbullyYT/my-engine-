@@ -119,7 +119,9 @@ public:
         return {};
     }
 
-    [[nodiscard]] RenderResult render(const RenderFramePacket& frame) {
+    // Refreshes the current framebuffer metrics and performs backend resize
+    // before callers build a frame packet for the new extent.
+    [[nodiscard]] RenderResult refresh_surface() {
         if (!initialized_)
             return {RenderError::NotInitialized, {}, "RenderDevice is not initialized"};
 
@@ -146,10 +148,14 @@ public:
                     RenderError::BackendResizeFailed, {}, std::move(resize_error)
                 };
             }
-            surface_info_ = latest;
-        } else {
-            surface_info_ = latest;
         }
+        surface_info_ = latest;
+        return {};
+    }
+
+    [[nodiscard]] RenderResult render(const RenderFramePacket& frame) {
+        const auto refreshed = refresh_surface();
+        if (!refreshed) return refreshed;
 
         if (frame.framebuffer_extent != surface_info_.pixel_extent) {
             return {
