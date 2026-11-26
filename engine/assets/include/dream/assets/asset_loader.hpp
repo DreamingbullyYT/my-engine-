@@ -5,10 +5,12 @@
 #include <dream/core/resource_store.hpp>
 #include <dream/platform/filesystem.hpp>
 
+#include <atomic>
 #include <cstddef>
 #include <future>
 #include <functional>
 #include <optional>
+#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
@@ -22,12 +24,40 @@ enum class AssetLoadStatus {
     Loaded,
     CacheHit,
     CacheRejected,
+    Cancelled,
     InvalidPath,
     InvalidKey,
     InvalidLimit,
     ReadFailed,
     DecodeFailed,
     StoreRejected
+};
+
+class AssetCancellationToken final {
+public:
+    AssetCancellationToken() = default;
+    [[nodiscard]] bool is_cancelled() const noexcept {
+        return state_ && state_->load(std::memory_order_acquire);
+    }
+private:
+    explicit AssetCancellationToken(std::shared_ptr<std::atomic_bool> state)
+        : state_(std::move(state)) {}
+    std::shared_ptr<std::atomic_bool> state_;
+    friend class AssetCancellationSource;
+};
+
+class AssetCancellationSource final {
+public:
+    AssetCancellationSource() : state_(std::make_shared<std::atomic_bool>(false)) {}
+    [[nodiscard]] AssetCancellationToken token() const noexcept {
+        return AssetCancellationToken(state_);
+    }
+    void cancel() noexcept { state_->store(true, std::memory_order_release); }
+    [[nodiscard]] bool is_cancelled() const noexcept {
+        return state_->load(std::memory_order_acquire);
+    }
+private:
+    std::shared_ptr<std::atomic_bool> state_;
 };
 
 template <typename T>
@@ -68,7 +98,8 @@ template <typename T, typename Tag, typename Decoder>
     std::string key,
     std::string virtual_path,
     Decoder&& decoder,
-    std::size_t max_file_bytes = 64u * 1024u * 1024u)
+    std::size_t max_file_bytes = 64u * 1024u * 1024u,
+    AssetCancellationToken cancellation = {})
     -> std::future<AssetLoadResult<core::Handle<Tag>>> {
     using Result = AssetLoadResult<core::Handle<Tag>>;
     using Decode = std::decay_t<Decoder>;
@@ -78,7 +109,8 @@ template <typename T, typename Tag, typename Decoder>
     return jobs.submit(
         [&filesystem, &store, key = std::move(key),
          path = std::move(virtual_path),
-         decode = Decode(std::forward<Decoder>(decoder)), max_file_bytes]() mutable -> Result {
+         decode = Decode(std::forward<Decoder>(decoder)), max_file_bytes,
+         cancellation = std::move(cancellation)]() mutable -> Result {
             if (!platform::is_valid_virtual_path(path)) {
                 return {AssetLoadStatus::InvalidPath, {}, platform::FileError::InvalidPath,
                         "Asset path is not a valid virtual path"};
@@ -92,14 +124,27 @@ template <typename T, typename Tag, typename Decoder>
                         "Maximum asset file size must be greater than zero"};
             }
 
+            if (cancellation.is_cancelled()) {
+                return {AssetLoadStatus::Cancelled, {}, platform::FileError::None,
+                        "Asset load was cancelled"};
+            }
             std::vector<std::byte> bytes;
             platform::FileError file_error = platform::FileError::None;
-            if (!filesystem.read_file(path, bytes, max_file_bytes, file_error)) {
+            const bool read_succeeded = filesystem.read_file(path, bytes, max_file_bytes, file_error);
+            if (cancellation.is_cancelled()) {
+                return {AssetLoadStatus::Cancelled, {}, platform::FileError::None,
+                        "Asset load was cancelled"};
+            }
+            if (!read_succeeded) {
                 return {AssetLoadStatus::ReadFailed, {}, file_error,
                         "Filesystem could not read the asset"};
             }
 
             auto decoded = std::invoke(decode, std::span<const std::byte>(bytes));
+            if (cancellation.is_cancelled()) {
+                return {AssetLoadStatus::Cancelled, {}, platform::FileError::None,
+                        "Asset load was cancelled"};
+            }
             if (!decoded.value) {
                 return {AssetLoadStatus::DecodeFailed, {}, platform::FileError::None,
                         std::move(decoded.message)};
@@ -126,7 +171,8 @@ template <typename T, typename Tag, typename Decoder, typename SizeEstimator>
     std::string virtual_path,
     Decoder&& decoder,
     SizeEstimator&& estimate_bytes,
-    std::size_t max_file_bytes = 64u * 1024u * 1024u)
+    std::size_t max_file_bytes = 64u * 1024u * 1024u,
+    AssetCancellationToken cancellation = {})
     -> std::future<AssetLoadResult<core::Handle<Tag>>> {
     using Result = AssetLoadResult<core::Handle<Tag>>;
     using Handle = core::Handle<Tag>;
@@ -141,7 +187,7 @@ template <typename T, typename Tag, typename Decoder, typename SizeEstimator>
         [&filesystem, &cache, key = std::move(key), path = std::move(virtual_path),
          decode = Decode(std::forward<Decoder>(decoder)),
          estimate = Estimate(std::forward<SizeEstimator>(estimate_bytes)),
-         max_file_bytes]() mutable -> Result {
+         max_file_bytes, cancellation = std::move(cancellation)]() mutable -> Result {
             if (!platform::is_valid_virtual_path(path)) {
                 return {AssetLoadStatus::InvalidPath, {}, platform::FileError::InvalidPath,
                         "Asset path is not a valid virtual path"};
@@ -155,24 +201,41 @@ template <typename T, typename Tag, typename Decoder, typename SizeEstimator>
                         "Maximum asset file size must be greater than zero"};
             }
 
+            if (cancellation.is_cancelled()) {
+                return {AssetLoadStatus::Cancelled, {}, platform::FileError::None,
+                        "Asset load was cancelled"};
+            }
             if (const Handle existing = cache.find(key); existing) {
                 return {AssetLoadStatus::CacheHit, existing, platform::FileError::None, {}};
             }
 
             std::vector<std::byte> bytes;
             platform::FileError file_error = platform::FileError::None;
-            if (!filesystem.read_file(path, bytes, max_file_bytes, file_error)) {
+            const bool read_succeeded = filesystem.read_file(path, bytes, max_file_bytes, file_error);
+            if (cancellation.is_cancelled()) {
+                return {AssetLoadStatus::Cancelled, {}, platform::FileError::None,
+                        "Asset load was cancelled"};
+            }
+            if (!read_succeeded) {
                 return {AssetLoadStatus::ReadFailed, {}, file_error,
                         "Filesystem could not read the asset"};
             }
 
             auto decoded = std::invoke(decode, std::span<const std::byte>(bytes));
+            if (cancellation.is_cancelled()) {
+                return {AssetLoadStatus::Cancelled, {}, platform::FileError::None,
+                        "Asset load was cancelled"};
+            }
             if (!decoded.value) {
                 return {AssetLoadStatus::DecodeFailed, {}, platform::FileError::None,
                         std::move(decoded.message)};
             }
 
             const std::size_t estimated_bytes = std::invoke(estimate, std::as_const(*decoded.value));
+            if (cancellation.is_cancelled()) {
+                return {AssetLoadStatus::Cancelled, {}, platform::FileError::None,
+                        "Asset load was cancelled"};
+            }
             auto inserted = cache.put(key, estimated_bytes, std::move(*decoded.value));
             if (!inserted.inserted()) {
                 std::string message = "AssetCache rejected the decoded resource";
