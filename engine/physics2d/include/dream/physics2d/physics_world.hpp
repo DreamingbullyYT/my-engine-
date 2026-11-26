@@ -223,13 +223,13 @@ public:
         if (!handle) return {{}, BodyCreateError::CapacityExhausted};
 
         Body body = make_body(handle, std::move(description));
-        if (!std::isfinite(body.inertia) ||
-            (body.type == BodyType::Dynamic &&
-             (!std::isfinite(body.inverse_mass) ||
-              !std::isfinite(body.inverse_inertia) ||
-              body.inverse_mass <= 0.0F ||
-              body.inertia <= 1.0e-12F ||
-              body.inverse_inertia <= 0.0F))) {
+        if (body.type == BodyType::Dynamic &&
+            (!std::isfinite(body.inverse_mass) ||
+             !std::isfinite(body.inertia) ||
+             !std::isfinite(body.inverse_inertia) ||
+             body.inverse_mass <= 0.0F ||
+             body.inertia <= 1.0e-12F ||
+             body.inverse_inertia <= 0.0F)) {
             (void)handles_.release(handle);
             return {{}, BodyCreateError::InvalidInertia};
         }
