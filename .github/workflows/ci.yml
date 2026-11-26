@@ -182,6 +182,13 @@ jobs:
             -c tests/render/render_contract_tests.cpp \
             -o /tmp/render-contract-tests-android.o
 
+      - name: Cross-compile 3D physics world tests for Android ARM64
+        run: |
+          "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
+            -std=c++20 -Iengine/core/include -Iengine/physics3d/include \
+            -c tests/physics3d/physics_world_tests.cpp \
+            -o /tmp/physics3d-world-tests-android.o
+
       - name: Cross-compile 3D physics broadphase tests for Android ARM64
         run: |
           "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
