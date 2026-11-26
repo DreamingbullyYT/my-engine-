@@ -1,10 +1,10 @@
 # Technical Audit
 
-**Status:** Core services, typed resource identity/ownership and DMod package parsing are CI-verified. ChaiScript remains a proof-only candidate; no script runtime has been approved for production use.
+**Status:** Core services, typed resource identity/ownership, keyed ResourceStore and DMod package parsing are CI-verified. ChaiScript remains a proof-only candidate; no script runtime has been approved for production use.
 
 ## Core resource identity
-- Initial typed handle design is a tag-typed `(index, generation)` pair. Tag types prevent accidental interchange between domains such as textures and buffers at compile time.
-- `HandlePool<Tag>` synchronizes allocation, release and liveness checks; releasing increments the generation so stale handles are rejected after slot reuse.
+- Initial typed handle design is a tag-typed (index, generation) pair. Tag types prevent accidental interchange between domains such as textures and buffers at compile time.
+- HandlePool<Tag> synchronizes allocation, release and liveness checks; releasing increments the generation so stale handles are rejected after slot reuse.
 - The pool tracks identity only: it does not own resource objects, define destruction order, or provide cross-pool identity. A registry/resource owner must define those semantics before resources are stored behind handles.
 - Generation is 32-bit and skips zero; after a full generation wrap, an extremely old stale handle could theoretically alias. Evaluate wider generations or pool identity if lifetime requirements demand it.
 - Handle implementation and tests passed in [run 45714411879](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45714411879).
@@ -17,11 +17,12 @@
 - Registry implementation and tests passed in [run 45715803430](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715803430), including construction failure and exactly-once destruction. Callback-vs-destroy synchronization stress coverage remains desirable.
 
 ## Keyed resource store
-- Initial ResourceStore<T, Tag> maps case-sensitive, non-empty string keys (maximum 4096 bytes) to typed generational handles.
+- ResourceStore<T, Tag> maps case-sensitive, non-empty string keys (maximum 4096 bytes) to typed generational handles.
 - Duplicate keys and invalid keys are rejected; callers can find a handle, erase a key, or access a resource through a scoped callback by key or handle.
 - Key-map insertion uses an inaccessible placeholder before constructing the resource, so a failed resource construction removes the placeholder and does not leave an orphaned resource.
+- Store and registry locks are acquired in a consistent outer-to-inner order; store callbacks must not re-enter the same store. ResourceRegistry enforces callback return type void and holds its shared lock for the callback duration.
 - The store does not interpret keys as filesystem paths and performs no I/O, decoding, async work, dependency tracking, cache eviction or GPU upload. Those are separate asset-pipeline responsibilities.
-- Callbacks must not re-enter the same store. CI verification is pending.
+- Linux GCC/Clang unit tests and Android ARM64 cross-compilation of the tests passed in [run 45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493). Android result is compile-only, not device execution.
 
 ## Engine references
 - Luanti: study runtime modding, API exposure, package lifecycle and server/client boundaries.
@@ -32,6 +33,7 @@ These are references, not code-copy permissions or automatic adoption decisions.
 ## Rendering candidates
 - bgfx: cross-platform rendering abstraction; verify API, backends, Android support, license and integration.
 - Compare Vulkan/OpenGL ES and practical Android/desktop backends before selecting.
+Do not select a backend until comparative research and a minimal Android ARM64 integration proof are complete.
 
 ## Physics candidates
 - Jolt Physics: 3D rigid-body candidate; verify Android ARM64, license, features and adapter boundary.
@@ -73,7 +75,7 @@ Do not expose third-party physics types throughout engine/game APIs.
 - Default Optimizer_Default can replace AST nodes with Compiled_AST_Node callable wrappers. These are not bytecode, but violate the strictest no-transformation interpretation.
 - The pinned proof injects an identity optimizer and verifies no AST_Node_Type::Compiled nodes.
 - Proof uses an AST evaluation step budget and explicit no-module/no-external-script/no-IO configuration.
-- Run [45704291464](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45704291464) passed Linux proof and Android ARM64 cross-compilation.
+- Run [45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493) passed the DMod AST proof and Android ARM64 cross-compilation.
 - This does not prove physical Android execution, memory quotas, safe native host bindings, unload safety or complete sandboxing. Step limits are not memory limits; exposed C++ host functions can block or mutate engine state. Do not integrate until these risks are addressed.
 
 ### Lua
