@@ -5,7 +5,7 @@
 #include <dream/assets/builtin_importers.hpp>
 #include <dream/audio/audio_mixer.hpp>
 #include <dream/physics3d/physics_world.hpp>
-#include <dream/ui/ui_runtime.hpp>
+#include <dream/ui/ui_render_adapter.hpp>
 #include <dream/dmod/native_mod_host.hpp>
 #include <dream/dmod/native_mod_manager.hpp>
 #include <dream/input/action_map.hpp>
@@ -370,6 +370,21 @@ public:
                 }
             });
         return hook_data.result;
+    }
+
+    // Call after begin_render_frame() and before render_frame(). The supplied
+    // Camera2D must be the same camera used for the frame's 2D camera matrices.
+    [[nodiscard]] ui::UiRenderError enqueue_ui_draws(
+        const world::Camera2D& camera, ui::UiRect viewport,
+        const ui::IUiGlyphProvider* glyph_provider = nullptr,
+        std::int32_t layer = 100000) {
+        if (state_ != RuntimeState::Initialized)
+            return ui::UiRenderError::RuntimeNotInitialized;
+        ui::UiRenderAdapter adapter(
+            frame_builder_, viewport, camera, glyph_provider, layer);
+        if (!adapter.valid()) return adapter.error();
+        ui_runtime_.draw(adapter);
+        return adapter.error();
     }
 
     [[nodiscard]] RuntimeRenderResult render_frame() {

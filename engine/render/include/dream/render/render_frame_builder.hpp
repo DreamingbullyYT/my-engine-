@@ -226,6 +226,9 @@ public:
     }
 
     [[nodiscard]] bool finalized() const noexcept { return finalized_; }
+    [[nodiscard]] bool accepting_draws() const noexcept {
+        return begun_ && !finalized_ && error_ == FrameBuilderError::None;
+    }
     [[nodiscard]] FrameBuilderError error() const noexcept { return error_; }
     [[nodiscard]] std::size_t quad_count() const noexcept { return quads_.size(); }
     [[nodiscard]] std::size_t mesh_draw_count() const noexcept {

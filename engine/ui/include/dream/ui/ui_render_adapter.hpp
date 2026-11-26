@@ -37,6 +37,8 @@ enum class UiRenderError : std::uint8_t {
     MissingGlyphProvider,
     GlyphLayoutFailed,
     GlyphLimitExceeded,
+    FrameNotOpen,
+    RuntimeNotInitialized,
     FrameBuilderRejected
 };
 
@@ -61,6 +63,10 @@ public:
             std::isfinite(camera_.orthographic_height) &&
             std::isfinite(camera_.zoom) &&
             camera_.orthographic_height > 0.0F && camera_.zoom > 0.0F;
+        if (valid_ && !builder_.accepting_draws()) {
+            valid_ = false;
+            error_ = UiRenderError::FrameNotOpen;
+        }
         if (valid_) {
             world_height_ = camera_.orthographic_height / camera_.zoom;
             world_width_ = world_height_ * viewport_.width / viewport_.height;
@@ -146,8 +152,9 @@ private:
     }
 
     [[nodiscard]] bool can_draw() noexcept {
-        if (!valid_) {
-            set_error(UiRenderError::InvalidViewport);
+        if (!valid_) return false;
+        if (!builder_.accepting_draws()) {
+            set_error(UiRenderError::FrameNotOpen);
             return false;
         }
         return error_ == UiRenderError::None;

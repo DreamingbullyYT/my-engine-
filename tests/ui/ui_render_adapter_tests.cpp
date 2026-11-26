@@ -96,5 +96,16 @@ int main() {
     require(!invalid.valid() &&
             invalid.error() == ui::UiRenderError::InvalidViewport,
             "empty UI viewport is rejected");
+
+    render::RenderFrameBuilder closed_builder;
+    require(closed_builder.begin_frame(3U, 0.0, {100U, 100U}) ==
+                render::FrameBuilderError::None &&
+            closed_builder.finalize() == render::FrameBuilderError::None,
+            "closed frame test reaches finalized state");
+    ui::UiRenderAdapter closed_adapter(
+        closed_builder, {0, 0, 100, 100}, world::Camera2D{});
+    require(!closed_adapter.valid() &&
+            closed_adapter.error() == ui::UiRenderError::FrameNotOpen,
+            "UI adapter rejects a finalized frame");
     return EXIT_SUCCESS;
 }
