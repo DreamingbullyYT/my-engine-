@@ -74,11 +74,11 @@ public:
                 entries_.emplace(key, Entry{handle, estimated_bytes, next_stamp()});
             (void)entry;
             if (!inserted) {
-                resources_.erase(key);
+                (void)resources_.erase(key);
                 return {AssetCachePutStatus::DuplicateKey, {}};
             }
         } catch (...) {
-            resources_.erase(key);
+            (void)resources_.erase(key);
             throw;
         }
 

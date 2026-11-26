@@ -66,8 +66,8 @@ bool AndroidAAudioOutput::start(
 
     stream_=opened;
     config_=config;
-    callback_=callback;
-    callback_context_=callback_context;
+    callback_context_.store(callback_context,std::memory_order_release);
+    callback_.store(callback,std::memory_order_release);
     running_.store(true,std::memory_order_release);
     result=AAudioStream_requestStart(stream_);
     if(result!=AAUDIO_OK) {
@@ -77,8 +77,8 @@ bool AndroidAAudioOutput::start(
         last_error_.store(result,std::memory_order_release);
         AAudioStream_close(stream_);
         stream_=nullptr;
-        callback_=nullptr;
-        callback_context_=nullptr;
+        callback_.store(nullptr,std::memory_order_release);
+        callback_context_.store(nullptr,std::memory_order_release);
         return false;
     }
 
@@ -91,15 +91,15 @@ void AndroidAAudioOutput::stop() noexcept {
     std::lock_guard lock(lifecycle_mutex_);
     running_.store(false,std::memory_order_release);
     if(stream_==nullptr) {
-        callback_=nullptr;
-        callback_context_=nullptr;
+        callback_.store(nullptr,std::memory_order_release);
+        callback_context_.store(nullptr,std::memory_order_release);
         return;
     }
     (void)AAudioStream_requestStop(stream_);
     (void)AAudioStream_close(stream_);
     stream_=nullptr;
-    callback_=nullptr;
-    callback_context_=nullptr;
+    callback_.store(nullptr,std::memory_order_release);
+    callback_context_.store(nullptr,std::memory_order_release);
 }
 
 aaudio_data_callback_result_t AndroidAAudioOutput::on_data(
@@ -116,12 +116,14 @@ aaudio_data_callback_result_t AndroidAAudioOutput::on_data(
     }
     const auto frames=static_cast<std::size_t>(num_frames);
     auto samples=std::span<float>(static_cast<float*>(audio_data),frames*2U);
-    const auto callback=output.callback_;
+    const auto callback=output.callback_.load(std::memory_order_acquire);
+    void* const callback_context=
+        output.callback_context_.load(std::memory_order_acquire);
     if(callback==nullptr) {
         std::fill(samples.begin(),samples.end(),0.0F);
         return AAUDIO_CALLBACK_RESULT_CONTINUE;
     }
-    callback(output.callback_context_,samples,frames,static_cast<std::uint32_t>(rate));
+    callback(callback_context,samples,frames,static_cast<std::uint32_t>(rate));
     return AAUDIO_CALLBACK_RESULT_CONTINUE;
 }
 

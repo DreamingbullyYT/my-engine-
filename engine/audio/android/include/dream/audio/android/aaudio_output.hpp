@@ -25,6 +25,7 @@ public:
         return running_.load(std::memory_order_acquire);
     }
     [[nodiscard]] AudioOutputConfig config() const noexcept override {
+        std::lock_guard lock(lifecycle_mutex_);
         return config_;
     }
     [[nodiscard]] aaudio_result_t last_error() const noexcept {
@@ -42,8 +43,8 @@ private:
     mutable std::mutex lifecycle_mutex_;
     AAudioStream* stream_{nullptr};
     AudioOutputConfig config_{};
-    AudioRenderCallback callback_{nullptr};
-    void* callback_context_{nullptr};
+    std::atomic<AudioRenderCallback> callback_{nullptr};
+    std::atomic<void*> callback_context_{nullptr};
     std::atomic<bool> running_{false};
     std::atomic<aaudio_result_t> last_error_{AAUDIO_OK};
 };
