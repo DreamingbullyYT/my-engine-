@@ -287,18 +287,17 @@ public:
         if (!ray.valid()) return hits;
         const Vec2 direction = normalized(ray.direction);
 
-        for (const auto& [index, body] : bodies_) {
-            (void)index;
-            if ((filter.mask_bits & body.collision_filter.category_bits) == 0U ||
-                (body.collision_filter.mask_bits & filter.category_bits) == 0U) {
+        for (const Body* body : ray_candidates(ray.origin,direction,ray.maximum_distance)) {
+            if ((filter.mask_bits & body->collision_filter.category_bits) == 0U ||
+                (body->collision_filter.mask_bits & filter.category_bits) == 0U) {
                 continue;
             }
 
             const auto hit = raycast_shape(ray.origin, direction,
-                                           ray.maximum_distance, world_shape(body));
+                                           ray.maximum_distance, world_shape(*body));
             if (!hit) continue;
             hits.push_back({
-                body.handle, hit->point, hit->normal, hit->distance, body.sensor
+                body->handle, hit->point, hit->normal, hit->distance, body->sensor
             });
         }
 
@@ -322,14 +321,13 @@ public:
         Vec2 point, RaycastFilter2D filter = {}) const {
         std::vector<BodyHandle> result;
         if (!finite(point)) return result;
-        for (const auto& [index, body] : bodies_) {
-            (void)index;
-            if ((filter.mask_bits & body.collision_filter.category_bits) == 0U ||
-                (body.collision_filter.mask_bits & filter.category_bits) == 0U) {
+        for (const Body* body : bodies_in_bounds(Aabb{point,point})) {
+            if ((filter.mask_bits & body->collision_filter.category_bits) == 0U ||
+                (body->collision_filter.mask_bits & filter.category_bits) == 0U) {
                 continue;
             }
-            if (point_inside_shape(point, world_shape(body)))
-                result.push_back(body.handle);
+            if (point_inside_shape(point, world_shape(*body)))
+                result.push_back(body->handle);
         }
         return result;
     }
@@ -885,6 +883,43 @@ private:
         if (found == bodies_.end() ||
             found->second.handle.generation() != generation) return nullptr;
         return &found->second;
+    }
+
+    [[nodiscard]] const Body* find_proxy(ColliderProxyId id) const noexcept {
+        const auto index=static_cast<std::uint32_t>(id>>32U);
+        const auto generation=static_cast<std::uint32_t>(id&0xFFFFFFFFULL);
+        const auto found=bodies_.find(index);
+        if(found==bodies_.end()||
+           found->second.handle.generation()!=generation) return nullptr;
+        return &found->second;
+    }
+
+    [[nodiscard]] std::vector<const Body*> bodies_in_bounds(
+        const Aabb& bounds) const {
+        std::vector<const Body*> result;
+        for(const auto id:broadphase_.query_aabb(bounds)) {
+            if(const Body* body=find_proxy(id)) result.push_back(body);
+        }
+        return result;
+    }
+
+    [[nodiscard]] std::vector<const Body*> ray_candidates(
+        Vec2 origin,Vec2 direction,float maximum_distance) const {
+        const Vec2 end=origin+direction*maximum_distance;
+        if(!std::isfinite(end.x)||!std::isfinite(end.y)) {
+            std::vector<const Body*> result;
+            result.reserve(bodies_.size());
+            for(const auto& [index,body]:bodies_) {
+                (void)index;
+                result.push_back(&body);
+            }
+            return result;
+        }
+        const Aabb bounds{
+            {std::min(origin.x,end.x),std::min(origin.y,end.y)},
+            {std::max(origin.x,end.x),std::max(origin.y,end.y)}
+        };
+        return bodies_in_bounds(bounds);
     }
 
     [[nodiscard]] static std::optional<ContactManifold> collide_bodies(
