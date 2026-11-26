@@ -186,10 +186,11 @@ private:
     template <typename Unsigned>
     void write_unsigned_unchecked(Unsigned value) noexcept {
         static_assert(std::is_unsigned_v<Unsigned>);
+        std::uint64_t bits = static_cast<std::uint64_t>(value);
         for (std::size_t index = 0; index < sizeof(Unsigned); ++index) {
             data_.push_back(static_cast<std::byte>(
-                static_cast<std::uint8_t>(value & static_cast<Unsigned>(0xFFU))));
-            value >>= 8U;
+                static_cast<std::uint8_t>(bits & 0xFFU)));
+            bits >>= 8U;
         }
     }
 
@@ -295,7 +296,9 @@ public:
             return fail(ArchiveError::TooLarge);
         if (length > remaining()) return fail(ArchiveError::UnexpectedEnd);
 
-        const char* text = reinterpret_cast<const char*>(data_.data() + position_);
+        const char* text = length == 0U
+            ? ""
+            : reinterpret_cast<const char*>(data_.data() + position_);
         const std::string_view view{text, length};
         if (!is_valid_utf8(view)) return fail(ArchiveError::InvalidUtf8);
         output.assign(view);

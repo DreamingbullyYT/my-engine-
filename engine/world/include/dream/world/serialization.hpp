@@ -290,8 +290,10 @@ public:
                     return result;
                 }
                 if (!encoded) {
-                    result.error = WorldArchiveError::ComponentEncodeFailed;
                     result.archive_error = component_writer.error();
+                    result.error = result.archive_error == serialization::ArchiveError::TooLarge
+                        ? WorldArchiveError::ComponentPayloadTooLarge
+                        : WorldArchiveError::ComponentEncodeFailed;
                     return result;
                 }
                 if (!component_writer.good()) {

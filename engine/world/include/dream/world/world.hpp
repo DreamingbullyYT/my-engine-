@@ -32,6 +32,7 @@ class World final {
 private:
     struct IComponentPool {
         virtual ~IComponentPool() = default;
+        [[nodiscard]] virtual bool contains(Entity entity) const noexcept = 0;
         virtual void erase(Entity entity) noexcept = 0;
     };
 

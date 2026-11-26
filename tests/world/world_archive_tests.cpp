@@ -135,7 +135,7 @@ int main() {
             "independent 3D transform is added");
 
     const auto saved = WorldSerializer::save(source, registry);
-    require(saved, "world saves successfully");
+    require(static_cast<bool>(saved), "world saves successfully");
     require(saved.entity_count == 3U, "archive reports entity count");
     require(!saved.bytes.empty(), "archive contains data");
 
@@ -144,7 +144,7 @@ int main() {
             "world serialization is deterministic for an unchanged world");
 
     auto loaded = WorldSerializer::load(saved.bytes, registry);
-    require(loaded, "world loads successfully");
+    require(static_cast<bool>(loaded), "world loads successfully");
     require(loaded.entity_count == 3U && loaded.world->entity_count() == 3U,
             "loaded world contains all entities");
 
