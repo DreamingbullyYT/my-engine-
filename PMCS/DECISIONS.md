@@ -26,15 +26,15 @@
 **Decision:** Provide runtime-loaded .dmod packages with deep engine/game extension capabilities.  
 **Consequence:** Mod API and runtime are foundational architecture concerns.
 
-## ADR-0006 — Strict zero compilation for ordinary mods
-**Status:** ACCEPTED  
-**Decision:** Ordinary mods must not require native compilation or generated runtime bytecode.  
-**Consequence:** Prefer direct source/AST interpretation; prove the execution pipeline before choosing a runtime.
+## ADR-0006 — No compilation on the user's device
+**Status:** ACCEPTED WITH SCOPE UPDATE (2026-11-26)  
+**Decision:** Installing a .dmod must not compile code on the user's device or require rebuilding the engine, game or APK. Prebuilt native libraries supplied by mod authors are allowed and are the full-access mod path. The old restriction against accepting any precompiled native mod artifact is superseded.  
+**Consequence:** Native packages must include a library built for each target platform/ABI. A separate script lane may retain a source/AST/no-runtime-bytecode requirement if it is implemented.
 
 ## ADR-0007 — Deep mod access
 **Status:** ACCEPTED  
-**Decision:** Mods need meaningful access to engine/game internals through host bindings, registries, events, hooks and replaceable services.  
-**Consequence:** Design stable, advanced and experimental API tiers.
+**Decision:** Mods need deep access to engine/game internals through live host objects, registries, events, hooks and replaceable services. For native mods, API tiers describe compatibility only and are not security boundaries.  
+**Consequence:** Expand raw native interfaces and build hook/replace/mixin infrastructure; do not pretend a restricted wrapper is equivalent to full access.
 
 ## ADR-0008 — PC development, Android target
 **Status:** ACCEPTED  
@@ -66,3 +66,15 @@
 - Asset formats and pipeline
 - Audio, networking and editor technology
 - Minimum Android API and device requirements
+
+
+## ADR-0012 — Unrestricted in-process native mods
+**Status:** ACCEPTED — 2026-11-26  
+**Decision:** Native DMods execute inside the game/engine process with the application's process privileges. There is no sandbox and no capability enforcement for native modules. Native packages may ship prebuilt platform/ABI-specific shared libraries inside the .dmod container.  
+**Reason:** Explicit user direction: mods must be able to reach deeply into the engine/game, without sandbox limits, similar to the deep modification model expected from Minecraft Java modding.  
+**Consequences:**
+- NativeModHost exposes raw live engine object pointers and discoverable interface IDs/versions.
+- Newly implemented engine services must be made available to mods where deep access is needed; a hook/replace/mixin API is still required for structured internal behavior changes.
+- The native runtime is not safe for untrusted code. A mod may corrupt state, access app-permitted OS resources, deadlock or crash the process. Install only trusted modules.
+- Manifest capability declarations do not restrict native modules. Any future signatures/publisher trust policy verifies package origin/integrity, not runtime isolation.
+- No native compilation happens on the user's device and installing a mod does not require an APK/engine/game rebuild.

@@ -1,37 +1,35 @@
 # Project Memory — Dream Engine
 
+**Updated:** 2026-11-26
+
 ## Identity
-Dream Engine is a reusable, general-purpose game engine. It is not a custom engine for only the first planned game. The first planet/colony game is a validation project, not the engine's purpose.
+Dream Engine is a reusable, general-purpose C++ game engine. The initial planet/colony game is a validation project, not the engine's purpose. A different 3D game must not require an engine fork.
 
 ## Accepted requirements
-- **Primary implementation language: C++.** This is an explicit user decision. Do not use Rust as the engine language.
-- First-class 2D and 3D support from the beginning. A later unrelated 3D game must not require an engine fork.
-- Modular architecture with reusable systems and clear subsystem boundaries.
-- Research and reuse/adapt suitable existing libraries and engine components. Do not rewrite everything needlessly, and do not adopt a complete engine unchanged without evaluating fit.
+- C++ is the primary implementation language. Do not switch engine subsystems to Rust.
+- 2D and 3D are both first-class from the start.
+- Keep subsystems modular and reusable; game-specific rules/content remain in game projects.
+- Research and reuse suitable libraries, but audit exact source, version, license, platform support and build cost.
 - GitHub Actions is the primary build/test environment because the user has no PC available.
-- Android target ABI is `arm64-v8a` (ARMv8-A). Other ABIs are not currently required.
-- Deeply extensible runtime modding through DMod packages.
-- Ordinary mods must not require rebuilding the engine, game, or Android APK, and must not require native compilation on the user's device.
-- User's strict interpretation of zero compilation also rejects runtime bytecode generation. Prefer direct source/AST interpretation; prove the actual runtime pipeline rather than relying on marketing claims.
-- Mod APIs should reach meaningful engine/game internals through deliberate bindings, registries, events, hooks and replaceable interfaces.
+- Initial Android ABI: arm64-v8a (ARMv8-A).
+- Keep platform APIs behind engine-owned interfaces.
 
-## Scope boundaries
-The engine provides generic rendering, resources, scenes/worlds, entities/components, input, audio, physics adapters, animation, jobs, serialization, diagnostics and runtime services as justified by research. Game-specific economy, planets, colonies, citizens, buildings and progression belong to game projects or their modules, not the engine core.
+## DMod direction — updated 2026-11-26
+- .dmod remains the package/container format and supports a manifest with runtime kind, version and dependency metadata.
+- **The full-access mod path is native and in-process.** A runtime="native" package contains a prebuilt shared library for its target platform/ABI. The engine loads it into the game process.
+- Native modules run with the application's process privileges. There is no sandbox, no capability enforcement and no security isolation between a native mod and the engine. A native mod can mutate engine/game memory and state, use resources available to the app, corrupt data or crash the process. Install only trusted native mods.
+- Native modules receive raw pointers to live engine objects through NativeModHostApiV1. The host can query interfaces by ID and enumerate registered IDs/versions deterministically. This is a real object interface, not a sandboxed proxy.
+- No compilation is performed on the user's device and installing a mod must not require rebuilding the APK, engine or game. Mod authors/distributors must provide the correct prebuilt binary for each target ABI/platform.
+- Manifest capabilities may remain metadata for future script/runtime use, but they are not an access-control boundary for native modules.
+- The current EngineRuntime exposes runtime, scene, world, PhysicsWorld2D, ActionMap, fixed clock, RenderFrameBuilder and RenderDevice. This is not yet the complete future engine API; newly added services and internal hook points must be exposed as the engine grows.
+- A dedicated hook/replace/mixin system for deep engine/game behavior changes is still future work. Raw pointer access alone does not mean every private C++ method has a stable ABI.
+- runtime="script" is a separate possible path. No production script interpreter has been selected or integrated. ChaiScript remains a direct-AST proof candidate, not an implemented mod runtime.
 
-## DMod constraints
-- Package format concept: .dmod; exact archive and manifest schema remain open.
-- Runtime reads mod source and evaluates it dynamically.
-- Desired strict model: parse source to an AST and interpret/evaluate it directly, with no native compilation and no generated VM bytecode.
-- C++ engine APIs must be bindable to scripts.
-- Support dependencies, deterministic load order, lifecycle, diagnostics, permissions/capabilities, events, hooks (before/after/around/replace), registries, mod state and hot reload.
-- Native C++ plugins are optional developer extensions only; they are not ordinary DMods and cannot be required for user mods.
-- A C++-like script is not actual C++ machine code. Never blur that distinction.
+## Engine scope
+The reusable engine provides generic core services, platform adapters, rendering, resources, scenes/worlds, entities/components, input, 2D/3D physics adapters, audio, animation, jobs, serialization and diagnostics. Economy, colonies, planets, citizens, buildings and progression belong to games or game modules.
 
-## Language policy
-C++ is the engine language. Rust is not an alternative default and must not be introduced for engine subsystems without explicit user approval and a demonstrated technical reason. Third-party libraries may be written in other languages internally only where their integration model is acceptable and does not change the engine's language decision.
-
-## Current status
-The first CMake/core scaffold and CI workflow are now present. CI verification is pending. The repository's existing MIT license is not silently changed.
-
-## Highest-risk question
-Find or prove a C++-embeddable runtime that directly evaluates source/AST without generating bytecode, works on desktop and Android ARM64, exposes native C++ objects safely, and supports reload/diagnostics. This requirement affects architecture and must be tested before broad implementation.
+## Engineering policy
+- Do not claim a subsystem or runtime is complete without reproducible CI/device evidence.
+- Android cross-build is not physical-device proof.
+- Preserve the repository's MIT license and record third-party notices separately.
+- Update PMCS after every accepted decision and verified implementation milestone.

@@ -12,16 +12,16 @@
 10. Do not choose dependencies before checking exact version, license, maintenance, Android support, build cost and transitive dependencies.
 11. Preserve third-party license notices and record provenance for reused code.
 12. Do not copy code from a project merely because it is used as inspiration.
-13. Ordinary DMods must not require native compilation, engine rebuild, game rebuild or APK rebuild.
-14. Strict zero compilation means no runtime bytecode generation either, unless the user explicitly relaxes this.
-15. Test the interpreter's actual source pipeline; do not infer it from its name or syntax.
-16. Prefer direct AST/source interpretation for the strict DMod requirement.
+13. Installing a .dmod must not compile code on the user's device or require an engine/game/APK rebuild. Native mods may ship prebuilt target-platform/ABI libraries.
+14. The no-generated-bytecode rule applies to any future source/script mod lane; it does not prohibit prebuilt native shared libraries.
+15. Prove an interpreter's actual source pipeline before selecting it; do not infer behavior from its name or syntax.
+16. A script runtime is optional and separate from the full-access native mod runtime.
 17. C++-like script syntax does not make scripts actual C++.
-18. Native C++ plugins are optional trusted extensions, never the default mod format.
-19. Expose engine internals through versioned bindings, registries, events, hooks and extension interfaces.
-20. Separate stable, advanced and experimental mod APIs.
-21. Include dependency resolution, deterministic load order, lifecycle, diagnostics and hot reload in DMod design.
-22. Treat mod packages and assets as untrusted input; design permissions and resource limits.
+18. Native C++ modules are a supported full-access mod format. They execute in-process with app privileges; no sandbox or capability enforcement is provided.
+19. Expose live engine objects through versioned raw interfaces and add registries, events, hooks and replace/around extension points.
+20. Stable, advanced and experimental API labels describe compatibility, not security boundaries.
+21. Provide dependency resolution, deterministic load order, lifecycle, diagnostics and eventually safe hot reload. Native mods must stop their own threads and unregister callbacks/resources before unload.
+22. Validate .dmod archive bytes/paths, but never confuse package validation with runtime isolation. Native mods are executable trusted code and may crash or corrupt the process; install only trusted modules.
 23. Keep 2D and 3D render/physics implementations replaceable behind engine-owned interfaces.
 24. Avoid duplicated systems and unnecessary abstraction layers.
 25. Add tests for contracts, serialization, lifecycle, platform adapters and mod behavior.

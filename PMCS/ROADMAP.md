@@ -1,98 +1,88 @@
 # Roadmap
 
-All milestones begin incomplete. Mark tasks complete only with evidence.
+Milestones are marked complete only with reproducible evidence. Android cross-compilation is not physical-device validation.
 
 ## P0 — Requirements and technical proof
-- [x] Confirm general-purpose engine scope.
-- [x] Confirm 2D and 3D as first-class.
-- [x] Confirm C++ as primary engine language.
-- [x] Record strict DMod no-compilation requirement.
-- [x] Configure GitHub Actions for Linux GCC/Clang and Android ARM64.
-- [x] Verify Linux GCC and Clang build/CTest.
-- [x] Verify Android ARM64 NDK core cross-build.
-- [ ] Select final supported C++ standard/compiler matrix.
-- [x] Prove direct ChaiScript AST evaluation on Linux with identity optimizer.
-- [x] Cross-compile the pinned ChaiScript AST proof for Android ARM64.
+- [x] General-purpose C++ engine scope.
+- [x] First-class 2D and 3D requirement.
+- [x] GitHub Actions CI for Linux GCC/Clang and Android ARM64.
+- [x] Linux GCC/Clang build and CTest baseline.
+- [x] Android NDK core cross-build for arm64-v8a.
+- [x] ChaiScript direct-AST proof with identity optimizer; this does not select a production script runtime.
+- [ ] Final C++ standard/compiler-support policy.
 
 ## P1 — Foundation
-- [x] Initial core library and version API.
-- [x] Core logging and structured diagnostics.
-- [x] Typed event dispatcher with RAII subscriptions, priority order and exception isolation.
-- [x] Worker job system with futures, idle wait and drain-on-shutdown.
-- [x] Application lifecycle contract and tests (run 45708669112).
-- [x] Backend-neutral window and surface contracts; Linux GCC/Clang tests and Android ARM64 cross-build passed in run 45710274229.
-- [x] Portable keyboard, pointer/touch and gamepad input contract; Linux GCC/Clang tests and Android ARM64 cross-build passed in run 45710274229.
-- [x] Virtual filesystem contract and path validation; Linux GCC/Clang tests and Android ARM64 cross-build passed in run 45710274229.
-- [ ] Concrete desktop/Android backend implementations.
-- [x] Typed generational handle pool and owning ResourceRegistry; verified in run 45715803430.
-- [x] Initial typed ResourceStore key-to-handle layer; Linux tests and Android ARM64 cross-compilation verified in run 45716324493.
-- [x] Add deterministic ResourceRegistry callback-vs-destroy synchronization test; all four CI jobs passed in run 45758612936.
-- [ ] Expand event/job/resource concurrency, lifetime and shutdown stress tests.
+- [x] Core library, version, logging, diagnostics, events and JobSystem.
+- [x] Generational handles, ResourceRegistry and ResourceStore.
+- [x] Application lifecycle contract.
+- [x] Window/surface/input/filesystem contracts and virtual-path validation.
+- [ ] Concrete Android platform lifecycle/window/surface/filesystem backend.
+- [ ] Expanded concurrency, lifetime and shutdown stress tests.
 
 ## P2 — World and core runtime
-- [x] Initial Scene/World lifecycle and scene-owned system scheduler; verified in run 45772233089.
-- [x] Initial generational entity/component model with scoped queries; verified in run 45772233089.
-- [x] Parent/child transform hierarchy and 2D/3D matrix math; verified in run 45772233089.
-- [x] Initial versioned binary archive plus explicit-codec World/Scene save-load; verified in runs 45772640872, 45773296150 and 45773898548. Full game-save migration policy and external entity-reference remapping remain open.
-- [x] Initial typed ResourceStore key-to-handle layer with duplicate-key rejection and scoped access.
-- [x] Async asset read/decode/register helper with bounded reads; Linux GCC/Clang tests and Android ARM64 cross-compilation passed in run 45765620129.
-- [x] Deterministic asset dependency planner with required/optional dependency handling and cycle detection; all four CI jobs passed in run 45766502045.
-- [x] Initial CPU-side byte-budgeted LRU AssetCache; all four CI jobs passed in run 45768090059.
-- [x] Optional AssetLoader-to-AssetCache async path with cache-hit short-circuit and caller-provided size estimator; all four CI jobs passed in run 45768508344.
-- [x] Cooperative cancellation tokens/checkpoints for async uncached and cached asset loading; verified in all four CI jobs in run 45769042275. This does not interrupt an active read/decoder.
-- [x] In-flight asset request coordinator and coordinated uncached/cached loader wrappers; concurrent same-ID calls share one read/decode and result. Verified in all four CI jobs in run 45770215802.
-- [ ] Define explicit async service shutdown/lifetime policy and independent per-subscriber cancellation semantics.
-- [ ] Renderer/GPU upload and GPU resource residency.
+- [x] Scene/World lifecycle and deterministic system scheduler.
+- [x] Generational ECS, component queries, hierarchy and 2D/3D transforms.
+- [x] Versioned binary archive and explicit-codec World/Scene persistence.
+- [x] Gameplay ActionMap for keyboard, mouse and gamepad.
+- [x] Bounded async asset read/decode/register.
+- [x] Asset dependency planner, CPU LRU cache, cooperative cancellation and in-flight request coordination.
+- [ ] Explicit async service shutdown/lifetime policy and independent cancellation for shared subscribers.
+- [ ] GPU asset upload/residency integration.
 
 ## P3 — Rendering
-- [ ] Compare renderer candidates.
-- [ ] Define and test engine-owned rendering API.
-- [ ] 2D renderer and camera.
-- [ ] 3D renderer, camera and materials.
-- [ ] Shared asset/resource pipeline.
-- [ ] Android surface/device validation.
+- [x] Engine-owned backend-neutral rendering contract and RenderDevice.
+- [x] Frame packet validation and deterministic 2D sprite frame builder.
+- [x] bgfx Linux/Android backend compile proof and ESSL 300 / GLSL 330 shader compile proof ([run 45790590738](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45790590738)).
+- [ ] Runtime shader asset packaging/loading for Android and Linux.
+- [ ] Complete operational 2D renderer and physical-device validation.
+- [ ] 3D renderer, mesh buffers, materials, lighting and camera path.
+- [ ] Shared GPU asset/resource lifetime and device-loss handling.
+- [ ] Final renderer dependency decision after device testing.
 
 ## P4 — Simulation
-- [ ] Compare 2D physics candidates.
-- [ ] Compare 3D physics candidates.
-- [ ] Implement adapters and deterministic test fixtures.
+- [x] Initial PhysicsWorld2D rigid-body, collision/filter/sensor/contact/raycast implementation.
+- [x] Deterministic sweep-and-prune broadphase.
+- [ ] Physics2D solver hardening: joints, CCD, sleeping, warm starting, multiple fixtures and more stable contact manifolds.
+- [ ] Physics3D implementation and adapter.
 - [ ] Animation and navigation integration.
 
-## P5 — DMod
-- [x] In-memory manifest model and validation.
-- [x] Required/optional dependency resolution and deterministic topological order.
-- [x] TOML manifest parser, strict version fields and malformed/oversized input tests.
-- [x] Pin miniz ZIP library and toml++ TOML parser to immutable upstream commits.
-- [x] Initial read-only in-memory ZIP package reader with root manifest parsing, entry-script validation and bounded reads.
-- [x] Validate ZIP local headers against central-directory metadata before indexing package entries.
-- [x] Test archive/per-file/total decompressed-size limits, entry-count limits, compression-ratio limits, path traversal, case collisions, missing entry script, malformed local header and invalid ZIP data.
-- [x] Test exact duplicate paths, Unix symlink rejection, unsupported compression methods and CRC/decompression error reporting (run 45708233794).
-- [ ] Package signature/trust policy and explicit package-format versioning.
-- [ ] Choose interpreter only after Android cross-compile and runtime safety audit.
-- [ ] C++ host bindings, mod contexts and enforced capabilities.
-- [ ] Registries, events and hooks.
-- [ ] Mod lifecycle, diagnostics and hot reload.
-- [ ] Runtime resource limits and sandbox review.
-- [ ] Desktop and Android ARM64 runtime tests.
+## P5 — DMod and unrestricted native mods
+- [x] Manifest model/parser, validation and deterministic dependency resolver.
+- [x] Bounded in-memory ZIP package reader with local-header, path, collision, size and CRC checks.
+- [x] Native library open/symbol lookup.
+- [x] Native .dmod package installation into app-private storage (POSIX implementation).
+- [x] NativeModHostApiV1 with raw interface query and logging.
+- [x] NativeModManager dependency order, batch rollback, enable/update/disable/unload lifecycle.
+- [x] Deferred self-unload after native callbacks return.
+- [x] EngineRuntime raw interface exposure for runtime, scene, world, Physics2D, input actions, fixed clock and render objects.
+- [x] Deterministic host interface enumeration with ID/version reporting ([run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851)).
+- [x] Explicit user decision: native mods run in-process with no sandbox and no capability enforcement.
+- [ ] Expand raw host exposure as additional engine systems are implemented.
+- [ ] Deep hook/replace/mixin system for engine and game behavior.
+- [ ] Track module-owned callbacks/resources/jobs/threads and make unload/hot reload safe.
+- [ ] Native package signature/publisher trust policy; signatures verify origin/integrity, not runtime isolation.
+- [ ] Native .dmod load/unload test on a real Android ARM64 device.
+- [ ] Decide whether a separate script runtime adds enough value. ChaiScript is currently proof-only; it is not a production runtime.
 
 ## P6 — Runtime services and content
-- [x] Initial keyboard/mouse/gamepad gameplay ActionMap; verified in runs 45774213362 and 45774483591.
-- [ ] Audio.
-- [ ] UI integration.
+- [x] Initial device-independent keyboard/mouse/gamepad ActionMap.
+- [ ] Audio backend and mixer.
+- [ ] Animation runtime.
+- [ ] Runtime UI integration.
 - [ ] Asset import pipeline.
-- [ ] Networking/localization as justified.
+- [ ] Networking/localization where justified.
 
 ## P7 — Tools
-- [ ] Runtime diagnostics and profiler integration.
+- [ ] Runtime diagnostics/profiler integration.
 - [ ] Editor/tooling architecture.
-- [ ] Touch-friendly Android workflows where applicable.
+- [ ] Touch-friendly Android workflows.
 
 ## P8 — Validation games
 - [ ] Validate with the planned planet/colony game.
 - [ ] Validate with a substantially different 3D game.
 - [ ] Confirm neither project requires an engine fork.
 
-## Out of scope until justified
-- Native C++ plugins as the ordinary user mod format.
-- Custom script language before existing runtimes are tested.
-- Premature renderer/ECS/physics lock-in.
+## Explicit non-goals
+- Sandboxing or capability restrictions for native mods. Native modules are trusted in-process code by user decision.
+- Compiling mods on the end user's device or requiring an APK/engine rebuild for mod installation.
+- Claiming Android runtime correctness from cross-compilation alone.

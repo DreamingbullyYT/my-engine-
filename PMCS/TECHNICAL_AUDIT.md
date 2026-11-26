@@ -1,6 +1,6 @@
 # Technical Audit
 
-**Status:** Core services, typed resource identity/ownership, keyed ResourceStore, asset dependency planning, bounded async asset loading, CPU-side AssetCache, cooperative cancellation and in-flight request coordination are CI-verified. ChaiScript remains a proof-only candidate; no script runtime has been approved for production use.
+**Status:** Core services, World/ECS, async assets, Physics2D, backend-neutral rendering, EngineRuntime and native in-process DMod loading are CI-verified. Native mods intentionally have no sandbox or capability enforcement. ChaiScript remains a proof-only candidate for a separate script lane.
 
 ## Core resource identity
 - Initial typed handle design is a tag-typed (index, generation) pair. Tag types prevent accidental interchange between domains such as textures and buffers at compile time.
@@ -157,3 +157,25 @@ For each interpreter, inspect exact source/version:
 
 ## License/provenance gate
 Before adoption, pin repository, tag/commit and exact license files; inspect transitive dependencies and bundled assets; record modifications; preserve notices; confirm compatibility with distribution plans. The repository currently contains an MIT LICENSE; do not silently change it.
+
+
+## Native DMod runtime — implemented, intentionally unrestricted
+
+- Native manifests use runtime="native" and a safe relative native_library path. The package contains a prebuilt shared library for the target platform/ABI.
+- NativeLibrary uses dlopen(RTLD_NOW | RTLD_LOCAL) on POSIX and LoadLibraryW on Windows. Dynamic loading is in-process; it is not an isolated worker or sandbox.
+- NativeModPackageInstaller installs the validated library beneath an existing application-private root. POSIX installation walks directories with openat and O_NOFOLLOW, writes a temporary file with restrictive permissions and atomically renames it into place. The non-POSIX installer path is currently not implemented.
+- NativeModManager validates the module descriptor and manifest identity/version, supports dependency-ordered batch loads and rollback, enable/update/disable/unload and reverse-order shutdown. Self-unload from inside a native callback is deferred until the callback returns.
+- NativeModHostApiV1 provides raw interface lookup, log forwarding and append-only interface enumeration. Enumeration returns IDs/versions in deterministic lexical order and calls visitors without holding the host registry lock.
+- EngineRuntime currently exposes raw live objects for runtime, Scene, World, PhysicsWorld2D, ActionMap, FixedStepClock, RenderFrameBuilder and RenderDevice. The Runtime object itself exposes additional accessors for its managed systems.
+- This is not a capability sandbox. Native code runs with the game's process privileges; it may mutate any object it obtains, use OS resources allowed to the app, corrupt memory/data, deadlock or terminate the process. Archive validation prevents malformed package paths; it does not make native code trustworthy.
+- The manifest's capabilities field is parsed/validated but is not enforced for native modules. Do not add capability gates or claim isolation without a new explicit user decision.
+- Raw C++ pointers are powerful but create compiler/ABI/lifetime obligations. Modules must target the correct CPU ABI and a compatible C++ runtime/header set. V1 host API extensions must be append-only while preserving existing fields.
+- Native mod callbacks are expected to obey the declared noexcept ABI. The manager is not a general process fault-containment mechanism and does not make arbitrary mod-created threads safe to unload. Mods must stop their own threads and unregister callbacks/resources before disable/destroy returns.
+- Native package loading and lifecycle plus interface enumeration passed Linux tests in [run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851). Android ARM64 jobs cross-compile the package installer/runtime sources; they do not execute a native mod on a phone.
+- Remaining: full engine service exposure, hook/replace/mixin infrastructure, callback/resource/job/thread ownership tracking, hot reload, package publisher/signature trust and physical Android runtime validation.
+
+## Rendering and physics implementation status
+
+- Engine-owned render packet validation, RenderDevice surface lifetime/resize handling, RGBA8 texture forwarding and RenderFrameBuilder are implemented. The builder produces indexed 2D sprite quads and supports 3D draw submissions at the contract level.
+- Optional bgfx backend proof compiles for Linux and Android ARM64. CI compiles ESSL 300 and GLSL 330 sprite shaders. The current backend draws 2D sprites only when compatible shader binaries are supplied; there is no 3D mesh/material renderer or physical device proof. Verified in [run 45790590738](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45790590738).
+- PhysicsWorld2D and deterministic sweep-and-prune broadphase have unit coverage. Known limitations include no joints, CCD, sleeping, persistent warm-starting or multiple fixtures per body. Physics3D is not implemented.

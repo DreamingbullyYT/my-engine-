@@ -1,160 +1,91 @@
 # Architecture
 
-**Status:** Core services, platform contracts, typed resource ownership, asset pipeline, initial World/ECS with hierarchy and transforms, Scene scheduler, versioned binary and World/Scene serialization, plus device-independent gameplay action mappings are CI-verified. No concrete renderer, physics engine or Android/desktop native backend exists yet.
+**Status:** Core/runtime foundations, World/ECS, serialization, gameplay input, async assets, Physics2D, backend-neutral rendering, EngineRuntime and native in-process DMod loading are implemented and CI-verified. Android platform integration, production 3D rendering/physics and several runtime services remain incomplete.
 
 ## High-level modules
-- Platform: desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
-- Core: memory/handles, jobs, events, logging, diagnostics, serialization and resource identity.
-- World: scenes, entities, components, transforms and world lifecycle.
-- Rendering: engine-owned API with 2D and 3D render paths.
-- Simulation: 2D/3D physics, animation and navigation through replaceable adapters.
-- Runtime services: input actions, audio, UI, networking and localization as optional capabilities.
-- DMod: package validation, dependency resolver, source interpreter, bindings, hooks, lifecycle, permissions and hot reload.
-- Game project: game-specific systems, content, assets, UI and scripts.
-- Tools/editor: editor and debugging tools are not required by runtime.
+- **Core:** time, jobs, events, logging, diagnostics, handles, resource ownership and serialization primitives.
+- **Platform:** lifecycle, windows/surfaces, input, filesystem and OS integration. Platform contracts exist; concrete Android/desktop backends remain future work.
+- **World:** Scene, World/ECS, entities, components, hierarchy, transforms and scheduler.
+- **Assets:** bounded file loading, decoders, dependency planning, CPU cache and request coordination.
+- **Rendering:** engine-owned 2D/3D frame and resource contracts with replaceable backends.
+- **Simulation:** Physics2D is implemented initially; Physics3D, solver hardening, animation and navigation remain.
+- **Runtime:** combines Scene, fixed-step updates, input actions, Physics2D and rendering.
+- **DMod:** validated ZIP package, manifest/dependency handling and an unrestricted in-process native runtime. A production script runtime and hook system remain future work.
+- **Game project:** game-specific systems, content, assets, UI and gameplay code.
+- **Tools/editor:** diagnostics, profiling and editor tools are not required for the initial runtime.
 
-## Core contracts implemented
-- Engine identity/version API.
-- Logger with severity filtering and replaceable sink; callbacks run outside configuration locks.
-- Structured diagnostic value.
-- Typed event dispatcher with RAII connections, priority ordering, stable registration order, snapshot dispatch, re-entrancy and per-listener exception isolation.
-- Job system with worker pool, futures, exception propagation, idle wait and drain-on-shutdown. Lifecycle operations are not safe to call concurrently or from a worker thread.
+## Core contracts
+- Engine identity/version API, logger, structured diagnostics, typed event dispatcher and worker JobSystem.
 - No process-global singleton is imposed; callers own service instances.
-- Typed generational handles use tag types to prevent cross-domain type mixing; a synchronized handle pool detects stale handles after release/reuse.
-- ResourceRegistry<T, Tag> owns resources with unique_ptr, provides scoped callback access under a shared lock, rejects stale handles and safely invalidates identities before destruction. Callbacks must not re-enter the same registry; do not retain resource references outside the callback.
-- ResourceStore<T, Tag> adds a case-sensitive string-key mapping over ResourceRegistry, with insert/find/erase and scoped access by key or handle. It is intentionally not a loader: file I/O, decoding, async scheduling, dependency tracking and GPU upload belong to higher-level asset systems. Store callbacks must not re-enter the same store.
-- ResourceStore Linux GCC/Clang tests and Android ARM64 test cross-compilation passed in [run 45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493). Android is compile-only, not physical-device execution.
-- `dream_assets::load_async` composes JobSystem, bounded IFileSystem reads, a caller-provided decoder and ResourceStore. `load_async_cached` is an optional sibling path targeting AssetCache; it checks for an existing key before file I/O and takes a caller-provided decoded-size estimator. Both accept an optional `AssetCancellationToken`; cancellation is cooperative and checked before I/O/cache hits, after reads, after decoding and, for cached loads, after size estimation. It cannot interrupt an in-progress backend read or decoder call. Cancellation observed before registration/insertion prevents that operation. AssetCache is a CPU-side byte-budgeted LRU; it does not measure allocations or manage GPU residency. Borrowed services must outlive the task and callbacks run on a worker thread. All four CI jobs passed in [run 45769042275](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45769042275).
-- `AssetRequestCoordinator<Result>` shares a `std::shared_future<Result>` among callers using the same request ID while the request is pending. `load_async_coordinated` and `load_async_cached_coordinated` are convenience wrappers over the existing loaders. Completed entries are pruned on the next request or explicit `prune_completed()` call; this is not a result cache. Request IDs are caller-defined and must include any type/source/version identity needed to distinguish requests. The first caller owns the decoder and cancellation token; followers receive the shared result and cannot independently cancel the underlying operation. Concurrent duplicate requests therefore perform one read/decode. Verified across Linux GCC, Linux Clang, DMod proof and Android ARM64 cross-compilation in [run 45770215802](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45770215802).
-- ResourceRegistry callback-vs-destroy synchronization test passed with all four CI jobs in [run 45758612936](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45758612936).
-
-## World, ECS and transforms
-- `DreamEngine::World` is an owning, thread-safe entity/component store using generational `Entity` handles. Each component type has a pool; stale entity generations cannot access components left by a prior entity occupying the same index.
-- Structural operations take the exclusive World lock; read access uses a shared lock. Component callbacks run while the relevant lock is held and must not re-enter the same World or retain references after the callback returns.
-- `with_component`, `with_component_mut`, multi-component access and `for_each`/`for_each_mut` provide scoped access. A component pool's runtime `std::type_index` is not a persistent identifier.
-- Parent links are World-owned and updated atomically with structural changes. Self-parenting and cycles are rejected. Destroying a parent detaches its direct children; destroying an entity clears its parent link.
-- `Transform2D` and `Transform3D` are data components. Matrix conventions are column-major storage with column vectors. 2D matrices are 3x3; 3D matrices are 4x4. Matrix composition is retained so hierarchical non-uniform scale/rotation does not lose shear. 3D quaternion inputs are expected to be normalized.
-- `Scene` owns a World and a `SystemScheduler`. Systems run in `PreUpdate`, `Update`, `PostUpdate` order, descending priority and stable registration order within a phase. A tick snapshots the registrations; systems added during a tick start next tick, and a system removed before its turn is skipped. Callback exceptions are reported without aborting remaining systems. Recursive/concurrent ticks are rejected.
-- ECS, hierarchy, transform and scheduler tests passed all four CI jobs in [run 45772233089](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45772233089).
-
-## Serialization and persistence
-- `DreamEngine::Serialization` provides a DENG-magic, major/minor-versioned, little-endian binary archive with bounded total size, bounded UTF-8 strings, strict UTF-8 validation and sticky error reporting.
-- World components are persisted only through explicitly registered codecs with stable project-defined 64-bit type IDs and explicit component versions. `std::type_index`, compiler type names and pointer values are never written as IDs.
-- World archive records use deterministic entity order and archive-local entity indices for parent relationships. Restored entities receive fresh runtime handles.
-- Saving fails on unregistered live component types instead of silently omitting data. Loading rejects invalid IDs, duplicate components, unsupported component versions, invalid/cyclic parents, oversized/truncated payloads and trailing bytes. Unknown components are rejected by default; skip behavior must be explicitly enabled.
-- World restoration is staged into a new World and exposed only after successful validation. Save callers must quiesce World mutations for the duration of a consistent snapshot; the current serializer does not provide a multi-operation transactional read lock across the entire save. Custom codecs that contain entity references must explicitly translate them; generic external entity-reference remapping is not automatic.
-- Scene archives persist the scene name and World. Runtime system callbacks are executable code and are intentionally not serialized; game code re-registers systems after load.
-- Binary archive, World archive and Scene archive passed all four CI jobs in [run 45772640872](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45772640872), [run 45773296150](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45773296150) and [run 45773898548](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45773898548).
-
-## Gameplay input actions
-- `DreamEngine::Input::ActionMap` maps platform input events into game action states. Bindings currently cover USB HID keyboard usages with exact modifiers, mouse buttons and specific gamepad device buttons/axes.
-- Digital and analog bindings contribute to a common action: an action remains down while any digital binding is held or its analog threshold is met. Edge flags are reset by `begin_frame()`, while values remain latched.
-- Gamepad axes use a configurable deadzone and scale. Device disconnect releases only that device's gamepad bindings. `reset_all()` supports focus-loss/global input reset.
-- ActionMap tests and Android ARM64 cross-compilation passed all four CI jobs in [run 45774213362](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45774213362) and [run 45774483591](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45774483591).
+- Typed generational handles, owning ResourceRegistry and keyed ResourceStore provide identity and lifetime management.
+- ResourceStore is not an asset loader. I/O, decoding, dependency planning, cancellation, caching and GPU upload stay in higher-level systems.
+- JobSystem lifecycle methods are not safe to call concurrently or from a worker thread. Callers must respect borrowed-service lifetimes.
 
 ## Platform contracts
-- Application lifecycle owns initialization, frame polling/update and shutdown sequencing; stop requests are atomic and frame delta is clamped.
+- Application lifecycle defines initialization, update, stop requests and cleanup.
 - Window contract uses opaque IDs, logical/pixel dimensions, DPI scale, focus/minimized state and lifecycle events.
-- Surface contract separates a window from its native render surface. Native display/window pointers are borrowed and valid only until the surface is released or platform surface is destroyed.
-- Input contract separates physical keyboard usage IDs (USB HID Keyboard/Keypad), Unicode text, mouse/touch/pen pointer identity, scroll and normalized gamepad axes.
-- Filesystem contract uses UTF-8 relative virtual paths rooted by the backend, rejects traversal/absolute paths and invalid/nonportable names, and exposes read/write/existence/directory operations.
-- These are interfaces only; no concrete SDL, Win32, X11, Wayland, Android or Apple backend has been selected or implemented.
-- Window/surface/input/filesystem contracts and virtual-path tests passed Linux GCC, Linux Clang, DMod AST proof and Android ARM64 cross-build in [run 45710274229](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45710274229). Android is cross-compiled, not device-tested.
-- The typed handle pool and owning ResourceRegistry are verified in [run 45715295194](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715295194). Android is cross-compiled, not device-tested.
+- Surface contract separates a window from its native render surface. Native display/window pointers are borrowed and valid only until the surface is released or destroyed.
+- Input contract separates physical keyboard usage IDs, Unicode text, mouse/touch/pen pointer identity, scrolling and normalized gamepad axes.
+- Filesystem uses UTF-8 relative virtual paths and rejects traversal/absolute/unsafe paths.
+- These are interfaces only. No concrete SDL, Android NativeActivity/GameActivity, Win32, X11, Wayland or Apple backend has been completed.
 
-## Asset loading cancellation
-- `AssetCancellationSource` creates a shared cancellation state and issues copyable `AssetCancellationToken` values. Calling `cancel()` requests cancellation for work using those tokens.
-- Cancellation is cooperative, not preemptive: an active filesystem backend read or decoder/estimator callback must return before the next checkpoint can observe the request. Callers must still keep borrowed services alive until the future completes.
-- The loader reports `AssetLoadStatus::Cancelled` when cancellation is observed at a checkpoint and avoids subsequent cache/store registration or insertion.
-- Cancellation behavior passed Linux GCC, Linux Clang, DMod AST proof and Android ARM64 cross-compilation in [run 45769042275](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45769042275). Android is compile-only, not physical-device execution.
+## World, ECS and simulation
+- World owns generational Entity handles and typed component pools. Structural operations use exclusive locking; scoped read/write callbacks use shared/exclusive access. Callbacks must not re-enter the same World or retain references after return.
+- Parent links are World-owned; cycles are rejected and parent destruction detaches children.
+- Transform2D and Transform3D use column-major matrices with column vectors. Transform composition preserves shear under rotated children and non-uniform parent scale.
+- Scene owns a three-phase PreUpdate/Update/PostUpdate scheduler with descending priority and stable registration order. Add/remove behavior during ticks is deterministic; callback exceptions are reported per system.
+- Serialization uses a versioned DENG little-endian archive and explicit stable component IDs/versions. World loading is staged. Runtime system callbacks are re-registered by game code after load.
+- PhysicsWorld2D provides rigid bodies, circle/box colliders, forces/impulses, filtering, sensors, contact events, raycasts and a deterministic sweep-and-prune broadphase. Known gaps include joints, CCD, sleeping, warm-starting and multi-fixture bodies.
+- Physics3D is not implemented.
 
-## Asset request coordination
-- The coordinator deduplicates only pending requests. Once a future is ready, its entry is removed lazily on the next request or by calling `prune_completed()`; callers already holding a shared future can still read its result.
-- Request IDs are supplied by the caller. Include asset type, source path/identity, version or other relevant dimensions so unrelated loads do not accidentally share work.
-- The first caller's factory, decoder and cancellation token own the underlying operation. Later callers with the same pending ID share the result; their factories and cancellation tokens are ignored. Independent per-subscriber cancellation is not implemented.
-- The coordinator does not own JobSystem, filesystem, store or cache lifetimes. Those borrowed services must still outlive the underlying task.
-- Concurrent same-ID uncached requests were tested to perform one file read and one decode and return the same handle. All four CI jobs passed in [run 45770215802](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45770215802).
+## Assets
+- AssetLoader composes JobSystem, bounded IFileSystem reads, caller-provided decoding and ResourceStore.
+- Optional AssetCache is byte-budgeted CPU-side LRU; decoded size is caller-estimated and GPU residency is not managed.
+- Cancellation is cooperative and cannot interrupt an active filesystem read or decoder.
+- AssetRequestCoordinator deduplicates pending requests by caller-provided ID. The first requester owns the factory/cancellation token; subscribers cannot independently cancel the shared operation.
+- Dependency planning is deterministic and reports missing dependencies/cycles; execution and lifetime management remain separate.
 
-## Asset dependency planning
-- `resolve_dependencies` accepts an in-memory set of asset definitions and returns deterministic dependency-first order using lexical tie-breaking.
-- Required missing dependencies fail the plan; missing optional dependencies are reported but do not block it. Invalid/duplicate asset keys and duplicate dependency declarations are rejected; cycles return blocked asset keys and no partial load order.
-- This is a pure planning layer: it does not load, own, cache, cancel or unload assets. All four CI jobs passed in [run 45766502045](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45766502045).
+## Rendering and EngineRuntime
+- RenderFramePacket separates engine frame data from the graphics backend.
+- validate_frame_packet checks dimensions, timing, camera/matrix values, vertices, indices and draw commands.
+- IRenderBackend is the backend contract. RenderDevice owns a SurfaceId lease, refreshes surface metrics, forwards resize, validates frames and forwards texture create/destroy.
+- RenderFrameBuilder builds indexed sprite quads and ordered 2D draw commands; it also represents 3D mesh draws at the contract level.
+- bgfx is currently an integration proof, not a final locked dependency. The optional bgfx backend can clear and draw 2D sprites when compatible shader binaries are provided. CI compiles ESSL 300 and GLSL 330 shaders and Android ARM64 builds the backend. No 3D mesh/material renderer or physical Android GPU test exists yet.
+- EngineRuntime composes Scene, fixed-step clock, ActionMap, PhysicsWorld2D, RenderFrameBuilder and RenderDevice. Native mods are updated from the fixed-step loop. ECS/physics body synchronization remains game/system-owned.
 
-## Asset cache
-- `AssetCache<T, Tag>` wraps ResourceStore with a byte-budgeted least-recently-used policy for decoded CPU assets. Callers provide estimated byte sizes; zero-byte assets are valid, and shrinking the budget evicts least-recently-used entries.
-- Cache construction/insertion is exception-safe; cache callbacks execute under its mutex and must not re-enter the same cache. No pinning, automatic memory measurement, file I/O, decoding or GPU residency is provided.
-- LRU cache behavior and exception safety passed all CI jobs in [run 45768090059](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768090059).
+## Native DMod runtime — no sandbox
+- .dmod is a ZIP package with a root manifest. PackageReader validates archive structure, paths, local headers, collisions, sizes, compression ratios and CRC/decompression results before exposing bytes.
+- For runtime="native", the manifest names a safe relative path to a prebuilt shared library. NativeModPackageInstaller writes it into an application-private root. POSIX installation uses directory file descriptors, openat, O_NOFOLLOW, restrictive permissions and atomic rename.
+- NativeLibrary loads the installed binary with dlopen on POSIX or LoadLibraryW on Windows. The installer currently has no Windows implementation.
+- NativeModManager validates descriptor/identity/version, loads dependency order, rolls back failed batches, controls enable/update/disable/unload and defers self-unload until native callbacks return.
+- NativeModHostApiV1 exposes logging, query-by-ID and deterministic interface enumeration. It hands mods raw object pointers; it does not use proxies or a security sandbox.
+- EngineRuntime currently registers dream.engine.runtime, dream.engine.scene, dream.engine.world, dream.engine.physics2d, dream.engine.input.actions, dream.engine.clock.fixed, dream.engine.render.frame_builder and dream.engine.render.device.
+- Native code runs inside the game process with the app's OS privileges. There is no sandbox, no capability enforcement and no promise of crash/memory isolation. A ZIP path validator only validates package data; it does not make executable code safe.
+- Native code can access any registered object and can also use its normal in-process/OS capabilities. Not every future engine subsystem or private implementation detail is automatically registered today. The roadmap includes broader engine service exposure and hook/replace/mixin points.
+- Manifest.capabilities is parsed/validated metadata but is not an access-control boundary for native modules.
+- Modules must be built and packaged per target ABI/platform. The user's device does not compile them, and loading a package does not rebuild the APK or engine.
+- Native unload is not equivalent to safe thread termination. Mods must stop owned threads and unregister callbacks/resources before disable/destroy returns; host-side ownership tracking and full hot reload are not finished.
 
-## DMod contracts implemented and verified
-- Manifest model includes package ID/name/version, engine API range, relative entry script, dependencies and requested capabilities.
-- Validation rejects invalid IDs, unsafe paths (absolute paths, traversal, backslashes, drive-like paths and trailing separators), duplicate dependencies/capabilities and invalid version ranges.
-- TOML parser accepts manifest format version 1, parses strict three-part numeric versions, dependency ranges and capabilities, and caps manifest text at 64 KiB.
-- Deterministic resolver checks engine API compatibility, duplicate installed IDs, required dependency presence/version, optional dependencies and cycles.
-- Read-only in-memory ZIP reader indexes package files without filesystem extraction, requires root manifest.toml, validates every local header against central-directory metadata, validates relative UTF-8 paths, rejects traversal/case-collisions/links/encryption/unsupported methods, applies configured archive/per-entry/total-size and compression-ratio limits, parses the manifest and checks that its entry script exists.
-- File bytes are read into bounded memory buffers and CRC/decompression errors are returned to the caller.
-- Linux GCC/Clang tests and Android ARM64 cross-build passed in [run 45708233794](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45708233794).
-- Package tests cover valid packages, traversal, duplicate/case-colliding paths, Unix symlink metadata, unsupported compression, malformed local headers, entry count and size/ratio limits, missing entry scripts, invalid archives and CRC/decompression failures.
-- Package signature/trust, interpreter execution and capability enforcement remain future work.
+## Script mods
+- runtime="script" remains a separate future lane.
+- ChaiScript at the pinned proof commit demonstrated direct AST evaluation with an identity optimizer and no compiled AST nodes. This is a proof only; it is not integrated as the production script runtime.
+- Do not describe script execution, memory quotas, sandboxing or reload as implemented.
 
-## DMod package proposal
-- .dmod is planned as a ZIP container with a root manifest.toml and relative paths for scripts/assets.
-- The package reader is read-only and must not extract untrusted paths to the filesystem.
-- The reader validates archive metadata, local headers, entry types, UTF-8 paths, duplicate/case-colliding paths, entry count, compressed/uncompressed sizes and compression ratios before exposing entries.
-- Only stored and deflate entries are supported initially. Encryption, links, absolute paths and traversal are rejected.
-- The current in-memory reader is a first implementation; package signature/trust and versioning remain pending.
+## Mod API compatibility
+- Stable, advanced and experimental are compatibility/documentation tiers, not security boundaries.
+- Native ABI structs use a size/version contract. V1 extensions must be append-only and existing fields must retain their meaning.
+- Because mods receive raw C++ object pointers, modules need compatible headers, architecture, toolchain/runtime ABI and engine API range. Raw pointer access is powerful but not a promise that every private C++ symbol has a stable cross-version ABI.
+- A future hook API should support deterministic registration, before/after/around/replace behavior, explicit priority, ownership tracking, recursion protection, error diagnostics and safe unregistration. Hooks must not impose a sandbox on native mods.
 
 ## Dependency direction
-Platform adapters implement platform interfaces. Backends implement engine-owned rendering/physics/audio interfaces. Game systems depend on public engine APIs. DMods depend on versioned DMod APIs and granted capabilities. Core must not depend on a particular game or backend.
+- Platform adapters implement platform interfaces.
+- Render/physics/audio backends implement engine-owned interfaces.
+- Game systems depend on public engine APIs; game-specific systems do not enter engine core.
+- Native mods can call registered engine objects directly. The host registry is discovery and compatibility infrastructure, not a security wall.
+- Core must not depend on a particular game, platform windowing library or graphics backend.
 
-## 2D/3D coexistence
-2D and 3D may use specialized pipelines where semantics differ. Share resource identity, asset management, scheduling and diagnostics where appropriate. A project may use 2D, 3D or both.
-
-## DMod package lifecycle
-1. Discover package.
-2. Validate archive, manifest, paths, identity and declared API version.
-3. Resolve dependencies and conflicts.
-4. Determine deterministic load order.
-5. Create mod context and granted capabilities.
-6. Parse and interpret source directly as AST (no bytecode generation).
-7. Register hooks, events, components, systems and resources.
-8. Enable mod and report diagnostics.
-9. On unload/reload, unregister owned resources and isolate failures.
-
-## Hook model
-Plan for before/after/around/replace hooks, explicit priorities, deterministic ordering, recursion protection, error isolation and API-version checks. Do not promise arbitrary patching of every private C++ function.
-
-## Source execution contract
-DMod runtime reads script source and evaluates its AST directly. Conventional VM bytecode, native compilation, WASM modules and native plugins are not ordinary zero-compilation source mods.
-
-## API stability
-- Stable: documented contracts intended for broad mod compatibility.
-- Advanced: deeper access with explicit compatibility warnings.
-- Experimental: unstable internal-facing hooks and APIs.
-Never make every private implementation symbol a permanent public contract.
-
-## Build and CI baseline
-- CMake is the project build system; GitHub Actions is the primary build/test environment.
-- Linux CI builds and runs tests with GCC and Clang.
-- Android CI cross-compiles with NDK for arm64-v8a (ARMv8-A); this is not physical-device runtime testing.
-- C++20 is provisional; final compiler support remains open.
-
-## Proposed repository layout
-```
-/CMakeLists.txt
-/cmake/
-/engine/core/
-/engine/platform/
-/engine/world/
-/engine/render/
-/engine/simulation/
-/engine/runtime/
-/engine/dmod/
-/tools/
-/tests/
-/third_party/
-/examples/
-/PMCS/
-```
-
-## Build direction
-Keep dependency versions pinned and builds reproducible. Do not lock renderer, ECS, physics or scripting dependencies before comparative research and CI proof.
+## Verification policy
+- Linux GCC/Clang builds run CTest.
+- Android CI cross-compiles for arm64-v8a (ARMv8-A); it does not execute native modules on a real phone.
+- Current native interface enumeration is verified in [run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851).
+- Renderer backend proof is verified in [run 45790590738](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45790590738).

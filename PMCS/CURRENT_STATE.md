@@ -2,75 +2,77 @@
 
 **Last checked:** 2026-11-26  
 **Repository:** DreamingbullyYT/my-engine-  
-**Default branch:** main
+**Default branch:** main  
+**Latest verified implementation commit:** 6deb0a76d8143e05c15a0208359087ec626cb9c0
 
 ## Implemented
-- CMake project with `dream_core`, `dream_platform`, `dream_dmod` static libraries and interface modules `DreamEngine::Assets`, `DreamEngine::World`, `DreamEngine::Serialization` and `DreamEngine::Input`.
-- Core version API, logger, diagnostics, typed event dispatcher, worker job system, typed generational handle pool, owning ResourceRegistry and keyed ResourceStore.
-- Platform application lifecycle with initialization/update/shutdown callbacks, stop requests, frame delta clamping and cleanup on failure.
-- Backend-neutral window configuration/metrics/events and opaque window IDs.
-- Native render-surface bridge with borrowed native handles and opaque surface IDs.
-- Input event contract for USB HID keyboard usages, Unicode text, mouse/touch/pen pointers, scrolling and gamepad controls. `DreamEngine::Input` maps these into game actions with digital/analog state and binding edges.
-- Virtual filesystem contract with UTF-8 relative paths, traversal rejection and portable filename validation.
-- `DreamEngine::World`: generational entities, typed component pools, scoped const/mutable access, multi-component queries, parent/child hierarchy with cycle rejection, and data-only Transform2D/Transform3D plus matrix composition. `Scene` owns a World and a three-phase system scheduler (PreUpdate/Update/PostUpdate) with deterministic priority/order, safe add/remove during ticks and exception reporting. Verified in run 45772233089.
-- `DreamEngine::Serialization`: bounded versioned little-endian DENG binary reader/writer, strict UTF-8, and World/Scene save-load using explicit stable component IDs and versioned codecs. World restoration is staged; unknown component policy is explicit; Scene name/world are persisted but runtime system callbacks are re-registered. Verified in runs 45772640872, 45773296150 and 45773898548.
-- `DreamEngine::Input`: action map for HID keyboard, mouse buttons and device-specific gamepad buttons/axes; `down`, `just_pressed`, `just_released`, analog value, modifiers, deadzone, controller disconnect and global reset handling. Verified in runs 45774213362 and 45774483591.
-- DMod manifest model, validation, deterministic dependency resolver and tests.
-- TOML manifest parser with format-version check, strict MAJOR.MINOR.PATCH parsing, dependency/capability parsing and a 64 KiB input cap.
-- Read-only in-memory ZIP package reader. It does not extract package paths to disk, validates all local ZIP headers against the central directory, validates UTF-8 paths and case-collisions, rejects links/encryption/unsupported methods, enforces archive/per-entry/total-size and compression-ratio limits, reads the root manifest and checks the declared entry script exists.
-- Pinned build dependencies: miniz 3.1.2 and toml++ 3.5.1, each fetched from an immutable upstream commit.
-- GitHub Actions for Linux GCC/Clang, Android ARM64 cross-build, ChaiScript AST proof and Android cross-compilation of selected header-only tests.
-- `dream_assets` async loader: bounded virtual-file read (default 64 MiB, configurable), caller-provided worker-thread decoder and ResourceStore registration. `load_async_cached` optionally targets AssetCache, checks for a cache hit before I/O, and accepts a caller-provided CPU-memory estimator. Both paths support cooperative cancellation through `AssetCancellationSource` / `AssetCancellationToken`, with checkpoints before I/O/cache hits, after reads, after decoding and (cached path) after size estimation. Cancellation cannot interrupt an in-progress filesystem read or decoder call. Borrowed filesystem/cache/store/JobSystem lifetime and decoder/estimator thread-safety are caller responsibilities. Run 45769042275 passed all four CI jobs.
-- `AssetRequestCoordinator<Result>` plus `load_async_coordinated` / `load_async_cached_coordinated` deduplicate matching in-flight request IDs and return a shared future/result. Completed entries are lazily pruned; this is not a result cache. The caller must namespace request IDs correctly. The first caller owns the operation's decoder and cancellation token; later callers share its result and cannot independently cancel it. Run 45770215802 passed all four CI jobs.
-- Asset dependency planner in `engine/assets/include/dream/assets/dependency_graph.hpp`: deterministic dependency-first order, required/optional missing dependency reporting, duplicate/invalid key rejection and cycle detection. Verified in run 45766502045.
+
+### Core and platform contracts
+- CMake/C++20 project with dream_core, dream_platform, dream_dmod and interface targets for Assets, World, Serialization, Input, Render, Physics2D and Runtime.
+- Core version API, logger, diagnostics, typed event dispatcher, worker JobSystem, fixed-step clock, generational handles, owning ResourceRegistry and keyed ResourceStore.
+- Application lifecycle callbacks, frame-delta clamping, stop requests and failure cleanup.
+- Backend-neutral window, native render-surface, input and virtual-filesystem contracts. Input covers USB HID keyboard/keypad, Unicode text, mouse/touch/pen and gamepad controls. Virtual paths reject traversal, absolute paths and unsafe/nonportable segments.
+- These are contracts, not concrete Android window/lifecycle/filesystem implementations.
+
+### World, serialization and input
+- World/ECS with generational entities, typed component pools, scoped access, multi-component queries, parent/child hierarchy with cycle rejection, Transform2D and Transform3D matrices.
+- Scene-owned PreUpdate/Update/PostUpdate scheduler with deterministic priority/order and safe add/remove behavior during ticks.
+- Versioned little-endian DENG binary archive and explicit stable-ID component codecs. World restoration is staged; Scene archives preserve scene name and World, while runtime callbacks are re-registered by game code.
+- ActionMap for keyboard, mouse and gamepad, with modifiers, analog deadzones, edge state, disconnect handling and global reset.
+
+### Asset pipeline
+- Bounded asynchronous asset read/decode/register path using JobSystem and IFileSystem.
+- Optional byte-budgeted CPU AssetCache with LRU policy and caller-supplied size estimator.
+- Cooperative cancellation checkpoints; active filesystem or decoder calls cannot be interrupted.
+- Deterministic asset dependency planner and in-flight request coordinator for matching request IDs. Coordinator shares pending work; it is not a result cache and does not provide independent follower cancellation.
+
+### 2D physics
+- PhysicsWorld2D with static/kinematic/dynamic bodies, circle and oriented-box colliders, gravity, force/torque/impulse, damping, friction, restitution, category/mask/group filters and sensors.
+- Deterministic sweep-and-prune broadphase; Begin/Stay/End contact events; raycast/raycast-all and point overlap queries.
+- Known gaps: one collider per body, no joints, CCD, sleeping or persistent warm-start cache; OBB-OBB contact is approximate. Physics2D is not a complete production solver yet.
+
+### Rendering and runtime
+- Backend-neutral render contract, validated frame packets, RenderDevice surface ownership/resize handling and RGBA8 texture forwarding.
+- RenderFrameBuilder creates indexed 2D sprite quads, sorts by layer/submission order and supports 3D mesh draw submissions at the contract level.
+- Optional bgfx backend proof supports clear and 2D sprite rendering when compatible precompiled shader binaries are supplied. CI compiles ESSL 300 and GLSL 330 shaders and cross-builds the backend for Android ARM64. The current backend has no 3D mesh/material pipeline; bgfx is not yet a final production dependency decision.
+- EngineRuntime coordinates Scene, fixed-step updates, PhysicsWorld2D, ActionMap, render frame building and RenderDevice. ECS-to-physics body synchronization is still game/system-owned.
+
+### DMod / native mods
+- .dmod ZIP reader validates archive metadata, local headers, UTF-8 paths, duplicate/case collisions, entry limits, decompression limits and CRC/decompression errors. It reads packages in memory without extracting package-controlled paths.
+- Manifest parser and deterministic dependency resolver support runtime="script" or runtime="native", version ranges and dependencies.
+- Native shared-library loading through dlopen on POSIX and LoadLibraryW on Windows; native package installer materializes the declared library into an application-private directory. POSIX installation uses openat, O_NOFOLLOW and atomic rename for package-controlled path components.
+- NativeModManager supports dependency-ordered batch loading, rollback on failure, enable/disable/update, reverse-order unload and deferred self-unload after a native callback returns.
+- NativeModHostApiV1 exposes query-by-ID, logging and deterministic interface enumeration. Enumeration snapshots IDs/versions under lock and invokes the visitor outside the registry lock.
+- EngineRuntime currently exposes raw live objects for dream.engine.runtime, dream.engine.scene, dream.engine.world, dream.engine.physics2d, dream.engine.input.actions, dream.engine.clock.fixed, dream.engine.render.frame_builder and dream.engine.render.device.
+- Native mods execute in-process with the application's process privileges. There is deliberately **no sandbox and no capability enforcement** for native modules. The archive validator is not a runtime security boundary. Only install native mods the user trusts.
+- Native packages must ship a prebuilt library for the target platform/ABI. The engine does not compile mods on the user's device and does not require an APK/engine/game rebuild to install a package.
+- The script interpreter is not a production runtime yet. ChaiScript direct-AST evaluation remains a proof-only candidate; do not describe script mods as implemented.
 
 ## Verified CI
-- Run [45774483591](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45774483591) completed successfully for all four jobs. It verifies action-map controller-disconnect isolation and global input reset/focus-loss handling.
-- Run [45774213362](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45774213362) completed successfully for all four jobs. It verifies game action mappings over keyboard, mouse and gamepad events, including modifiers, deadzones and multi-binding state.
-- Run [45773898548](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45773898548) completed successfully for all four jobs. It verifies Scene name/world save-load and confirms runtime system callbacks are intentionally not serialized.
-- Run [45773296150](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45773296150) completed successfully for all four jobs. It verifies deterministic World serialization, stable component IDs/codecs, hierarchy restore and rejection of unknown/unregistered components by default.
-- Run [45772640872](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45772640872) completed successfully for all four jobs. It verifies the bounded, versioned binary archive primitives and Android ARM64 cross-compilation.
-- Run [45772233089](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45772233089) completed successfully for all four jobs. It verifies ECS, generational entities, parent/child hierarchy, 2D/3D transform matrices and system scheduler.
-- Run [45770215802](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45770215802) completed successfully for all four jobs. It verifies in-flight asset request deduplication, one read/decode for concurrent identical request IDs, shared result/handle behavior and Android ARM64 cross-compilation.
-- Run [45768508344](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768508344) completed successfully for all four jobs. It verifies optional AssetCache-backed async loading, cache-hit I/O avoidance, estimator accounting and cache budget rejection; Android is cross-compilation only.
-- Run [45768090059](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768090059) completed successfully for all four jobs, verifying AssetCache LRU behavior and exception safety.
-- Run [45766502045](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45766502045) completed successfully for all four jobs, verifying the asset dependency planner.
-- Run [45758612936](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45758612936) completed successfully for all four jobs. It includes deterministic ResourceRegistry callback-vs-destroy synchronization coverage.
-- Run [45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493) completed successfully for all four jobs and verifies ResourceStore Linux tests plus Android ARM64 test cross-compilation.
-- Run [45715803430](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715803430) completed successfully for ResourceRegistry and all four CI jobs.
-- Run [45714411879](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45714411879) completed successfully for typed handles and all four CI jobs.
-- Run [45710274229](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45710274229) completed successfully for window/surface/input/filesystem contracts and all four CI jobs.
-- Run [45708669112](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45708669112) completed successfully for application lifecycle and all four CI jobs.
-- Android results are NDK cross-compilation for arm64-v8a (ARMv8-A), not execution on a physical device.
-
-## Dependency pins
-- miniz: richgel999/miniz, commit 77d0dce8627735138c51770d1799a1ef48f2117d, upstream LICENSE is MIT.
-- toml++: marzer/tomlplusplus, commit efd80e03356af65c7d4e61c56ffb326b34f8d0f4, MIT.
-- ChaiScript remains a proof-only candidate, not an adopted runtime.
-
-## Build and test policy
-- GitHub Actions is the primary build/test environment because the user has no PC available.
-- Android target ABI is arm64-v8a (ARMv8-A).
-- C++20 is a provisional implementation baseline, not a final compiler-support decision.
+- [Run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851) completed successfully for all four jobs on commit 6deb0a76d8143e05c15a0208359087ec626cb9c0. It includes native host interface enumeration tests, native module lifecycle/package tests, Linux GCC/Clang, DMod AST proof and Android ARM64 cross-compilation.
+- [Run 45805442161](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45805442161) completed successfully for all four jobs before the interface-enumeration extension.
+- [Run 45790590738](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45790590738) completed successfully for both bgfx backend proof jobs.
+- Android CI is NDK cross-compilation for arm64-v8a (ARMv8-A), not execution on a physical Android device.
 
 ## Accepted direction
-- General-purpose C++ engine; 2D and 3D are first-class.
-- DMod source/AST execution only: no native compilation and no generated runtime bytecode.
-- Native C++ plugins are not the ordinary DMod format.
-- Platform contracts must not require a particular windowing or graphics backend.
+- General-purpose C++ game engine; 2D and 3D are both first-class.
+- GitHub Actions is the primary build/test environment because the user has no PC available.
+- Android target ABI is arm64-v8a (ARMv8-A).
+- Native DMods are full-access, in-process modules with no sandbox/capability fence. Compatibility tiers are not security boundaries.
+- Native modules are distributed as prebuilt target-ABI libraries inside .dmod; no compilation occurs on the user's device.
+- Keep package parsing/path validation, runtime trust and code isolation as three distinct concerns. Native code is trusted executable content, not sandboxed input.
 
-## Remaining DMod work
-- Package signature/trust policy and explicit package-format versioning.
-- Interpreter integration, safe host bindings, per-mod context and enforced capabilities.
-- Runtime memory/time quotas and robust sandbox isolation.
-- Hooks/registries, lifecycle, unload/reload and diagnostics integration.
+## Remaining engine work
+1. Concrete Android platform application/window/surface/filesystem implementation and physical-device validation.
+2. Finish the operational 2D renderer path, runtime shader packaging/loading and GPU resource lifecycle; then implement 3D rendering, meshes, materials, lighting and GPU asset residency.
+3. Harden Physics2D and implement 3D physics.
+4. Audio, animation, UI/runtime services and asset import pipeline.
+5. Expand NativeModHost exposure to the full engine service set; build a first-class hook/replace/mixin API for deep engine/game modification; define module-owned callback/resource cleanup and safe hot reload.
+6. Define package trust/signature policy and test native .dmod loading on real Android ARM64. Signatures may establish publisher/integrity; they do not sandbox code.
+7. Decide whether a separate script runtime is worth implementing. It is not a prerequisite for the native full-access path.
 
-## Other engine work not yet implemented
-- Concrete desktop/Android platform backends and physical-device tests.
-- Concrete desktop/Android platform backends and physical-device tests; renderer/backend and GPU resource residency; 2D/3D physics; audio; runtime UI/editor/profiling; production DMod interpreter, security/capability enforcement and hot reload. The initial ECS/world, transforms, system scheduler, versioned binary archive, World/Scene persistence and gameplay action map are implemented and CI-verified, but they are not a complete renderer, physics engine or game runtime. The async asset pipeline remains CI-verified; ResourceStore remains a key-to-handle layer.
-
-## Immediate next actions
-1. Define explicit async service shutdown/lifetime behavior and decide how independent subscribers should cancel shared requests.
-2. Strengthen cache concurrency/lifetime tests and define how dependency-plan execution coordinates with loading.
-3. Research renderer candidates, define the engine-owned 2D/3D rendering contract and prove a minimal Android ARM64 backend integration before selecting the renderer; later add GPU upload/residency.
-4. Continue DMod package trust/signatures, capability enforcement and interpreter integration/security review.
+## Build and test policy
+- GitHub Actions is the primary build/test environment.
+- Linux GCC and Clang builds execute CTest.
+- Android uses the NDK toolchain for arm64-v8a (ARMv8-A); cross-compilation must never be reported as physical-device execution.
+- C++20 remains the current implementation baseline; final compiler-support policy is still open.
