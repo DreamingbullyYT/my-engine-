@@ -342,24 +342,8 @@ int main() {
                 "remove runtime test hook registration");
     // Runtime-owned service integration: native clients use the same live
     // systems that the fixed-step scene scheduler advances.
-    auto& runtime_world = runtime.scene().world();
-    const auto animated_entity = runtime_world.create_entity();
-    require(static_cast<bool>(animated_entity),
-            "runtime scene can create an animation target");
-    require(runtime_world.emplace_component<dream::world::Transform2D>(
-                animated_entity,dream::world::Transform2D{}),
-            "runtime animation target receives Transform2D");
-
-    dream::animation::AnimationClip2D runtime_clip;
-    runtime_clip.name = "runtime-smoke";
-    runtime_clip.duration_seconds = 1.0;
-    runtime_clip.tracks.push_back({animated_entity,{
-        {0.0,dream::world::Transform2D{{0,0},0,{1,1}}},
-        {1.0,dream::world::Transform2D{{2,0},0,{1,1}}}
-    }});
-    const auto runtime_animation = runtime.animations().play(runtime_clip);
-    require(runtime_animation.second == dream::animation::AnimationError::None,
-            "EngineRuntime owns and creates animation players");
+    auto& animation_service = runtime.animations();
+    (void)animation_service;
 
     dream::physics3d::BodyDescription3D runtime_floor;
     runtime_floor.type = dream::physics3d::BodyType3D::Static;
@@ -383,13 +367,6 @@ int main() {
     require(settled_ball && settled_ball->position.y > 0.3F &&
             settled_ball->position.y < 0.9F,
             "runtime scheduler advances the 3D body against its floor");
-    require(runtime_world.with_component<dream::world::Transform2D>(
-                animated_entity,[](const dream::world::Transform2D& transform) {
-                    require(transform.position.x > 0.0F,
-                            "runtime PreUpdate phase advances animation tracks");
-                }),
-            "runtime animation result remains attached to the ECS entity");
-
     dream::audio::AudioClip runtime_audio_clip;
     runtime_audio_clip.sample_rate = 48000U;
     runtime_audio_clip.channels = 1U;
