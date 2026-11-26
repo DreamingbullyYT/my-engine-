@@ -7,6 +7,7 @@ project(DreamEngine
 )
 
 option(DREAM_BUILD_TESTS "Build Dream Engine tests" ON)
+option(DREAM_BUILD_BGFX_BACKEND "Build the optional bgfx clear/present backend (requires an existing bgfx target)" OFF)
 
 include(FetchContent)
 include(GenerateExportHeader)
@@ -106,6 +107,30 @@ target_compile_features(dream_render INTERFACE cxx_std_20)
 target_link_libraries(dream_render INTERFACE
     DreamEngine::Core DreamEngine::Platform DreamEngine::World
 )
+
+if(DREAM_BUILD_BGFX_BACKEND)
+    if(NOT TARGET bgfx)
+        message(FATAL_ERROR "DREAM_BUILD_BGFX_BACKEND requires a bgfx CMake target")
+    endif()
+
+    add_library(dream_render_bgfx STATIC
+        engine/render/bgfx/src/bgfx_clear_backend.cpp
+    )
+    add_library(DreamEngine::RenderBgfx ALIAS dream_render_bgfx)
+    target_include_directories(dream_render_bgfx
+        PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/render/bgfx/include>
+    )
+    target_compile_features(dream_render_bgfx PUBLIC cxx_std_20)
+    target_link_libraries(dream_render_bgfx
+        PUBLIC DreamEngine::Render
+        PRIVATE bgfx
+    )
+    set_target_properties(dream_render_bgfx PROPERTIES
+        CXX_EXTENSIONS OFF
+        POSITION_INDEPENDENT_CODE ON
+    )
+endif()
 
 add_library(dream_physics2d INTERFACE)
 add_library(DreamEngine::Physics2D ALIAS dream_physics2d)

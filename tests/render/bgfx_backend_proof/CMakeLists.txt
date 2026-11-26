@@ -27,9 +27,23 @@ set(BIMG_CONFIG_USE_STB_IMAGE OFF CACHE BOOL "" FORCE)
 
 add_subdirectory("${BGFX_CMAKE_SOURCE_DIR}" bgfx-cmake)
 
+add_library(dream_render_bgfx_bootstrap STATIC
+    "${CMAKE_CURRENT_LIST_DIR}/../../../engine/render/bgfx/src/bgfx_clear_backend.cpp"
+)
+target_include_directories(dream_render_bgfx_bootstrap PUBLIC
+    "${CMAKE_CURRENT_LIST_DIR}/../../../engine/render/bgfx/include"
+    "${CMAKE_CURRENT_LIST_DIR}/../../../engine/render/include"
+    "${CMAKE_CURRENT_LIST_DIR}/../../../engine/platform/include"
+    "${CMAKE_CURRENT_LIST_DIR}/../../../engine/world/include"
+    "${CMAKE_CURRENT_LIST_DIR}/../../../engine/core/include"
+)
+target_compile_features(dream_render_bgfx_bootstrap PUBLIC cxx_std_20)
+target_link_libraries(dream_render_bgfx_bootstrap PUBLIC bgfx)
+set_target_properties(dream_render_bgfx_bootstrap PROPERTIES CXX_EXTENSIONS OFF)
+
 add_executable(dream_bgfx_compile_proof main.cpp)
 target_compile_features(dream_bgfx_compile_proof PRIVATE cxx_std_20)
-target_link_libraries(dream_bgfx_compile_proof PRIVATE bgfx)
+target_link_libraries(dream_bgfx_compile_proof PRIVATE dream_render_bgfx_bootstrap)
 set_target_properties(dream_bgfx_compile_proof PROPERTIES CXX_EXTENSIONS OFF)
 
 if(ANDROID)

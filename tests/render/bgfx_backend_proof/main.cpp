@@ -1,9 +1,11 @@
-#include <bgfx/bgfx.h>
+#include <dream/render/bgfx/bgfx_clear_backend.hpp>
+
+#include <type_traits>
+
+static_assert(std::is_base_of_v<dream::render::IRenderBackend,
+                                dream::render::BgfxClearBackend>);
 
 int main() {
-    // This verifies the public API headers and static-library link only.
-    // It intentionally does not create a GPU device or open a native window.
-    const char* vulkan = bgfx::getRendererName(bgfx::RendererType::Vulkan);
-    const char* gles = bgfx::getRendererName(bgfx::RendererType::OpenGLES);
-    return vulkan != nullptr && gles != nullptr ? 0 : 1;
+    dream::render::BgfxClearBackend backend;
+    return backend.initialized() ? 1 : 0;
 }
