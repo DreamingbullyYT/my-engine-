@@ -196,6 +196,14 @@ bool AndroidGameActivityBackend::initialize(
     // filters allows mouse/stylus/gamepad sources to reach the input buffer.
     android_app_set_key_event_filter(app_, nullptr);
     android_app_set_motion_event_filter(app_, nullptr);
+    constexpr std::array<std::int32_t, 10> gamepad_axes{
+        AMOTION_EVENT_AXIS_Z, AMOTION_EVENT_AXIS_RZ,
+        AMOTION_EVENT_AXIS_RX, AMOTION_EVENT_AXIS_RY,
+        AMOTION_EVENT_AXIS_HAT_X, AMOTION_EVENT_AXIS_HAT_Y,
+        AMOTION_EVENT_AXIS_LTRIGGER, AMOTION_EVENT_AXIS_RTRIGGER,
+        AMOTION_EVENT_AXIS_BRAKE, AMOTION_EVENT_AXIS_GAS
+    };
+    for (const auto axis : gamepad_axes) GameActivityPointerAxes_enableAxis(axis);
 
     initialized_ = true;
     surface_available_ = app_->window != nullptr;
@@ -545,8 +553,10 @@ void AndroidGameActivityBackend::consume_motion_event(
         event.pointer_id = pointer.id < 0 ? 0U :
             static_cast<std::uint64_t>(pointer.id);
         event.pointer_kind = pointer_kind(source.source, pointer.toolType);
-        event.x = GameActivityPointerAxes_getX(&pointer);
-        event.y = GameActivityPointerAxes_getY(&pointer);
+        WindowMetrics metrics{};
+        const float scale = read_metrics(metrics) ? metrics.scale_x : 1.0F;
+        event.x = GameActivityPointerAxes_getX(&pointer) / scale;
+        event.y = GameActivityPointerAxes_getY(&pointer) / scale;
         event.button = mouse_button(source.buttonState);
         event.modifiers = modifiers_from_meta_state(source.metaState);
         push_input_event(event);
@@ -585,8 +595,10 @@ void AndroidGameActivityBackend::consume_motion_event(
         event.pointer_id = pointer.id < 0 ? 0U :
             static_cast<std::uint64_t>(pointer.id);
         event.pointer_kind = pointer_kind(source.source, pointer.toolType);
-        event.x = GameActivityPointerAxes_getX(&pointer);
-        event.y = GameActivityPointerAxes_getY(&pointer);
+        WindowMetrics metrics{};
+        const float scale = read_metrics(metrics) ? metrics.scale_x : 1.0F;
+        event.x = GameActivityPointerAxes_getX(&pointer) / scale;
+        event.y = GameActivityPointerAxes_getY(&pointer) / scale;
         event.delta_x = GameActivityPointerAxes_getAxisValue(
             &pointer, AMOTION_EVENT_AXIS_HSCROLL);
         event.delta_y = GameActivityPointerAxes_getAxisValue(
