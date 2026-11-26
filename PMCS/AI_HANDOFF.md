@@ -27,7 +27,7 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - ResourceRegistry<T, Tag> owns resources through unique_ptr, provides callback-scoped access and rejects stale handles; tests passed in [run 45715803430](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715803430).
 - ResourceStore<T, Tag> maps case-sensitive string keys (non-empty, maximum 4096 bytes) to typed generational handles. Duplicate/invalid keys are rejected; find/erase and callback-scoped access by key or handle are supported. Linux tests and Android ARM64 cross-compilation passed in [run 45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493).
 - ResourceStore is not an asset loader; it remains a key-to-handle owner.
-- `dream_assets::load_async` schedules bounded virtual filesystem reads on JobSystem (64 MiB default limit), decodes on a worker and registers in ResourceStore. `load_async_cached` is an optional sibling path that checks AssetCache before I/O and uses a caller-provided decoded-size estimator. Both paths passed all four CI jobs in [run 45768508344](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768508344). Borrowed services must outlive the task; decoder/estimator thread safety is caller-owned.
+- `dream_assets::load_async` schedules bounded virtual filesystem reads on JobSystem (64 MiB default limit), decodes on a worker and registers in ResourceStore. `load_async_cached` is an optional sibling path that checks AssetCache before I/O and uses a caller-provided decoded-size estimator. Both paths accept optional cooperative cancellation tokens and report `AssetLoadStatus::Cancelled` at checkpoints. Cancellation cannot interrupt an active read/decoder/estimator callback. Verified across all four CI jobs in [run 45769042275](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45769042275). Borrowed services must outlive the task; decoder/estimator thread safety is caller-owned.
 - Asset dependency planner is implemented in `engine/assets/include/dream/assets/dependency_graph.hpp`; deterministic ordering, missing dependency reporting and cycle detection passed all four CI jobs in [run 45766502045](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45766502045).
 - `AssetCache<T, Tag>` provides CPU-side byte-budgeted LRU storage; cache tests and exception-safety checks passed all four CI jobs in [run 45768090059](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768090059).
 - dream_core: version API, logging, diagnostics, event dispatcher, worker job system, typed generational handle pool, ResourceRegistry and ResourceStore.
@@ -40,7 +40,7 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - C++20 remains a provisional implementation baseline.
 
 ## Next work
-1. Add asset request cancellation, explicit lifetime/shutdown behavior and in-flight request deduplication as separate layers.
+1. Add in-flight asset request deduplication to close the same-key check-then-load race; define explicit async service shutdown/lifetime behavior.
 2. Add stronger cache concurrency/lifetime tests and define how cache handles interact with dependency-plan execution.
 3. Research renderer candidates and define engine-owned 2D/3D rendering interfaces before selecting a backend; later add GPU upload/residency.
 4. Continue DMod package trust/versioning and interpreter security audit.
