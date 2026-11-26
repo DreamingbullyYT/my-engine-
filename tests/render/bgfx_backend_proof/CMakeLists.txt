@@ -7,14 +7,16 @@ foreach(required_dir IN ITEMS BGFX_CMAKE_SOURCE_DIR BGFX_DIR BX_DIR BIMG_DIR)
     endif()
 endforeach()
 
-# Keep this isolated: compile/link the library only, without its examples,
-# shader tools, asset tools or runtime window-system example glue.
-set(BGFX_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+# Keep examples and asset-conversion tools disabled. The Linux proof can opt
+# into shaderc to produce portable 2D shader binaries; Android only cross-builds
+# the backend library and consumes those precompiled assets at runtime.
+option(DREAM_BGFX_BUILD_SHADER_TOOLS "Build host shaderc in this proof" OFF)
+set(BGFX_BUILD_TOOLS ${DREAM_BGFX_BUILD_SHADER_TOOLS} CACHE BOOL "" FORCE)
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_EXAMPLE_COMMON OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS_BIN2C OFF CACHE BOOL "" FORCE)
-set(BGFX_BUILD_TOOLS_SHADER OFF CACHE BOOL "" FORCE)
+set(BGFX_BUILD_TOOLS_SHADER ${DREAM_BGFX_BUILD_SHADER_TOOLS} CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS_GEOMETRY OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS_TEXTURE OFF CACHE BOOL "" FORCE)
 set(BGFX_INSTALL OFF CACHE BOOL "" FORCE)

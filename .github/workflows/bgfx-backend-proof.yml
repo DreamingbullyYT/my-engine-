@@ -49,16 +49,50 @@ jobs:
         run: |
           cmake -S tests/render/bgfx_backend_proof -B build-bgfx \
             -G Ninja \
+            -DDREAM_BGFX_BUILD_SHADER_TOOLS=ON \
             -DBGFX_CMAKE_SOURCE_DIR=/tmp/bgfx.cmake \
             -DBGFX_DIR=/tmp/bgfx \
             -DBX_DIR=/tmp/bx \
             -DBIMG_DIR=/tmp/bimg \
             -DCMAKE_BUILD_TYPE=Release
 
+      - name: Build the host shader compiler
+        run: cmake --build build-bgfx --target shaderc --parallel 2
+
+      - name: Compile OpenGL ES 3 and desktop OpenGL 3.3 sprite shaders
+        run: |
+          SHADERC="$(find build-bgfx -type f -name shaderc -executable -print -quit)"
+          test -n "$SHADERC"
+          mkdir -p build-bgfx/shaders
+          VARYINGS="$GITHUB_WORKSPACE/engine/render/bgfx/shaders/varying.def.sc"
+          VS="$GITHUB_WORKSPACE/engine/render/bgfx/shaders/vs_sprite.sc"
+          FS="$GITHUB_WORKSPACE/engine/render/bgfx/shaders/fs_sprite.sc"
+
+          "$SHADERC" -f "$VS" -o build-bgfx/shaders/vs_sprite_essl300.bin \
+            --platform android --profile 300_es --type vertex \
+            --varyingdef "$VARYINGS" -i /tmp/bgfx/src
+          "$SHADERC" -f "$FS" -o build-bgfx/shaders/fs_sprite_essl300.bin \
+            --platform android --profile 300_es --type fragment \
+            --varyingdef "$VARYINGS" -i /tmp/bgfx/src
+
+          "$SHADERC" -f "$VS" -o build-bgfx/shaders/vs_sprite_glsl330.bin \
+            --platform linux --profile 330 --type vertex \
+            --varyingdef "$VARYINGS" -i /tmp/bgfx/src
+          "$SHADERC" -f "$FS" -o build-bgfx/shaders/fs_sprite_glsl330.bin \
+            --platform linux --profile 330 --type fragment \
+            --varyingdef "$VARYINGS" -i /tmp/bgfx/src
+
       - name: Build and execute bgfx compile proof
         run: |
           cmake --build build-bgfx --target dream_bgfx_compile_proof --parallel 2
           ./build-bgfx/dream_bgfx_compile_proof
+
+      - name: Upload compiled 2D shader binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: dream-engine-bgfx-2d-shaders
+          path: build-bgfx/shaders/*.bin
+          if-no-files-found: error
 
   android-arm64:
     name: Android / arm64-v8a bgfx static library

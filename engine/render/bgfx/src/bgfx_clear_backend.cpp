@@ -298,8 +298,25 @@ bool BgfxClearBackend::initialize(
     }
     impl_->owns_global_context = true;
 
+    const auto has_shader_format = [&](Bgfx2DShaderFormat format) {
+        const auto& shaders = impl_->shader_binaries[shader_format_index(format)];
+        return !shaders.vertex.empty() && !shaders.fragment.empty();
+    };
+
     bgfx::Init init;
     init.type = bgfx::RendererType::Count;
+    if (native_surface.kind == platform::NativeSurfaceKind::Android) {
+        if (has_shader_format(Bgfx2DShaderFormat::Vulkan))
+            init.type = bgfx::RendererType::Vulkan;
+        else if (has_shader_format(Bgfx2DShaderFormat::OpenGLES))
+            init.type = bgfx::RendererType::OpenGLES;
+    } else if (native_surface.kind == platform::NativeSurfaceKind::X11 ||
+               native_surface.kind == platform::NativeSurfaceKind::Wayland) {
+        if (has_shader_format(Bgfx2DShaderFormat::Vulkan))
+            init.type = bgfx::RendererType::Vulkan;
+        else if (has_shader_format(Bgfx2DShaderFormat::OpenGL))
+            init.type = bgfx::RendererType::OpenGL;
+    }
     init.reset = BGFX_RESET_VSYNC;
     init.platformData.context = nullptr;
     init.platformData.queue = nullptr;
