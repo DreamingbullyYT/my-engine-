@@ -17,7 +17,8 @@
 - Read-only in-memory ZIP package reader. It does not extract package paths to disk, validates all local ZIP headers against the central directory, validates UTF-8 paths and case-collisions, rejects links/encryption/unsupported methods, enforces archive/per-entry/total-size and compression-ratio limits, reads the root manifest and checks the declared entry script exists.
 - Pinned build dependencies: miniz 3.1.2 and toml++ 3.5.1, each fetched from an immutable upstream commit.
 - GitHub Actions for Linux GCC/Clang, Android ARM64 cross-build, ChaiScript AST proof and Android cross-compilation of selected header-only tests.
-- Initial header-only dream_assets module: asynchronous virtual-file read, caller-provided decoder, and ResourceStore registration. Implementation and tests are pending CI; it has no cache/dependency graph/GPU upload.
+- `dream_assets` async loader: bounded virtual-file read (default 64 MiB, configurable), caller-provided worker-thread decoder and ResourceStore registration. Linux GCC/Clang tests and Android ARM64 test cross-compilation passed in run 45765620129. Borrowed filesystem/store/JobSystem lifetime and decoder thread-safety are caller responsibilities.
+- Asset dependency planner added in `engine/assets/include/dream/assets/dependency_graph.hpp`: deterministic dependency-first order, required/optional missing dependency reporting, duplicate/invalid key rejection and cycle detection. Its CI verification is pending.
 
 ## Verified CI
 - Run [45758612936](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45758612936) completed successfully for all four jobs. It includes deterministic ResourceRegistry callback-vs-destroy synchronization coverage.
@@ -52,10 +53,10 @@
 
 ## Other engine work not yet implemented
 - Concrete desktop/Android platform backends and physical-device tests.
-- Renderer, ECS/world, physics, asset dependency graph/cache policy/GPU upload, audio, serialization, editor and profiling. Initial async asset read/decode/register helper is implemented but pending CI; ResourceStore itself remains only a key-to-handle layer.
+- Renderer, ECS/world, physics, asset cache policy/GPU upload, audio, serialization, editor and profiling. The async asset loader is CI-verified; dependency planner is implemented but pending CI. ResourceStore remains only a key-to-handle layer.
 
 ## Immediate next actions
-1. Verify the initial async asset loader in Linux GCC/Clang tests and Android ARM64 cross-compilation; review borrowed-service lifetime and decoder thread-safety contracts.
-2. Extend the asset layer with explicit cancellation/lifetime, dependency graph and cache policy only after the initial contract is verified.
+1. Verify the asset dependency planner in Linux GCC/Clang tests and Android ARM64 cross-compilation.
+2. Add explicit cancellation/lifetime and cache policy as separate asset-pipeline layers; later add renderer upload.
 3. Compare renderer candidates and define an engine-owned 2D/3D API without prematurely locking a backend.
 4. Continue DMod package trust/signatures, capability enforcement and interpreter integration/security review.
