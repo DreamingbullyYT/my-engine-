@@ -65,6 +65,7 @@ public:
     int shutdown_calls{0};
     std::size_t last_2d_draws{0};
     std::size_t last_3d_draws{0};
+    Color last_clear_color{};
 
     bool initialize(
         NativeSurface, const RenderSurfaceInfo&,
@@ -87,6 +88,7 @@ public:
         ++render_calls;
         last_2d_draws = frame.draws_2d.size();
         last_3d_draws = frame.draws_3d.size();
+        last_clear_color = frame.clear_color;
         return true;
     }
 
@@ -98,6 +100,45 @@ Matrix3x3 translation(float x, float y) {
     matrix.at(0, 2) = x;
     matrix.at(1, 2) = y;
     return matrix;
+}
+
+struct UpdateHookProbe final {
+    EngineRuntime* expected_runtime{};
+    std::size_t calls{0};
+};
+struct PhysicsHookProbe final { std::size_t calls{0}; };
+struct RenderHookProbe final {
+    std::size_t begin_calls{0};
+    std::size_t render_calls{0};
+};
+
+void runtime_update_before(void* context, dmod::NativeHookInvocationV1* invocation) noexcept {
+    if (!context || !invocation || !invocation->user_data) return;
+    auto& probe = *static_cast<UpdateHookProbe*>(context);
+    auto& call = *static_cast<RuntimeUpdateHookDataV1*>(invocation->user_data);
+    if (call.runtime == probe.expected_runtime && probe.calls == 0)
+        call.frame_delta_seconds = 0.26;
+}
+void runtime_update_after(void* context, dmod::NativeHookInvocationV1*) noexcept {
+    if (context) ++static_cast<UpdateHookProbe*>(context)->calls;
+}
+void physics_step_after(void* context, dmod::NativeHookInvocationV1* invocation) noexcept {
+    if (!context || !invocation || !invocation->user_data) return;
+    const auto& call =
+        *static_cast<RuntimePhysics2DStepHookDataV1*>(invocation->user_data);
+    if (call.report.body_count != 0U)
+        ++static_cast<PhysicsHookProbe*>(context)->calls;
+}
+void begin_render_before(void* context, dmod::NativeHookInvocationV1* invocation) noexcept {
+    if (!context || !invocation || !invocation->user_data) return;
+    auto& probe = *static_cast<RenderHookProbe*>(context);
+    auto& call = *static_cast<RuntimeBeginRenderFrameHookDataV1*>(invocation->user_data);
+    if (probe.begin_calls == 0)
+        call.clear_color = {0.2F, 0.3F, 0.4F, 1.0F};
+    ++probe.begin_calls;
+}
+void render_frame_after(void* context, dmod::NativeHookInvocationV1*) noexcept {
+    if (context) ++static_cast<RenderHookProbe*>(context)->render_calls;
 }
 }
 
@@ -169,6 +210,28 @@ int main() {
     require(static_cast<bool>(runtime.physics_system()),
             "runtime registers its built-in PhysicsWorld2D system");
 
+    UpdateHookProbe update_hook_probe{&runtime, 0};
+    PhysicsHookProbe physics_hook_probe;
+    RenderHookProbe render_hook_probe;
+    auto& runtime_hooks = runtime.mods().hook_registry();
+    const auto update_before = runtime_hooks.register_hook(
+        "test.runtime", hook_points::runtime_update, dmod::NativeHookStage::Before,
+        0, &runtime_update_before, &update_hook_probe);
+    const auto update_after = runtime_hooks.register_hook(
+        "test.runtime", hook_points::runtime_update, dmod::NativeHookStage::After,
+        0, &runtime_update_after, &update_hook_probe);
+    const auto physics_after = runtime_hooks.register_hook(
+        "test.runtime", hook_points::physics2d_step, dmod::NativeHookStage::After,
+        0, &physics_step_after, &physics_hook_probe);
+    const auto begin_before = runtime_hooks.register_hook(
+        "test.runtime", hook_points::begin_render_frame, dmod::NativeHookStage::Before,
+        0, &begin_render_before, &render_hook_probe);
+    const auto render_after = runtime_hooks.register_hook(
+        "test.runtime", hook_points::render_frame, dmod::NativeHookStage::After,
+        0, &render_frame_after, &render_hook_probe);
+    require(update_before && update_after && physics_after && begin_before && render_after,
+            "game code can register native hooks at runtime extension points");
+
     InputEvent key_down;
     key_down.type = InputEventType::KeyDown;
     key_down.key_code = 0x2CU;
@@ -177,8 +240,9 @@ int main() {
     const auto first_update = runtime.update(0.25, first_events);
     require(static_cast<bool>(first_update) &&
             first_update.fixed_step.steps_executed == 2U &&
-            first_update.fixed_step.tick_index == 2U,
-            "runtime advances two fixed simulation steps");
+            first_update.fixed_step.tick_index == 2U &&
+            update_hook_probe.calls == 1U && physics_hook_probe.calls == 2U,
+            "runtime update and each fixed Physics2D step execute registered hooks");
     require(first_update.input_events_handled == 1U,
             "runtime forwards platform input into ActionMap");
     require(observed_jump_ticks == 2U,
@@ -194,6 +258,8 @@ int main() {
     require(static_cast<bool>(runtime.begin_render_frame(
                 {0.05F, 0.1F, 0.15F, 1.0F})),
             "runtime starts a render frame using the acquired framebuffer size");
+    require(render_hook_probe.begin_calls == 1U,
+            "begin-render hook can mutate the clear color before frame construction");
     require(runtime.frame_builder().set_camera_2d(CameraMatrices2D{}) ==
                 FrameBuilderError::None,
             "runtime frame builder accepts a 2D camera");
@@ -204,8 +270,12 @@ int main() {
             "runtime frame builder accepts a sprite");
     require(static_cast<bool>(runtime.render_frame()),
             "runtime finalizes and renders the frame");
-    require(backend.render_calls == 1 && backend.last_2d_draws == 1U,
-            "render backend receives validated frame commands");
+    require(backend.render_calls == 1 && backend.last_2d_draws == 1U &&
+            backend.last_clear_color.r == 0.2F &&
+            backend.last_clear_color.g == 0.3F &&
+            backend.last_clear_color.b == 0.4F &&
+            render_hook_probe.render_calls == 1U,
+            "render hook contexts can mutate frame input and observe render completion");
 
     InputEvent key_up = key_down;
     key_up.type = InputEventType::KeyUp;
@@ -214,8 +284,9 @@ int main() {
     const auto second_update = runtime.update(0.05, second_events);
     require(static_cast<bool>(second_update) &&
             second_update.fixed_step.steps_executed == 1U &&
-            second_update.fixed_step.tick_index == 3U,
-            "runtime preserves fractional frame time between rendered frames");
+            second_update.fixed_step.tick_index == 3U &&
+            update_hook_probe.calls == 2U && physics_hook_probe.calls == 3U,
+            "update hooks preserve fractional time while running for every update/physics tick");
     const auto jump = runtime.actions().state("jump");
     require(jump && !jump->down && jump->just_released,
             "runtime resets frame edges and processes the release event");
@@ -235,6 +306,10 @@ int main() {
     require(duplicate_init.error == RuntimeError::AlreadyInitialized,
             "runtime rejects duplicate initialization");
 
+    for (const auto registration : {update_before, update_after, physics_after,
+                                    begin_before, render_after})
+        require(runtime_hooks.remove_hook(registration),
+                "remove runtime test hook registration");
     runtime.shutdown();
     require(runtime.state() == RuntimeState::Stopped &&
             surfaces.released == 1 &&

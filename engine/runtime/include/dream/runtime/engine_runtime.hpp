@@ -84,6 +84,43 @@ struct RuntimeRenderResult final {
     }
 };
 
+class EngineRuntime;
+
+namespace hook_points {
+inline constexpr char runtime_update[] = "dream.engine.runtime.update";
+inline constexpr char physics2d_step[] = "dream.engine.physics2d.step";
+inline constexpr char begin_render_frame[] = "dream.engine.runtime.begin_render_frame";
+inline constexpr char render_frame[] = "dream.engine.runtime.render_frame";
+} // namespace hook_points
+
+// These contexts live only for the duration of a hook dispatch. Mods may mutate
+// the fields and may replace the whole operation by omitting call_next.
+struct RuntimeUpdateHookDataV1 final {
+    EngineRuntime* runtime{};
+    double frame_delta_seconds{};
+    std::span<const platform::InputEvent> input_events{};
+    RuntimeUpdateResult result{};
+};
+
+struct RuntimePhysics2DStepHookDataV1 final {
+    EngineRuntime* runtime{};
+    float delta_seconds{};
+    physics2d::PhysicsStepReport2D report{};
+};
+
+struct RuntimeBeginRenderFrameHookDataV1 final {
+    EngineRuntime* runtime{};
+    render::Color clear_color{};
+    bool clear_color_buffer{true};
+    bool clear_depth_buffer{true};
+    RuntimeRenderResult result{};
+};
+
+struct RuntimeRenderFrameHookDataV1 final {
+    EngineRuntime* runtime{};
+    RuntimeRenderResult result{};
+};
+
 // Coordinates one application-facing engine loop. Input is collected once per
 // rendered frame; the Scene scheduler and built-in PhysicsWorld2D system run
 // at the fixed simulation rate. The physics system runs at the lowest Update
@@ -143,10 +180,28 @@ public:
             world::SystemPhase::Update,
             std::numeric_limits<std::int32_t>::min(),
             [this](world::World&, const world::SystemContext& context) {
-                const auto report = physics_.update(context.delta_seconds);
-                last_physics_error_ = report.error;
-                saturating_add(frame_physics_contacts_, report.contact_count);
-                saturating_add(frame_physics_events_, report.events.size());
+                RuntimePhysics2DStepHookDataV1 hook_data{
+                    this, context.delta_seconds, {}
+                };
+                const auto dispatched = mod_manager_.dispatch_hooks(
+                    hook_points::physics2d_step,
+                    &hook_data,
+                    [](void* opaque) noexcept {
+                        auto& call =
+                            *static_cast<RuntimePhysics2DStepHookDataV1*>(opaque);
+                        try {
+                            call.report = call.runtime->physics_.update(call.delta_seconds);
+                        } catch (...) {
+                            call.report.error = physics2d::PhysicsStepError::InvalidBodyState;
+                        }
+                    });
+                if (!dispatched.success) {
+                    last_physics_error_ = physics2d::PhysicsStepError::InvalidBodyState;
+                    return;
+                }
+                last_physics_error_ = hook_data.report.error;
+                saturating_add(frame_physics_contacts_, hook_data.report.contact_count);
+                saturating_add(frame_physics_events_, hook_data.report.events.size());
             });
 
         if (!physics_system) configuration_valid_ = false;
@@ -186,101 +241,62 @@ public:
     [[nodiscard]] RuntimeUpdateResult update(
         double frame_delta_seconds,
         std::span<const platform::InputEvent> input_events = {}) {
-        RuntimeUpdateResult result;
-        if (state_ != RuntimeState::Initialized) {
-            result.error = RuntimeError::NotInitialized;
-            return result;
-        }
-        if (!std::isfinite(frame_delta_seconds) || frame_delta_seconds < 0.0) {
-            result.error = RuntimeError::InvalidFrameDelta;
-            return result;
-        }
-
-        last_frame_delta_seconds_ = frame_delta_seconds;
-        frame_physics_contacts_ = 0U;
-        frame_physics_events_ = 0U;
-        last_physics_error_ = physics2d::PhysicsStepError::None;
-
-        action_map_.begin_frame();
-        for (const auto& event : input_events) {
-            if (action_map_.process_event(event))
-                saturating_add(result.input_events_handled, std::size_t{1});
-        }
-
-        try {
-            result.fixed_step = simulation_clock_.advance(
-                frame_delta_seconds,
-                [&](double fixed_delta, std::uint64_t) {
-                    const auto report = scene_.update(
-                        static_cast<float>(fixed_delta));
-                    saturating_add(result.system_failures, report.failures.size());
-                    if (report.error != world::SystemUpdateError::None)
-                        saturating_add(result.system_failures, std::size_t{1});
-                    if (!mod_manager_.update(fixed_delta))
-                        saturating_add(result.system_failures, std::size_t{1});
-                });
-        } catch (...) {
-            result.error = RuntimeError::SimulationCallbackFailure;
-            result.physics_contacts = frame_physics_contacts_;
-            result.physics_contact_events = frame_physics_events_;
-            result.physics_error = last_physics_error_;
-            return result;
-        }
-
-        if (!result.fixed_step)
-            result.error = RuntimeError::SimulationClockFailure;
-
-        result.physics_contacts = frame_physics_contacts_;
-        result.physics_contact_events = frame_physics_events_;
-        result.physics_error = last_physics_error_;
-        return result;
+        RuntimeUpdateHookDataV1 hook_data{
+            this, frame_delta_seconds, input_events, {}
+        };
+        (void)mod_manager_.dispatch_hooks(
+            hook_points::runtime_update,
+            &hook_data,
+            [](void* opaque) noexcept {
+                auto& call = *static_cast<RuntimeUpdateHookDataV1*>(opaque);
+                try {
+                    call.result = call.runtime->update_unhooked(
+                        call.frame_delta_seconds, call.input_events);
+                } catch (...) {
+                    call.result.error = RuntimeError::SimulationCallbackFailure;
+                }
+            });
+        return hook_data.result;
     }
 
     [[nodiscard]] RuntimeRenderResult begin_render_frame(
         render::Color clear_color = {},
         bool clear_color_buffer = true,
         bool clear_depth_buffer = true) {
-        if (state_ != RuntimeState::Initialized)
-            return {RuntimeError::NotInitialized, {}, {}};
-
-        auto surface_result = render_device_.refresh_surface();
-        if (!surface_result)
-            return {
-                RuntimeError::RenderFailure, {},
-                std::move(surface_result)
-            };
-
-        const auto extent = render_device_.surface_info().pixel_extent;
-        const auto error = frame_builder_.begin_frame(
-            render_frame_index_,
-            last_frame_delta_seconds_,
-            extent,
-            clear_color,
-            clear_color_buffer,
-            clear_depth_buffer);
-        if (error != render::FrameBuilderError::None)
-            return {RuntimeError::FrameBuilderFailure, error, {}};
-
-        if (render_frame_index_ != std::numeric_limits<std::uint64_t>::max())
-            ++render_frame_index_;
-        return {};
+        RuntimeBeginRenderFrameHookDataV1 hook_data{
+            this, clear_color, clear_color_buffer, clear_depth_buffer, {}
+        };
+        (void)mod_manager_.dispatch_hooks(
+            hook_points::begin_render_frame,
+            &hook_data,
+            [](void* opaque) noexcept {
+                auto& call =
+                    *static_cast<RuntimeBeginRenderFrameHookDataV1*>(opaque);
+                try {
+                    call.result = call.runtime->begin_render_frame_unhooked(
+                        call.clear_color, call.clear_color_buffer,
+                        call.clear_depth_buffer);
+                } catch (...) {
+                    call.result.error = RuntimeError::FrameBuilderFailure;
+                }
+            });
+        return hook_data.result;
     }
 
     [[nodiscard]] RuntimeRenderResult render_frame() {
-        if (state_ != RuntimeState::Initialized)
-            return {RuntimeError::NotInitialized, {}, {}};
-
-        const auto build_error = frame_builder_.finalize();
-        if (build_error != render::FrameBuilderError::None)
-            return {RuntimeError::FrameBuilderFailure, build_error, {}};
-
-        auto render_result = render_device_.render(frame_builder_.packet());
-        if (!render_result)
-            return {
-                RuntimeError::RenderFailure, {},
-                std::move(render_result)
-            };
-        return {};
+        RuntimeRenderFrameHookDataV1 hook_data{this, {}};
+        (void)mod_manager_.dispatch_hooks(
+            hook_points::render_frame,
+            &hook_data,
+            [](void* opaque) noexcept {
+                auto& call = *static_cast<RuntimeRenderFrameHookDataV1*>(opaque);
+                try {
+                    call.result = call.runtime->render_frame_unhooked();
+                } catch (...) {
+                    call.result.error = RuntimeError::RenderFailure;
+                }
+            });
+        return hook_data.result;
     }
 
     void shutdown() noexcept {
@@ -339,6 +355,106 @@ public:
     }
 
 private:
+    RuntimeUpdateResult update_unhooked(
+        double frame_delta_seconds,
+        std::span<const platform::InputEvent> input_events) {
+        RuntimeUpdateResult result;
+        if (state_ != RuntimeState::Initialized) {
+            result.error = RuntimeError::NotInitialized;
+            return result;
+        }
+        if (!std::isfinite(frame_delta_seconds) || frame_delta_seconds < 0.0) {
+            result.error = RuntimeError::InvalidFrameDelta;
+            return result;
+        }
+
+        last_frame_delta_seconds_ = frame_delta_seconds;
+        frame_physics_contacts_ = 0U;
+        frame_physics_events_ = 0U;
+        last_physics_error_ = physics2d::PhysicsStepError::None;
+
+        action_map_.begin_frame();
+        for (const auto& event : input_events) {
+            if (action_map_.process_event(event))
+                saturating_add(result.input_events_handled, std::size_t{1});
+        }
+
+        try {
+            result.fixed_step = simulation_clock_.advance(
+                frame_delta_seconds,
+                [&](double fixed_delta, std::uint64_t) {
+                    const auto report = scene_.update(
+                        static_cast<float>(fixed_delta));
+                    saturating_add(result.system_failures, report.failures.size());
+                    if (report.error != world::SystemUpdateError::None)
+                        saturating_add(result.system_failures, std::size_t{1});
+                    if (!mod_manager_.update(fixed_delta))
+                        saturating_add(result.system_failures, std::size_t{1});
+                });
+        } catch (...) {
+            result.error = RuntimeError::SimulationCallbackFailure;
+            result.physics_contacts = frame_physics_contacts_;
+            result.physics_contact_events = frame_physics_events_;
+            result.physics_error = last_physics_error_;
+            return result;
+        }
+
+        if (!result.fixed_step)
+            result.error = RuntimeError::SimulationClockFailure;
+
+        result.physics_contacts = frame_physics_contacts_;
+        result.physics_contact_events = frame_physics_events_;
+        result.physics_error = last_physics_error_;
+        return result;
+    }
+
+    RuntimeRenderResult begin_render_frame_unhooked(
+        render::Color clear_color = {},
+        bool clear_color_buffer = true,
+        bool clear_depth_buffer = true) {
+        if (state_ != RuntimeState::Initialized)
+            return {RuntimeError::NotInitialized, {}, {}};
+
+        auto surface_result = render_device_.refresh_surface();
+        if (!surface_result)
+            return {
+                RuntimeError::RenderFailure, {},
+                std::move(surface_result)
+            };
+
+        const auto extent = render_device_.surface_info().pixel_extent;
+        const auto error = frame_builder_.begin_frame(
+            render_frame_index_,
+            last_frame_delta_seconds_,
+            extent,
+            clear_color,
+            clear_color_buffer,
+            clear_depth_buffer);
+        if (error != render::FrameBuilderError::None)
+            return {RuntimeError::FrameBuilderFailure, error, {}};
+
+        if (render_frame_index_ != std::numeric_limits<std::uint64_t>::max())
+            ++render_frame_index_;
+        return {};
+    }
+
+    RuntimeRenderResult render_frame_unhooked() {
+        if (state_ != RuntimeState::Initialized)
+            return {RuntimeError::NotInitialized, {}, {}};
+
+        const auto build_error = frame_builder_.finalize();
+        if (build_error != render::FrameBuilderError::None)
+            return {RuntimeError::FrameBuilderFailure, build_error, {}};
+
+        auto render_result = render_device_.render(frame_builder_.packet());
+        if (!render_result)
+            return {
+                RuntimeError::RenderFailure, {},
+                std::move(render_result)
+            };
+        return {};
+    }
+
     template <typename Value>
     static void saturating_add(Value& target, Value amount) noexcept {
         if (amount > std::numeric_limits<Value>::max() - target)

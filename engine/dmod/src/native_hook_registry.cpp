@@ -166,7 +166,7 @@ NativeHookDispatchResult NativeHookRegistry::dispatch(
             for (const auto& entry : entries_) {
                 if (entry.hook_point_id != hook_point_id) continue;
                 const auto owner = owner_enabled_.find(entry.owner_mod_id);
-                if (owner == owner_enabled_.end() || !owner->second) continue;
+                if (owner != owner_enabled_.end() && !owner->second) continue;
                 snapshot.push_back(entry);
             }
         }
