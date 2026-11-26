@@ -242,6 +242,9 @@ enum class FrameValidationError : std::uint8_t {
             return FrameValidationError::InvalidTint;
     }
 
+    return FrameValidationError::None;
+}
+
 [[nodiscard]] inline FrameValidationError validate_mesh_description(
     const MeshDescription& mesh) noexcept {
     if (mesh.vertices.empty() || mesh.indices.empty() ||
@@ -290,8 +293,5 @@ enum class FrameValidationError : std::uint8_t {
     return false;
 }
 
-
-    return FrameValidationError::None;
-}
 
 } // namespace dream::render

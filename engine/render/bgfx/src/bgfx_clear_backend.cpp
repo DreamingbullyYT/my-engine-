@@ -92,6 +92,19 @@ struct PackedVertex2D final {
     std::uint8_t color[4];
 };
 
+struct PackedVertex3D final {
+    float x;
+    float y;
+    float z;
+    float nx;
+    float ny;
+    float nz;
+    float u;
+    float v;
+};
+
+static_assert(sizeof(PackedVertex3D) == sizeof(float) * 8U);
+
 static_assert(sizeof(PackedVertex2D) == sizeof(float) * 4U + 4U);
 
 [[nodiscard]] PackedVertex2D pack_vertex(const Vertex2D& vertex) noexcept {
@@ -128,6 +141,29 @@ static_assert(sizeof(PackedVertex2D) == sizeof(float) * 4U + 4U);
     return state;
 }
 
+[[nodiscard]] std::uint64_t state_for_material(
+    const MaterialDescription& material) noexcept {
+    std::uint64_t state =
+        BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
+    switch (material.blend) {
+    case BlendMode::Opaque:
+        state |= BGFX_STATE_BLEND_FUNC(
+            BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ZERO);
+        break;
+    case BlendMode::Alpha:
+        state |= BGFX_STATE_BLEND_ALPHA;
+        break;
+    case BlendMode::Additive:
+        state |= BGFX_STATE_BLEND_FUNC(
+            BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
+        break;
+    }
+    if (material.depth_test) state |= BGFX_STATE_DEPTH_TEST_LESS;
+    if (material.depth_write) state |= BGFX_STATE_WRITE_Z;
+    if (material.backface_culling) state |= BGFX_STATE_CULL_CCW;
+    return state;
+}
+
 [[nodiscard]] world::Matrix4x4 lift_2d_matrix(
     const world::Matrix3x3& matrix) noexcept {
     world::Matrix4x4 result;
@@ -160,15 +196,29 @@ struct BgfxClearBackend::Impl final {
 
     RenderSurfaceInfo surface{};
     platform::NativeSurface native_surface{};
+    struct MeshGpu final {
+        bgfx::VertexBufferHandle vertices{};
+        bgfx::IndexBufferHandle indices{};
+        std::uint32_t index_count{0};
+    };
+
     std::array<ShaderBinary, 3> shader_binaries{};
+    std::array<ShaderBinary, 3> mesh_shader_binaries{};
     std::map<RenderAssetId, bgfx::TextureHandle> textures;
+    std::map<RenderAssetId, MeshGpu> meshes;
+    std::map<RenderAssetId, MaterialDescription> materials;
     bgfx::TextureHandle white_texture{};
     bgfx::ProgramHandle sprite_program{};
+    bgfx::ProgramHandle mesh_program{};
     bgfx::UniformHandle tint{};
     bgfx::UniformHandle sampler{};
+    bgfx::UniformHandle mesh_model{};
+    bgfx::UniformHandle mesh_light_direction{};
     bgfx::VertexLayout vertex_layout{};
+    bgfx::VertexLayout mesh_vertex_layout{};
     std::uint16_t maximum_texture_dimension{0};
     bool supports_2d{false};
+    bool supports_3d{false};
     bool initialized{false};
     bool owns_global_context{false};
 };
@@ -207,6 +257,162 @@ bool BgfxClearBackend::set_2d_shader_binaries(
     return true;
 }
 
+bool BgfxClearBackend::set_3d_shader_binaries(
+    Bgfx2DShaderFormat format,
+    std::span<const std::byte> vertex_shader,
+    std::span<const std::byte> fragment_shader,
+    std::string& error) {
+    if (!impl_ || impl_->initialized) {
+        error = "3D shader binaries must be installed before backend initialization";
+        return false;
+    }
+    const auto index = shader_format_index(format);
+    if (index >= impl_->mesh_shader_binaries.size() ||
+        vertex_shader.empty() || fragment_shader.empty() ||
+        vertex_shader.size() > std::numeric_limits<std::uint32_t>::max() ||
+        fragment_shader.size() > std::numeric_limits<std::uint32_t>::max()) {
+        error = "3D shader binaries are empty or exceed bgfx memory limits";
+        return false;
+    }
+    auto& destination = impl_->mesh_shader_binaries[index];
+    destination.vertex.assign(vertex_shader.begin(), vertex_shader.end());
+    destination.fragment.assign(fragment_shader.begin(), fragment_shader.end());
+    return true;
+}
+
+bool BgfxClearBackend::create_mesh(
+    RenderAssetId mesh_id, const MeshDescription& mesh, std::string& error) {
+    if (!initialized()) {
+        error = "bgfx backend is not initialized";
+        return false;
+    }
+    if (!impl_->supports_3d) {
+        error = "3D shader program is unavailable for the selected bgfx renderer";
+        return false;
+    }
+    if (mesh_id == 0U ||
+        validate_mesh_description(mesh) != FrameValidationError::None ||
+        mesh.vertices.size() > std::numeric_limits<std::uint32_t>::max() ||
+        mesh.indices.size() > std::numeric_limits<std::uint32_t>::max() / sizeof(std::uint32_t)) {
+        error = "Mesh ID, vertices or indices are invalid or exceed bgfx limits";
+        return false;
+    }
+    if (impl_->meshes.contains(mesh_id)) {
+        error = "Mesh ID is already registered";
+        return false;
+    }
+
+    std::vector<PackedVertex3D> packed;
+    packed.reserve(mesh.vertices.size());
+    for (const auto& vertex : mesh.vertices) {
+        packed.push_back({
+            vertex.position.x, vertex.position.y, vertex.position.z,
+            vertex.normal.x, vertex.normal.y, vertex.normal.z,
+            vertex.uv.x, vertex.uv.y
+        });
+    }
+
+    const auto vertex_bytes = packed.size() * sizeof(PackedVertex3D);
+    const auto index_bytes = mesh.indices.size() * sizeof(std::uint32_t);
+    if (vertex_bytes > std::numeric_limits<std::uint32_t>::max() ||
+        index_bytes > std::numeric_limits<std::uint32_t>::max()) {
+        error = "Mesh buffers exceed bgfx's upload size limit";
+        return false;
+    }
+    const auto* vertex_memory = bgfx::copy(
+        packed.data(), static_cast<std::uint32_t>(vertex_bytes));
+    const auto* index_memory = bgfx::copy(
+        mesh.indices.data(), static_cast<std::uint32_t>(index_bytes));
+    if (vertex_memory == nullptr || index_memory == nullptr) {
+        error = "bgfx could not allocate mesh upload buffers";
+        return false;
+    }
+
+    MeshGpu gpu;
+    gpu.vertices = bgfx::createVertexBuffer(vertex_memory, impl_->mesh_vertex_layout);
+    if (!bgfx::isValid(gpu.vertices)) {
+        error = "bgfx failed to create the mesh vertex buffer";
+        return false;
+    }
+    gpu.indices = bgfx::createIndexBuffer(index_memory, BGFX_BUFFER_INDEX32);
+    if (!bgfx::isValid(gpu.indices)) {
+        bgfx::destroy(gpu.vertices);
+        error = "bgfx failed to create the mesh index buffer";
+        return false;
+    }
+    gpu.index_count = static_cast<std::uint32_t>(mesh.indices.size());
+    try {
+        const auto [it, inserted] = impl_->meshes.emplace(mesh_id, gpu);
+        (void)it;
+        if (!inserted) {
+            bgfx::destroy(gpu.vertices);
+            bgfx::destroy(gpu.indices);
+            error = "Mesh ID is already registered";
+            return false;
+        }
+    } catch (...) {
+        bgfx::destroy(gpu.vertices);
+        bgfx::destroy(gpu.indices);
+        throw;
+    }
+    return true;
+}
+
+bool BgfxClearBackend::destroy_mesh(
+    RenderAssetId mesh_id, std::string& error) {
+    if (!initialized()) {
+        error = "bgfx backend is not initialized";
+        return false;
+    }
+    const auto found = impl_->meshes.find(mesh_id);
+    if (found == impl_->meshes.end()) {
+        error = "Mesh ID is not registered";
+        return false;
+    }
+    bgfx::destroy(found->second.vertices);
+    bgfx::destroy(found->second.indices);
+    impl_->meshes.erase(found);
+    return true;
+}
+
+bool BgfxClearBackend::create_material(
+    RenderAssetId material_id, const MaterialDescription& material,
+    std::string& error) {
+    if (!initialized()) {
+        error = "bgfx backend is not initialized";
+        return false;
+    }
+    if (!impl_->supports_3d || material_id == 0U ||
+        !valid_material_description(material)) {
+        error = "Material ID, 3D pipeline or material properties are invalid";
+        return false;
+    }
+    if (material.texture_id != 0U &&
+        !impl_->textures.contains(material.texture_id)) {
+        error = "Material references a texture that is not registered";
+        return false;
+    }
+    if (impl_->materials.contains(material_id)) {
+        error = "Material ID is already registered";
+        return false;
+    }
+    impl_->materials.emplace(material_id, material);
+    return true;
+}
+
+bool BgfxClearBackend::destroy_material(
+    RenderAssetId material_id, std::string& error) {
+    if (!initialized()) {
+        error = "bgfx backend is not initialized";
+        return false;
+    }
+    if (impl_->materials.erase(material_id) == 0U) {
+        error = "Material ID is not registered";
+        return false;
+    }
+    return true;
+}
+
 bool BgfxClearBackend::create_texture_rgba8(
     RenderAssetId texture_id, Extent2D extent,
     std::span<const std::byte> pixels, std::string& error) {
@@ -214,8 +420,8 @@ bool BgfxClearBackend::create_texture_rgba8(
         error = "bgfx backend is not initialized";
         return false;
     }
-    if (!impl_->supports_2d) {
-        error = "2D shader program is unavailable for the selected bgfx renderer";
+    if (!impl_->supports_2d && !impl_->supports_3d) {
+        error = "No compatible bgfx shader pipeline is available for texture use";
         return false;
     }
     if (texture_id == 0U || !valid_extent(extent) ||
@@ -275,6 +481,13 @@ bool BgfxClearBackend::destroy_texture(
         error = "Texture ID is not registered";
         return false;
     }
+    for (const auto& [material_id, material] : impl_->materials) {
+        (void)material_id;
+        if (material.texture_id == texture_id) {
+            error = "Texture is still referenced by a registered material";
+            return false;
+        }
+    }
     bgfx::destroy(found->second);
     impl_->textures.erase(found);
     return true;
@@ -308,8 +521,11 @@ bool BgfxClearBackend::initialize(
     impl_->owns_global_context = true;
 
     const auto has_shader_format = [&](Bgfx2DShaderFormat format) {
-        const auto& shaders = impl_->shader_binaries[shader_format_index(format)];
-        return !shaders.vertex.empty() && !shaders.fragment.empty();
+        const auto index = shader_format_index(format);
+        const auto& sprite = impl_->shader_binaries[index];
+        const auto& mesh = impl_->mesh_shader_binaries[index];
+        return (!sprite.vertex.empty() && !sprite.fragment.empty()) ||
+               (!mesh.vertex.empty() && !mesh.fragment.empty());
     };
 
     bgfx::Init init;
@@ -412,6 +628,63 @@ bool BgfxClearBackend::initialize(
         }
     }
 
+    if (renderer_shader_format(bgfx::getRendererType(), shader_format)) {
+        const auto shader_index = shader_format_index(shader_format);
+        const auto& shaders = impl_->mesh_shader_binaries[shader_index];
+        if (!shaders.vertex.empty() && !shaders.fragment.empty()) {
+            const auto* vertex_memory = bgfx::copy(
+                shaders.vertex.data(),
+                static_cast<std::uint32_t>(shaders.vertex.size()));
+            const auto* fragment_memory = bgfx::copy(
+                shaders.fragment.data(),
+                static_cast<std::uint32_t>(shaders.fragment.size()));
+            if (vertex_memory == nullptr || fragment_memory == nullptr) {
+                error = "bgfx could not allocate 3D shader memory";
+                shutdown();
+                return false;
+            }
+            const auto vertex_shader = bgfx::createShader(vertex_memory);
+            const auto fragment_shader = bgfx::createShader(fragment_memory);
+            if (!bgfx::isValid(vertex_shader) || !bgfx::isValid(fragment_shader)) {
+                if (bgfx::isValid(vertex_shader)) bgfx::destroy(vertex_shader);
+                if (bgfx::isValid(fragment_shader)) bgfx::destroy(fragment_shader);
+                error = "bgfx rejected the supplied 3D vertex or fragment shader";
+                shutdown();
+                return false;
+            }
+            impl_->mesh_program =
+                bgfx::createProgram(vertex_shader, fragment_shader, true);
+            if (!bgfx::isValid(impl_->mesh_program)) {
+                error = "bgfx could not link the 3D mesh shader program";
+                shutdown();
+                return false;
+            }
+            if (!bgfx::isValid(impl_->tint))
+                impl_->tint = bgfx::createUniform("u_tint", bgfx::UniformType::Vec4);
+            if (!bgfx::isValid(impl_->sampler))
+                impl_->sampler =
+                    bgfx::createUniform("s_texColor", bgfx::UniformType::Sampler);
+            impl_->mesh_model =
+                bgfx::createUniform("u_modelMatrix", bgfx::UniformType::Mat4);
+            impl_->mesh_light_direction =
+                bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
+            if (!bgfx::isValid(impl_->tint) || !bgfx::isValid(impl_->sampler) ||
+                !bgfx::isValid(impl_->mesh_model) ||
+                !bgfx::isValid(impl_->mesh_light_direction)) {
+                error = "bgfx could not create the required 3D shader uniforms";
+                shutdown();
+                return false;
+            }
+            impl_->mesh_vertex_layout
+                .begin(bgfx::getRendererType())
+                .add(bgfx::Attrib::Position, 3U, bgfx::AttribType::Float)
+                .add(bgfx::Attrib::Normal, 3U, bgfx::AttribType::Float)
+                .add(bgfx::Attrib::TexCoord0, 2U, bgfx::AttribType::Float)
+                .end();
+            impl_->supports_3d = true;
+        }
+    }
+
     capabilities = {};
     capabilities.supports_2d = impl_->supports_2d;
     capabilities.supports_3d = impl_->supports_3d;
@@ -453,12 +726,12 @@ bool BgfxClearBackend::render(
         error = "render packet extent does not match bgfx swap chain";
         return false;
     }
-    if (!frame.draws_3d.empty()) {
-        error = "bgfx backend does not yet support 3D mesh commands";
-        return false;
-    }
     if (!frame.draws_2d.empty() && !impl_->supports_2d) {
         error = "no compatible offline 2D shader binary was supplied for this GPU renderer";
+        return false;
+    }
+    if (!frame.draws_3d.empty() && !impl_->supports_3d) {
+        error = "no compatible offline 3D shader binary was supplied for this GPU renderer";
         return false;
     }
 
@@ -477,31 +750,101 @@ bool BgfxClearBackend::render(
         textures.push_back(found->second);
     }
 
-    bgfx::setViewRect(
-        0U, 0U, 0U,
-        static_cast<std::uint16_t>(frame.framebuffer_extent.width),
-        static_cast<std::uint16_t>(frame.framebuffer_extent.height));
-    if (!frame.camera_2d && !frame.draws_2d.empty()) {
+    std::vector<const Impl::MeshGpu*> mesh_resources;
+    std::vector<const MaterialDescription*> material_resources;
+    std::vector<bgfx::TextureHandle> mesh_textures;
+    mesh_resources.reserve(frame.draws_3d.size());
+    material_resources.reserve(frame.draws_3d.size());
+    mesh_textures.reserve(frame.draws_3d.size());
+    for (const auto& draw : frame.draws_3d) {
+        const auto mesh = impl_->meshes.find(draw.mesh_id);
+        const auto material = impl_->materials.find(draw.material_id);
+        if (mesh == impl_->meshes.end() || material == impl_->materials.end()) {
+            error = "3D draw references an unregistered mesh or material";
+            return false;
+        }
+        bgfx::TextureHandle texture = impl_->white_texture;
+        if (material->second.texture_id != 0U) {
+            const auto found = impl_->textures.find(material->second.texture_id);
+            if (found == impl_->textures.end()) {
+                error = "3D material references an unregistered texture";
+                return false;
+            }
+            texture = found->second;
+        }
+        mesh_resources.push_back(&mesh->second);
+        material_resources.push_back(&material->second);
+        mesh_textures.push_back(texture);
+    }
+
+    if (!frame.draws_2d.empty() && !frame.camera_2d) {
         error = "2D draw packet is missing its camera matrices";
         return false;
+    }
+    if (!frame.draws_3d.empty() && !frame.camera_3d) {
+        error = "3D draw packet is missing its camera matrices";
+        return false;
+    }
+
+    constexpr bgfx::ViewId view_3d = 0U;
+    constexpr bgfx::ViewId view_2d = 1U;
+    for (const auto view : {view_3d, view_2d}) {
+        bgfx::setViewRect(
+            view, 0U, 0U,
+            static_cast<std::uint16_t>(frame.framebuffer_extent.width),
+            static_cast<std::uint16_t>(frame.framebuffer_extent.height));
     }
 
     std::uint16_t clear_flags = BGFX_CLEAR_NONE;
     if (frame.clear_color_buffer) clear_flags |= BGFX_CLEAR_COLOR;
     if (frame.clear_depth_buffer) clear_flags |= BGFX_CLEAR_DEPTH;
     bgfx::setViewClear(
-        0U, clear_flags, pack_clear_rgba(frame.clear_color), 1.0F, 0U);
+        view_3d, clear_flags, pack_clear_rgba(frame.clear_color), 1.0F, 0U);
+    bgfx::setViewClear(view_2d, BGFX_CLEAR_NONE, 0U, 1.0F, 0U);
 
-    if (frame.draws_2d.empty()) {
-        bgfx::touch(0U);
+    if (frame.draws_3d.empty() && frame.draws_2d.empty()) {
+        bgfx::touch(view_3d);
         (void)bgfx::frame();
         return true;
     }
 
-    const auto view_matrix = lift_2d_matrix(frame.camera_2d->view);
-    const auto projection_matrix = lift_2d_matrix(frame.camera_2d->projection);
-    bgfx::setViewTransform(
-        0U, view_matrix.values.data(), projection_matrix.values.data());
+    if (!frame.draws_3d.empty()) {
+        bgfx::setViewTransform(
+            view_3d,
+            frame.camera_3d->view.values.data(),
+            frame.camera_3d->projection.values.data());
+        constexpr std::array<float, 4> light_direction{0.35F, 0.8F, 0.45F, 0.0F};
+        for (std::size_t index = 0; index < frame.draws_3d.size(); ++index) {
+            const auto& draw = frame.draws_3d[index];
+            const auto& material = *material_resources[index];
+            const auto& mesh = *mesh_resources[index];
+            const std::array<float, 4> tint{
+                draw.tint.r * material.base_color.r,
+                draw.tint.g * material.base_color.g,
+                draw.tint.b * material.base_color.b,
+                draw.tint.a * material.base_color.a
+            };
+            bgfx::setTransform(draw.model.values.data());
+            bgfx::setUniform(impl_->mesh_model, draw.model.values.data(), 1U);
+            bgfx::setUniform(impl_->tint, tint.data(), 1U);
+            bgfx::setUniform(
+                impl_->mesh_light_direction, light_direction.data(), 1U);
+            bgfx::setTexture(0U, impl_->sampler, mesh_textures[index]);
+            bgfx::setVertexBuffer(0U, &mesh.vertices);
+            bgfx::setIndexBuffer(&mesh.indices);
+            bgfx::setState(state_for_material(material));
+            bgfx::submit(view_3d, impl_->mesh_program);
+        }
+    } else {
+        bgfx::touch(view_3d);
+    }
+
+    if (!frame.draws_2d.empty()) {
+        const auto view_matrix = lift_2d_matrix(frame.camera_2d->view);
+        const auto projection_matrix = lift_2d_matrix(frame.camera_2d->projection);
+        bgfx::setViewTransform(
+            view_2d, view_matrix.values.data(), projection_matrix.values.data());
+    }
 
     if (frame.vertices_2d.size() > std::numeric_limits<std::uint32_t>::max() ||
         frame.indices_2d.size() > std::numeric_limits<std::uint32_t>::max()) {
@@ -532,7 +875,7 @@ bool BgfxClearBackend::render(
             frame.indices_2d.size() * sizeof(std::uint32_t));
     }
 
-    constexpr bgfx::ViewId main_view = 0U;
+    constexpr bgfx::ViewId main_view = view_2d;
     for (std::size_t index = 0; index < frame.draws_2d.size(); ++index) {
         const auto& draw = frame.draws_2d[index];
         const auto model = lift_2d_matrix(draw.transform);
@@ -564,6 +907,14 @@ void BgfxClearBackend::shutdown() noexcept {
     if (!impl_ || !impl_->owns_global_context) return;
 
     if (impl_->initialized) {
+        for (const auto& [id, mesh] : impl_->meshes) {
+            (void)id;
+            bgfx::destroy(mesh.vertices);
+            bgfx::destroy(mesh.indices);
+        }
+        impl_->meshes.clear();
+        impl_->materials.clear();
+
         for (const auto& [id, texture] : impl_->textures) {
             (void)id;
             bgfx::destroy(texture);
@@ -574,19 +925,29 @@ void BgfxClearBackend::shutdown() noexcept {
             bgfx::destroy(impl_->white_texture);
         if (bgfx::isValid(impl_->sprite_program))
             bgfx::destroy(impl_->sprite_program);
+        if (bgfx::isValid(impl_->mesh_program))
+            bgfx::destroy(impl_->mesh_program);
         if (bgfx::isValid(impl_->tint))
             bgfx::destroy(impl_->tint);
         if (bgfx::isValid(impl_->sampler))
             bgfx::destroy(impl_->sampler);
+        if (bgfx::isValid(impl_->mesh_model))
+            bgfx::destroy(impl_->mesh_model);
+        if (bgfx::isValid(impl_->mesh_light_direction))
+            bgfx::destroy(impl_->mesh_light_direction);
         bgfx::shutdown();
     }
 
     impl_->white_texture = BGFX_INVALID_HANDLE;
     impl_->sprite_program = BGFX_INVALID_HANDLE;
+    impl_->mesh_program = BGFX_INVALID_HANDLE;
     impl_->tint = BGFX_INVALID_HANDLE;
     impl_->sampler = BGFX_INVALID_HANDLE;
+    impl_->mesh_model = BGFX_INVALID_HANDLE;
+    impl_->mesh_light_direction = BGFX_INVALID_HANDLE;
     impl_->maximum_texture_dimension = 0U;
     impl_->supports_2d = false;
+    impl_->supports_3d = false;
     impl_->initialized = false;
     impl_->owns_global_context = false;
     impl_->surface = {};
