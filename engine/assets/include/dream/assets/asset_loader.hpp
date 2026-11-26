@@ -21,6 +21,7 @@ enum class AssetLoadStatus {
     Loaded,
     InvalidPath,
     InvalidKey,
+    InvalidLimit,
     ReadFailed,
     DecodeFailed,
     StoreRejected
@@ -62,7 +63,8 @@ template <typename T, typename Tag, typename Decoder>
     core::ResourceStore<T, Tag>& store,
     std::string key,
     std::string virtual_path,
-    Decoder&& decoder)
+    Decoder&& decoder,
+    std::size_t max_file_bytes = 64u * 1024u * 1024u)
     -> std::future<AssetLoadResult<core::Handle<Tag>>> {
     using Result = AssetLoadResult<core::Handle<Tag>>;
     using Decode = std::decay_t<Decoder>;
@@ -82,9 +84,14 @@ template <typename T, typename Tag, typename Decoder>
                         "Asset key must contain 1 to 4096 bytes"};
             }
 
+            if (max_file_bytes == 0) {
+                return {AssetLoadStatus::InvalidLimit, {}, platform::FileError::None,
+                        "Maximum asset file size must be greater than zero"};
+            }
+
             std::vector<std::byte> bytes;
             platform::FileError file_error = platform::FileError::None;
-            if (!filesystem.read_file(path, bytes, file_error)) {
+            if (!filesystem.read_file(path, bytes, max_file_bytes, file_error)) {
                 return {AssetLoadStatus::ReadFailed, {}, file_error,
                         "Filesystem could not read the asset"};
             }
