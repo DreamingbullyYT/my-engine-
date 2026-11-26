@@ -85,7 +85,9 @@ jobs:
 
       - name: Assemble debug APK with EngineRuntime and bgfx
         working-directory: android-host
-        run: gradle --no-daemon --stacktrace :app:assembleDebug
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: "1"
+        run: gradle --no-daemon --max-workers=1 --stacktrace :app:assembleDebug
 
       - name: Verify APK contains ARM64 engine, renderer and runtime shaders
         run: |

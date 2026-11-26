@@ -288,8 +288,10 @@ void render_demo_frame(
                 std::to_string(engine.ui().text_value(ui_event.target).size()));
         } else if (ui_event.type == dream::ui::UiEventType::Clicked &&
                    ui_event.target == demo.action_button) {
-            if (engine.physics2d().apply_impulse(
-                    demo.player_2d, {0.0F, 5.0F})) {
+            const auto player_state =
+                engine.physics2d().body_state(demo.player_2d);
+            if (player_state && engine.physics2d().apply_impulse(
+                    demo.player_2d, {0.0F, 5.0F}, player_state->position)) {
                 logger.write(LogLevel::info, "demo.input",
                              "Touch button applied a jump impulse to the 2D player");
             } else {
