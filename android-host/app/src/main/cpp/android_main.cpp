@@ -245,6 +245,10 @@ void render_demo_frame(
     bool renderer_ready) {
     using namespace dream;
 
+    // Do not advance simulation or consume UI input while Android has
+    // suspended the app or the native render surface is unavailable.
+    if (!renderer_ready || !engine.render_device().initialized()) return;
+
     const auto update = engine.update(delta_seconds, input_events);
     dream::ui::UiEvent ui_event;
     while (engine.ui().pop_event(ui_event)) {
@@ -269,11 +273,10 @@ void render_demo_frame(
             ", physics3d=" +
             std::to_string(static_cast<unsigned>(update.physics3d_error)));
     }
-    if (!renderer_ready || !engine.render_device().initialized()) return;
-
     platform::WindowMetrics metrics{};
     if (!platform_backend.get_metrics(window, metrics) ||
-        metrics.pixel_width == 0U || metrics.pixel_height == 0U) {
+        metrics.pixel_width == 0U || metrics.pixel_height == 0U ||
+        metrics.logical_width == 0U || metrics.logical_height == 0U) {
         logger.write(LogLevel::warning, "platform.window",
                      "Skipping frame because the native window metrics are unavailable");
         return;
@@ -302,13 +305,16 @@ void render_demo_frame(
         return;
     }
 
+    // Android pointer events are already converted to logical pixels by the
+    // GameActivity adapter. Layout the retained UI in that same coordinate
+    // space; camera projection continues to use physical framebuffer pixels.
     const ui::UiRect viewport{
         0.0F, 0.0F,
-        static_cast<float>(metrics.pixel_width),
-        static_cast<float>(metrics.pixel_height)
+        static_cast<float>(metrics.logical_width),
+        static_cast<float>(metrics.logical_height)
     };
-    if (demo.ui_width != metrics.pixel_width ||
-        demo.ui_height != metrics.pixel_height) {
+    if (demo.ui_width != metrics.logical_width ||
+        demo.ui_height != metrics.logical_height) {
         const auto layout_error = engine.ui().layout(viewport, text_metrics);
         if (layout_error != ui::UiError::None) {
             logger.write(LogLevel::error, "ui.layout",
@@ -316,8 +322,8 @@ void render_demo_frame(
                          std::to_string(static_cast<unsigned>(layout_error)));
             return;
         }
-        demo.ui_width = metrics.pixel_width;
-        demo.ui_height = metrics.pixel_height;
+        demo.ui_width = metrics.logical_width;
+        demo.ui_height = metrics.logical_height;
     }
 
     const auto begin = engine.begin_render_frame(
@@ -391,16 +397,25 @@ extern "C" void android_main(android_app* app) {
     std::vector<Logger::Sink> sinks;
     sinks.emplace_back(dream::core::make_android_logcat_sink("DreamEngine"));
     std::string log_path;
-    if (app->activity->internalDataPath != nullptr) {
-        log_path = std::string(app->activity->internalDataPath) +
-            "/logs/engine.log";
+    std::string_view log_storage_scope = "unavailable";
+    const char* log_directory = app->activity->externalDataPath;
+    if (log_directory != nullptr && log_directory[0] != '\\0') {
+        log_storage_scope = "app-specific external files";
+    } else {
+        log_directory = app->activity->internalDataPath;
+        if (log_directory != nullptr && log_directory[0] != '\\0')
+            log_storage_scope = "private internal files (fallback)";
+    }
+    if (log_directory != nullptr && log_directory[0] != '\\0') {
+        log_path = std::string(log_directory) + "/logs/engine.log";
         sinks.emplace_back(dream::core::make_file_log_sink(
             log_path, dream::core::FileLogSinkOptions{8U * 1024U * 1024U, 3U, true}));
     }
     logger.set_sink(dream::core::make_combined_log_sink(std::move(sinks)));
     logger.set_minimum_level(LogLevel::debug);
     logger.write(LogLevel::info, "platform.android",
-                 "Dream Engine Android host entry; log_file=" +
+                 "Dream Engine Android host entry; log_scope=" +
+                 std::string(log_storage_scope) + "; log_file=" +
                  (log_path.empty() ? std::string("unavailable (Logcat only)") : log_path));
 
     dream::platform::AndroidAssetFileSystem apk_assets(app->activity->assetManager);
