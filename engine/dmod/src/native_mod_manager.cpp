@@ -1,7 +1,6 @@
 #include <dream/dmod/native_mod_manager.hpp>
 #include <dream/dmod/resolver.hpp>
 #include <dream/dmod/native_mod_package_installer.hpp>
-#include <dream/dmod/native_mod_package_installer.hpp>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -88,45 +87,6 @@ NativeModResult NativeModManager::load(
     mods_.push_back(std::move(mod));
     return {};
 }
-NativeModResult NativeModManager::install_and_load(
-    const PackageReader& package, const std::filesystem::path& private_mod_root) {
-    if (shutdown_) return {NativeModError::Shutdown, "Mod manager is shut down."};
-    const auto installed = NativeModPackageInstaller::install(package, private_mod_root);
-    if (!installed.success()) {
-        return {NativeModError::PackageInstallFailed, installed.error};
-    }
-    return load(package.manifest(), installed.library_path);
-}
-
-NativeModBatchResult NativeModManager::install_and_load_all(
-    std::span<const PackageReader* const> packages,
-    const std::filesystem::path& private_mod_root,
-    core::Version engine_api_version) {
-    NativeModBatchResult result;
-    std::vector<NativeModPackage> installed_packages;
-    installed_packages.reserve(packages.size());
-    for (const auto* package : packages) {
-        if (package == nullptr) {
-            result.error = NativeModError::InvalidManifest;
-            result.message = "Native package list contains a null reader.";
-            return result;
-        }
-        if (package->manifest().runtime_kind != ModRuntimeKind::Native) {
-            result.error = NativeModError::WrongRuntime;
-            result.message = "Every package in a native install batch must use the native runtime.";
-            return result;
-        }
-        const auto installed = NativeModPackageInstaller::install(*package, private_mod_root);
-        if (!installed.success()) {
-            result.error = NativeModError::PackageInstallFailed;
-            result.message = package->manifest().id + ": " + installed.error;
-            return result;
-        }
-        installed_packages.push_back({package->manifest(), installed.library_path});
-    }
-    return load_all(installed_packages, engine_api_version);
-}
-
 NativeModResult NativeModManager::install_and_load(
     const PackageReader& package, const std::filesystem::path& private_mod_root) {
     if (shutdown_) return {NativeModError::Shutdown, "Mod manager is shut down."};
