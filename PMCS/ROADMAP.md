@@ -39,7 +39,8 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [x] Deterministic asset dependency planner with required/optional dependency handling and cycle detection; all four CI jobs passed in run 45766502045.
 - [x] Initial CPU-side byte-budgeted LRU AssetCache; all four CI jobs passed in run 45768090059.
 - [x] Optional AssetLoader-to-AssetCache async path with cache-hit short-circuit and caller-provided size estimator; all four CI jobs passed in run 45768508344.
-- [ ] Asset cancellation/lifetime policy and in-flight request deduplication.
+- [x] Cooperative cancellation tokens/checkpoints for async uncached and cached asset loading; verified in all four CI jobs in run 45769042275. This does not interrupt an active read/decoder.
+- [ ] Define explicit async service shutdown/lifetime policy and add in-flight request deduplication.
 - [ ] Renderer/GPU upload and GPU resource residency.
 
 ## P3 — Rendering
