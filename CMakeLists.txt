@@ -324,6 +324,13 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     set_target_properties(dream_runtime_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.runtime.integration COMMAND dream_runtime_tests)
 
+    add_executable(dream_bgfx_shader_assets_tests tests/render/bgfx_shader_assets_tests.cpp)
+    target_link_libraries(dream_bgfx_shader_assets_tests PRIVATE DreamEngine::Render)
+    target_include_directories(dream_bgfx_shader_assets_tests PRIVATE engine/render/bgfx/include)
+    target_compile_features(dream_bgfx_shader_assets_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_bgfx_shader_assets_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.render.bgfx_shader_assets COMMAND dream_bgfx_shader_assets_tests)
+
     add_executable(dream_render_frame_builder_tests tests/render/render_frame_builder_tests.cpp)
     target_link_libraries(dream_render_frame_builder_tests PRIVATE DreamEngine::Render)
     target_compile_features(dream_render_frame_builder_tests PRIVATE cxx_std_20)
