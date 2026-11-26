@@ -97,6 +97,14 @@ add_library(dream_dmod STATIC
 )
 add_library(DreamEngine::DMod ALIAS dream_dmod)
 
+add_library(dream_physics2d INTERFACE)
+add_library(DreamEngine::Physics2D ALIAS dream_physics2d)
+target_include_directories(dream_physics2d INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/physics2d/include>
+)
+target_compile_features(dream_physics2d INTERFACE cxx_std_20)
+target_link_libraries(dream_physics2d INTERFACE DreamEngine::Core)
+
 add_library(dream_input INTERFACE)
 add_library(DreamEngine::Input ALIAS dream_input)
 target_include_directories(dream_input INTERFACE
@@ -217,6 +225,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_assets_dependency_graph_tests PRIVATE cxx_std_20)
     set_target_properties(dream_assets_dependency_graph_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.assets.dependency_graph COMMAND dream_assets_dependency_graph_tests)
+
+    add_executable(dream_physics2d_geometry_tests tests/physics2d/geometry_tests.cpp)
+    target_link_libraries(dream_physics2d_geometry_tests PRIVATE DreamEngine::Physics2D)
+    target_compile_features(dream_physics2d_geometry_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_physics2d_geometry_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.physics2d.geometry COMMAND dream_physics2d_geometry_tests)
 
     add_executable(dream_input_action_map_tests tests/input/action_map_tests.cpp)
     target_link_libraries(dream_input_action_map_tests PRIVATE DreamEngine::Input)
