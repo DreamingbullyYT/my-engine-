@@ -87,7 +87,7 @@ jobs:
         working-directory: android-host
         env:
           CMAKE_BUILD_PARALLEL_LEVEL: "1"
-        run: gradle --no-daemon --max-workers=1 --stacktrace :app:assembleDebug
+        run: gradle --no-daemon --no-build-cache --max-workers=1 --stacktrace :app:clean :app:assembleDebug
 
       - name: Verify APK contains ARM64 engine, renderer and runtime shaders
         run: |
@@ -96,6 +96,26 @@ jobs:
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libdream_engine_android_host.so"
           unzip -l "$APK" | grep -q "assets/shaders/vs_sprite_essl300.bin"
           unzip -l "$APK" | grep -q "assets/shaders/vs_mesh_essl300.bin"
+
+          # Guard against stale Gradle outputs: the packaged DEX and native library
+          # must contain the current startup diagnostics, not only old host code.
+          DEX_HAS_MARKER=0
+          while IFS= read -r dex; do
+            if unzip -p "$APK" "$dex" | strings | grep -q "DreamEngineBoot"; then
+              DEX_HAS_MARKER=1
+              break
+            fi
+          done < <(unzip -Z1 "$APK" | grep -E '^classes([0-9]+)?\\.dex
+      - name: Upload installable debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: dream-engine-android-arm64-debug
+          path: android-host/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+)
+          test "$DEX_HAS_MARKER" -eq 1
+          unzip -p "$APK" lib/arm64-v8a/libdream_engine_android_host.so | strings | grep -q "android_main entered"
 
       - name: Upload installable debug APK
         uses: actions/upload-artifact@v4
