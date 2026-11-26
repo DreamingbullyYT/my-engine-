@@ -150,6 +150,41 @@ void render_frame_after(void* context, dmod::NativeHookInvocationV1*) noexcept {
 struct SceneSystemHookProbe final {
     std::size_t bypassed_calls{0};
 };
+struct ServiceHookProbe final {
+    std::size_t animation_calls{0};
+    std::size_t asset_calls{0};
+    std::size_t ui_calls{0};
+    std::size_t audio_calls{0};
+};
+
+void animation_update_after(void* context,dmod::NativeHookInvocationV1* invocation) noexcept {
+    if (!context || !invocation || !invocation->user_data) return;
+    auto& probe=*static_cast<ServiceHookProbe*>(context);
+    const auto& call=*static_cast<RuntimeAnimationUpdateHookDataV1*>(invocation->user_data);
+    if(call.world && call.report.error==animation::AnimationError::None)
+        ++probe.animation_calls;
+}
+void asset_import_after(void* context,dmod::NativeHookInvocationV1* invocation) noexcept {
+    if (!context || !invocation || !invocation->user_data) return;
+    auto& probe=*static_cast<ServiceHookProbe*>(context);
+    const auto& call=*static_cast<RuntimeAssetImportHookDataV1*>(invocation->user_data);
+    if(call.importer && call.registry_error==assets::AssetImporterRegistryError::None)
+        ++probe.asset_calls;
+}
+void ui_draw_after(void* context,dmod::NativeHookInvocationV1* invocation) noexcept {
+    if (!context || !invocation || !invocation->user_data) return;
+    auto& probe=*static_cast<ServiceHookProbe*>(context);
+    const auto& call=*static_cast<RuntimeUiDrawHookDataV1*>(invocation->user_data);
+    if(call.adapter && call.result==ui::UiRenderError::None)
+        ++probe.ui_calls;
+}
+void audio_mix_after(void* context,dmod::NativeHookInvocationV1* invocation) noexcept {
+    if (!context || !invocation || !invocation->user_data) return;
+    auto& probe=*static_cast<ServiceHookProbe*>(context);
+    const auto& call=*static_cast<RuntimeAudioMixHookDataV1*>(invocation->user_data);
+    if(call.result==audio::AudioError::None)
+        ++probe.audio_calls;
+}
 void replace_scene_system(void* context, dmod::NativeHookInvocationV1* invocation) noexcept {
     if (!context || !invocation || !invocation->user_data) return;
     auto& probe = *static_cast<SceneSystemHookProbe*>(context);
@@ -257,7 +292,20 @@ int main() {
     PhysicsHookProbe physics_hook_probe;
     RenderHookProbe render_hook_probe;
     SceneSystemHookProbe scene_system_hook_probe;
+    ServiceHookProbe service_hook_probe;
     auto& runtime_hooks = runtime.mods().hook_registry();
+    const auto animation_after = runtime_hooks.register_hook(
+        "test.runtime", hook_points::animation_update, dmod::NativeHookStage::After,
+        0, &animation_update_after, &service_hook_probe);
+    const auto asset_after = runtime_hooks.register_hook(
+        "test.runtime", hook_points::asset_import, dmod::NativeHookStage::After,
+        0, &asset_import_after, &service_hook_probe);
+    const auto ui_after = runtime_hooks.register_hook(
+        "test.runtime", hook_points::ui_draw, dmod::NativeHookStage::After,
+        0, &ui_draw_after, &service_hook_probe);
+    const auto audio_after = runtime_hooks.register_hook(
+        "test.runtime", hook_points::audio_mix, dmod::NativeHookStage::After,
+        0, &audio_mix_after, &service_hook_probe);
     const auto update_before = runtime_hooks.register_hook(
         "test.runtime", hook_points::runtime_update, dmod::NativeHookStage::Before,
         0, &runtime_update_before, &update_hook_probe);
@@ -277,7 +325,8 @@ int main() {
         "test.runtime", hook_points::scene_system, dmod::NativeHookStage::Replace,
         0, &replace_scene_system, &scene_system_hook_probe);
     require(update_before && update_after && physics_after && begin_before &&
-            render_after && system_replace,
+            render_after && system_replace && animation_after && asset_after &&
+            ui_after && audio_after,
             "game code can register native hooks at runtime extension points");
 
     InputEvent key_down;
@@ -331,8 +380,9 @@ int main() {
             "runtime frame builder accepts a sprite");
     require(runtime.enqueue_ui_draws(
                 Camera2D{}, dream::ui::UiRect{0, 0, 640, 480}) ==
-                dream::ui::UiRenderError::None,
-            "EngineRuntime enqueues retained UI after frame begin");
+                dream::ui::UiRenderError::None &&
+            service_hook_probe.ui_calls == 1U,
+            "EngineRuntime enqueues retained UI through its native hook point");
     require(static_cast<bool>(runtime.render_frame()),
             "runtime finalizes and renders the frame");
     require(backend.render_calls == 1 && backend.last_2d_draws == 2U &&
@@ -374,7 +424,8 @@ int main() {
             "runtime rejects duplicate initialization");
 
     for (const auto registration : {update_before, update_after, physics_after,
-                                    begin_before, render_after, system_replace})
+                                    begin_before, render_after, system_replace,
+                                    animation_after, asset_after, ui_after, audio_after})
         require(runtime_hooks.remove_hook(registration),
                 "remove runtime test hook registration");
     // Runtime-owned service integration: native clients use the same live
@@ -402,8 +453,9 @@ int main() {
     }
     const auto settled_ball = runtime.physics3d().body_state(runtime_ball_body.handle);
     require(settled_ball && settled_ball->position.y > 0.3F &&
-            settled_ball->position.y < 0.9F,
-            "runtime scheduler advances the 3D body against its floor");
+            settled_ball->position.y < 0.9F &&
+            service_hook_probe.animation_calls >= 20U,
+            "runtime scheduler advances Physics3D and dispatches animation hooks");
     dream::audio::AudioClip runtime_audio_clip;
     runtime_audio_clip.sample_rate = 48000U;
     runtime_audio_clip.channels = 1U;
@@ -419,8 +471,23 @@ int main() {
                 dream::audio::AudioError::None &&
             runtime_audio_output[0] > 0.0F,
             "runtime audio mixer produces stereo PCM");
+    std::array<float, 4> hooked_audio_output{};
+    require(runtime.mix_audio(hooked_audio_output, 2U, 48000U) ==
+                dream::audio::AudioError::None &&
+            service_hook_probe.audio_calls == 1U,
+            "ordinary runtime audio mixing dispatches the native audio hook");
     require(static_cast<bool>(runtime.audio().remove_clip(runtime_audio.first)),
             "runtime audio clip releases after playback");
+
+    constexpr std::string_view obj_source =
+        "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
+    const auto obj_bytes = std::as_bytes(
+        std::span{obj_source.data(), obj_source.size()});
+    const auto imported = runtime.import_asset_source("models/test.obj", obj_bytes);
+    require(imported.registry_error == dream::assets::AssetImporterRegistryError::None &&
+            imported.output.error.empty() && imported.output.artifacts.size() == 1U &&
+            service_hook_probe.asset_calls == 1U,
+            "runtime invokes the built-in OBJ importer through the mod hook registry");
 
     std::string importer_id;
     dream::assets::AssetImporter importer;

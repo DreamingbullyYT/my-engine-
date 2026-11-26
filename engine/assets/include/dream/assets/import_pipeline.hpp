@@ -157,6 +157,21 @@ public:
         return true;
     }
 
+    [[nodiscard]] bool find_for_path(
+        std::string_view virtual_path,std::string& importer_id,
+        AssetImporter& importer) const {
+        if(!platform::is_valid_virtual_path(virtual_path) ||
+           virtual_path.size()>4096U)
+            return false;
+        const auto slash=virtual_path.find_last_of('/');
+        const auto dot=virtual_path.find_last_of('.');
+        if(dot==std::string_view::npos ||
+           (slash!=std::string_view::npos && dot<slash) ||
+           dot+1U>=virtual_path.size())
+            return false;
+        return find(virtual_path.substr(dot),importer_id,importer);
+    }
+
 private:
     struct Entry final {
         std::string id;

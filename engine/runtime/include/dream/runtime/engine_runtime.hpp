@@ -103,6 +103,10 @@ inline constexpr char physics3d_step[] = "dream.engine.physics3d.step";
 inline constexpr char scene_system[] = "dream.engine.scene.system";
 inline constexpr char begin_render_frame[] = "dream.engine.runtime.begin_render_frame";
 inline constexpr char render_frame[] = "dream.engine.runtime.render_frame";
+inline constexpr char animation_update[] = "dream.engine.animation.update";
+inline constexpr char asset_import[] = "dream.engine.assets.import";
+inline constexpr char ui_draw[] = "dream.engine.ui.draw";
+inline constexpr char audio_mix[] = "dream.engine.audio.mix";
 } // namespace hook_points
 
 // These contexts live only for the duration of a hook dispatch. Mods may mutate
@@ -146,6 +150,39 @@ struct RuntimeBeginRenderFrameHookDataV1 final {
 struct RuntimeRenderFrameHookDataV1 final {
     EngineRuntime* runtime{};
     RuntimeRenderResult result{};
+};
+
+struct RuntimeAnimationUpdateHookDataV1 final {
+    EngineRuntime* runtime{};
+    world::World* world{};
+    double delta_seconds{};
+    animation::AnimationUpdateReport report{};
+};
+
+struct RuntimeAssetImportHookDataV1 final {
+    EngineRuntime* runtime{};
+    std::string_view source_path{};
+    std::span<const std::byte> source_bytes{};
+    std::string_view options{};
+    std::string importer_id;
+    assets::AssetImporter importer;
+    assets::AssetImporterOutput output{};
+    assets::AssetImporterRegistryError registry_error{
+        assets::AssetImporterRegistryError::None};
+};
+
+struct RuntimeUiDrawHookDataV1 final {
+    EngineRuntime* runtime{};
+    ui::UiRenderAdapter* adapter{};
+    ui::UiRenderError result{ui::UiRenderError::None};
+};
+
+struct RuntimeAudioMixHookDataV1 final {
+    EngineRuntime* runtime{};
+    std::span<float> output{};
+    std::size_t frame_count{};
+    std::uint32_t sample_rate{};
+    audio::AudioError result{audio::AudioError::None};
 };
 
 // Coordinates one application-facing engine loop. Input is collected once per
@@ -252,8 +289,23 @@ public:
             world::SystemPhase::PreUpdate,
             std::numeric_limits<std::int32_t>::min(),
             [this](world::World& world, const world::SystemContext& context) {
-                (void)animation_runtime_.update(
-                    world, static_cast<double>(context.delta_seconds));
+                RuntimeAnimationUpdateHookDataV1 hook_data{
+                    this, &world, static_cast<double>(context.delta_seconds), {}
+                };
+                (void)mod_manager_.dispatch_hooks(
+                    hook_points::animation_update,
+                    &hook_data,
+                    [](void* opaque) noexcept {
+                        auto& call =
+                            *static_cast<RuntimeAnimationUpdateHookDataV1*>(opaque);
+                        try {
+                            call.report = call.runtime->animation_runtime_.update(
+                                *call.world, call.delta_seconds);
+                        } catch (...) {
+                            call.report.error = animation::AnimationError::InvalidDelta;
+                        }
+                    });
+                last_animation_report_ = hook_data.report;
             });
 
         const auto physics3d_system = scene_.systems().add_system(
@@ -383,8 +435,75 @@ public:
         ui::UiRenderAdapter adapter(
             frame_builder_, viewport, camera, glyph_provider, layer);
         if (!adapter.valid()) return adapter.error();
-        ui_runtime_.draw(adapter);
-        return adapter.error();
+        RuntimeUiDrawHookDataV1 hook_data{this, &adapter, ui::UiRenderError::None};
+        (void)mod_manager_.dispatch_hooks(
+            hook_points::ui_draw,
+            &hook_data,
+            [](void* opaque) noexcept {
+                auto& call = *static_cast<RuntimeUiDrawHookDataV1*>(opaque);
+                call.runtime->ui_runtime_.draw(*call.adapter);
+                call.result = call.adapter->error();
+            });
+        return hook_data.result;
+    }
+
+    // Ordinary-thread mixing is hookable. Do not call this from an audio device
+    // callback: real-time callbacks must use AudioMixer::mix_stereo_realtime()
+    // and must never execute arbitrary native mod code.
+    [[nodiscard]] audio::AudioError mix_audio(
+        std::span<float> output, std::size_t frame_count,
+        std::uint32_t sample_rate) {
+        RuntimeAudioMixHookDataV1 hook_data{
+            this, output, frame_count, sample_rate, audio::AudioError::None
+        };
+        (void)mod_manager_.dispatch_hooks(
+            hook_points::audio_mix,
+            &hook_data,
+            [](void* opaque) noexcept {
+                auto& call = *static_cast<RuntimeAudioMixHookDataV1*>(opaque);
+                call.result = call.runtime->audio_mixer_.mix_stereo(
+                    call.output, call.frame_count, call.sample_rate);
+            });
+        return hook_data.result;
+    }
+
+    // Runs the registered importer against an in-memory source. AssetImportPipeline
+    // remains responsible for filesystem reads, output validation and hashing.
+    // Mods may intercept/replace this importer invocation through asset_import.
+    [[nodiscard]] RuntimeAssetImportHookDataV1 import_asset_source(
+        std::string_view source_path, std::span<const std::byte> source_bytes,
+        std::string_view options = {}) {
+        RuntimeAssetImportHookDataV1 hook_data;
+        hook_data.runtime = this;
+        hook_data.source_path = source_path;
+        hook_data.source_bytes = source_bytes;
+        hook_data.options = options;
+        if (!asset_importers_.find_for_path(
+                source_path, hook_data.importer_id, hook_data.importer)) {
+            hook_data.registry_error =
+                assets::AssetImporterRegistryError::NotFound;
+            return hook_data;
+        }
+        (void)mod_manager_.dispatch_hooks(
+            hook_points::asset_import,
+            &hook_data,
+            [](void* opaque) noexcept {
+                auto& call = *static_cast<RuntimeAssetImportHookDataV1*>(opaque);
+                try {
+                    call.output = call.importer(
+                        call.source_path, call.source_bytes, call.options);
+                } catch (const std::exception& exception) {
+                    call.output.error = exception.what();
+                } catch (...) {
+                    call.output.error = "Native asset importer threw an unknown exception";
+                }
+            });
+        return hook_data;
+    }
+
+    [[nodiscard]] const animation::AnimationUpdateReport&
+    last_animation_report() const noexcept {
+        return last_animation_report_;
     }
 
     [[nodiscard]] RuntimeRenderResult render_frame() {
@@ -652,6 +771,7 @@ private:
         physics2d::PhysicsStepError::None};
     physics3d::PhysicsStepError3D last_physics3d_error_{
         physics3d::PhysicsStepError3D::None};
+    animation::AnimationUpdateReport last_animation_report_{};
 };
 
 } // namespace dream::runtime
