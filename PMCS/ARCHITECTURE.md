@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Core services, application lifecycle, backend-neutral platform contracts, initial DMod package pipeline, typed generational handles, owning ResourceRegistry, keyed ResourceStore and bounded async asset loader are CI-verified. Asset dependency planning is implemented and awaiting CI.
+**Status:** Core services, application lifecycle, backend-neutral platform contracts, initial DMod package pipeline, typed generational handles, owning ResourceRegistry, keyed ResourceStore, asset dependency planning, bounded async loading and optional AssetCache integration are CI-verified.
 
 ## High-level modules
 - Platform: desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
@@ -24,7 +24,7 @@
 - ResourceRegistry<T, Tag> owns resources with unique_ptr, provides scoped callback access under a shared lock, rejects stale handles and safely invalidates identities before destruction. Callbacks must not re-enter the same registry; do not retain resource references outside the callback.
 - ResourceStore<T, Tag> adds a case-sensitive string-key mapping over ResourceRegistry, with insert/find/erase and scoped access by key or handle. It is intentionally not a loader: file I/O, decoding, async scheduling, dependency tracking and GPU upload belong to higher-level asset systems. Store callbacks must not re-enter the same store.
 - ResourceStore Linux GCC/Clang tests and Android ARM64 test cross-compilation passed in [run 45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493). Android is compile-only, not physical-device execution.
-- `dream_assets::load_async` composes JobSystem, bounded IFileSystem reads, a caller-provided decoder and ResourceStore. Default maximum file size is 64 MiB; backends must enforce the limit before allocating. Filesystem, store and JobSystem are borrowed and must outlive the task; decoder runs on a worker thread. Linux GCC/Clang tests and Android ARM64 cross-compilation passed in [run 45765620129](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45765620129).
+- `dream_assets::load_async` composes JobSystem, bounded IFileSystem reads, a caller-provided decoder and ResourceStore. `load_async_cached` is an optional sibling path targeting AssetCache; it checks for an existing key before file I/O and takes a caller-provided decoded-size estimator. AssetCache is a CPU-side byte-budgeted LRU; it does not measure allocations or manage GPU residency. Borrowed services must outlive the task and callbacks run on a worker thread. Both paths passed all four CI jobs in [run 45768508344](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768508344).
 - ResourceRegistry callback-vs-destroy synchronization test passed with all four CI jobs in [run 45758612936](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45758612936).
 
 ## Platform contracts
@@ -40,7 +40,12 @@
 ## Asset dependency planning
 - `resolve_dependencies` accepts an in-memory set of asset definitions and returns deterministic dependency-first order using lexical tie-breaking.
 - Required missing dependencies fail the plan; missing optional dependencies are reported but do not block it. Invalid/duplicate asset keys and duplicate dependency declarations are rejected; cycles return blocked asset keys and no partial load order.
-- This is a pure planning layer: it does not load, own, cache, cancel or unload assets. CI verification is pending.
+- This is a pure planning layer: it does not load, own, cache, cancel or unload assets. All four CI jobs passed in [run 45766502045](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45766502045).
+
+## Asset cache
+- `AssetCache<T, Tag>` wraps ResourceStore with a byte-budgeted least-recently-used policy for decoded CPU assets. Callers provide estimated byte sizes; zero-byte assets are valid, and shrinking the budget evicts least-recently-used entries.
+- Cache construction/insertion is exception-safe; cache callbacks execute under its mutex and must not re-enter the same cache. No pinning, automatic memory measurement, file I/O, decoding or GPU residency is provided.
+- LRU cache behavior and exception safety passed all CI jobs in [run 45768090059](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768090059).
 
 ## DMod contracts implemented and verified
 - Manifest model includes package ID/name/version, engine API range, relative entry script, dependencies and requested capabilities.
