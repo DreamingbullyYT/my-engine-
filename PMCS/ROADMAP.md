@@ -27,7 +27,8 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [x] Gameplay ActionMap for keyboard, mouse and gamepad.
 - [x] Bounded async asset read/decode/register.
 - [x] Asset dependency planner, CPU LRU cache, cooperative cancellation and in-flight request coordination.
-- [ ] Explicit async service shutdown/lifetime policy and independent cancellation for shared subscribers.
+- [x] Explicit async task lifetime scope, cooperative cancellation and shutdown wait for borrowed-service safety (run 45818494612).
+- [ ] Independent cancellation for individual subscribers of a deduplicated shared asset request.
 - [ ] GPU asset upload/residency integration.
 
 ## P3 — Rendering

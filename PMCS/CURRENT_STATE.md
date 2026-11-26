@@ -3,7 +3,7 @@
 **Last checked:** 2026-11-26  
 **Repository:** DreamingbullyYT/my-engine-  
 **Default branch:** main  
-**Latest verified implementation commit:** db4560523914556196a243a16642c7c3de9fbeed
+**Latest verified implementation commit:** 0f6401be20366ce65f38eb684c11e7508b5eae67
 
 ## Implemented
 
@@ -26,7 +26,9 @@
 - Bounded asynchronous asset read/decode/register path using JobSystem and IFileSystem.
 - Optional byte-budgeted CPU AssetCache with LRU policy and caller-supplied size estimator.
 - Cooperative cancellation checkpoints; active filesystem or decoder calls cannot be interrupted.
-- Deterministic asset dependency planner and in-flight request coordinator for matching request IDs. Coordinator shares pending work; it is not a result cache and does not provide independent follower cancellation.
+- `AssetLoadScope` supplies per-operation lifetime leases. Move a token from `scope.acquire_token()` into `load_async` or `load_async_cached`; `shutdown_and_wait()` closes admission, requests cancellation and waits until all task leases are released. A task guard releases the lease as the load callable exits, including cancellation/error returns.
+- Scope does not own JobSystem, filesystem, ResourceStore, AssetCache or decoder dependencies. Declare it after those borrowed dependencies so it is destroyed first; do not call its blocking shutdown from one of its own worker tasks. Blocking reads/decoders must return before shutdown can complete.
+- Deterministic asset dependency planner and in-flight request coordinator for matching request IDs. Coordinator shares pending work; it is not a result cache and still does not provide independent follower cancellation.
 
 ### 2D physics
 - PhysicsWorld2D with static/kinematic/dynamic bodies, circle and oriented-box colliders, gravity, force/torque/impulse, damping, friction, restitution, category/mask/group filters and sensors.
@@ -58,6 +60,7 @@
 - The script interpreter is not a production runtime yet. ChaiScript direct-AST evaluation remains a proof-only candidate; do not describe script mods as implemented.
 
 ## Verified CI
+- [Run 45818494612](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45818494612) passed all four jobs for commit 0f6401be20366ce65f38eb684c11e7508b5eae67: Linux GCC/Clang, Android arm64-v8a and DMod AST proof. It verifies AssetLoadScope cancellation, waiting for a blocked read, no registration after cancellation, and lease release on task exit.
 - [Run 45816961428](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45816961428) passed all four jobs for commit db4560523914556196a243a16642c7c3de9fbeed: Linux GCC/Clang, Android arm64-v8a (ARMv8-A), and DMod AST proof. It builds NativeFileSystem and runs its Linux security/behavior tests.
 - [Run 45811326053](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45811326053) completed successfully for all four jobs on commit e65ee68289c874297b5267599a997d1bb06f5901. It verifies native hook ownership (create-time hooks dormant until enable), EngineRuntime update/Physics2D/render hook points, lifecycle cleanup, Linux GCC/Clang, DMod AST proof and Android arm64-v8a cross-compilation.
 - [Run 45811035311](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45811035311) passed all four jobs for the initial EngineRuntime hook integration.

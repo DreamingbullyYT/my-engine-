@@ -42,6 +42,7 @@
 - AssetLoader composes JobSystem, bounded IFileSystem reads, caller-provided decoding and ResourceStore.
 - Optional AssetCache is byte-budgeted CPU-side LRU; decoded size is caller-estimated and GPU residency is not managed.
 - Cancellation is cooperative and cannot interrupt an active filesystem read or decoder.
+- AssetLoadScope provides acquired task leases, cooperative cancellation on shutdown and a blocking wait until in-flight scoped load callables exit. It does not own the borrowed services; the scope must be destroyed before its JobSystem/filesystem/store/cache dependencies. It cannot interrupt active read/decode callbacks.
 - AssetRequestCoordinator deduplicates pending requests by caller-provided ID. The first requester owns the factory/cancellation token; subscribers cannot independently cancel the shared operation.
 - Dependency planning is deterministic and reports missing dependencies/cycles; execution and lifetime management remain separate.
 
