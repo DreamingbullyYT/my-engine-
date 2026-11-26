@@ -81,6 +81,15 @@ int main() {
             jump_state->value == 1.0F && jump_state->timestamp_ns == 100U,
             "digital keydown activates the action and press edge");
 
+    InputEvent unrelated_disconnect;
+    unrelated_disconnect.type = InputEventType::GamepadDisconnected;
+    unrelated_disconnect.device_id = 0U;
+    require(!actions.process_event(unrelated_disconnect),
+            "gamepad disconnect cannot release keyboard bindings");
+    jump_state = actions.state("jump");
+    require(jump_state && jump_state->down,
+            "keyboard action remains held after unrelated device disconnect");
+
     require(actions.process_event(jump), "key repeat remains a handled event");
     jump_state = actions.state("jump");
     require(jump_state && jump_state->just_pressed,
@@ -178,6 +187,15 @@ int main() {
     require(move_state && !move_state->down && move_state->value == 0.0F &&
             move_state->just_released,
             "disconnect releases active analog actions");
+
+    jump.type = InputEventType::KeyDown;
+    jump.timestamp_ns = 390U;
+    require(actions.process_event(jump), "jump can be pressed again");
+    actions.reset_all(400U);
+    jump_state = actions.state("jump");
+    require(jump_state && !jump_state->down && jump_state->just_released &&
+            jump_state->value == 0.0F && jump_state->timestamp_ns == 400U,
+            "global input reset clears all held controls and emits release edges");
 
     const auto names = actions.action_names();
     require(names.size() == 4U && names[0] == "jump" &&

@@ -35,9 +35,6 @@ enum class ActionMapError : std::uint8_t {
 
 class ActionMap final {
 public:
-    static constexpr std::uint64_t any_gamepad_device =
-        std::numeric_limits<std::uint64_t>::max();
-
     ActionMap() = default;
     ActionMap(const ActionMap&) = delete;
     ActionMap& operator=(const ActionMap&) = delete;
@@ -100,8 +97,8 @@ public:
     [[nodiscard]] ActionMapError bind_gamepad_button(
         std::string_view action, std::uint16_t control,
         std::uint64_t device_id, float scale = 1.0F) {
-        if (control == 0U || device_id == any_gamepad_device ||
-            !valid_scale(scale)) return ActionMapError::InvalidBinding;
+        if (control == 0U || !valid_scale(scale))
+            return ActionMapError::InvalidBinding;
         return add_binding(action, Binding{
             .kind = BindingKind::GamepadButton,
             .control = control,
@@ -114,8 +111,7 @@ public:
         std::string_view action, std::uint16_t control,
         std::uint64_t device_id, float deadzone = 0.15F,
         float scale = 1.0F) {
-        if (control == 0U || device_id == any_gamepad_device ||
-            !valid_scale(scale) || !std::isfinite(deadzone) ||
+        if (control == 0U || !valid_scale(scale) || !std::isfinite(deadzone) ||
             deadzone < 0.0F || deadzone >= 0.95F) {
             return ActionMapError::InvalidBinding;
         }
@@ -245,7 +241,9 @@ public:
                 break;
 
             case platform::InputEventType::GamepadDisconnected:
-                if (binding.device_id == event.device_id &&
+                if ((binding.kind == BindingKind::GamepadButton ||
+                     binding.kind == BindingKind::GamepadAxis) &&
+                    binding.device_id == event.device_id &&
                     (binding.active || binding.value != 0.0F)) {
                     binding.active = false;
                     binding.value = 0.0F;
@@ -273,6 +271,18 @@ public:
                 recompute_action(index, event.timestamp_ns);
         }
         return handled;
+    }
+
+    // Release every held input. Call this on application focus loss or when
+    // the platform reports a global input reset, preventing stuck actions.
+    void reset_all(std::uint64_t timestamp_ns = 0U) {
+        std::lock_guard lock(mutex_);
+        for (auto& binding : bindings_) {
+            binding.active = false;
+            binding.value = 0.0F;
+        }
+        for (std::size_t index = 0; index < actions_.size(); ++index)
+            recompute_action(index, timestamp_ns);
     }
 
     [[nodiscard]] std::optional<ActionState> state(std::string_view action) const {
