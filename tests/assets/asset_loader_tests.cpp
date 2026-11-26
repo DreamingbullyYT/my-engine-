@@ -255,14 +255,15 @@ int main() {
             cached_events->events.back().decoded_bytes == 5U,
             "cache store event reports its accepted resource size");
 
+    const auto reads_before_cache_hit = filesystem.read_count.load();
     auto cache_hit = assets::load_async_cached(
-        jobs, filesystem, cache, "text/cached", "assets/missing-on-purpose.txt", decode_text,
+        jobs, filesystem, cache, "text/missing-on-purpose", "assets/missing-on-purpose.txt", decode_text,
         [](const TextAsset& asset) { return asset.value.size(); }).get();
     require(cache_hit.loaded() && cache_hit.status == assets::AssetLoadStatus::CacheHit,
             "existing cached key returns its handle without reading the file");
     require(cache_hit.handle == cached.handle,
             "cache hit preserves the existing handle");
-    require(filesystem.read_count.load() == reads_before_cached_load + 1,
+    require(filesystem.read_count.load() == reads_before_cache_hit,
             "cache hit avoids additional filesystem I/O");
 
     auto cache_too_large = assets::load_async_cached(
