@@ -1,6 +1,11 @@
 #pragma once
 
 #include <dream/core/fixed_step_clock.hpp>
+#include <dream/animation/animation_runtime.hpp>
+#include <dream/assets/builtin_importers.hpp>
+#include <dream/audio/audio_mixer.hpp>
+#include <dream/physics3d/physics_world.hpp>
+#include <dream/ui/ui_runtime.hpp>
 #include <dream/dmod/native_mod_host.hpp>
 #include <dream/dmod/native_mod_manager.hpp>
 #include <dream/input/action_map.hpp>
@@ -25,6 +30,7 @@ struct EngineRuntimeConfig final {
     std::string scene_name{"Main"};
     core::FixedStepConfig fixed_step{};
     physics2d::PhysicsSettings2D physics2d{};
+    physics3d::PhysicsSettings3D physics3d{};
     render::FrameBuilderLimits frame_builder{};
 };
 
@@ -64,6 +70,9 @@ struct RuntimeUpdateResult final {
     std::size_t physics_contacts{0};
     std::size_t physics_contact_events{0};
     physics2d::PhysicsStepError physics_error{physics2d::PhysicsStepError::None};
+    physics3d::PhysicsStepError3D physics3d_error{physics3d::PhysicsStepError3D::None};
+    std::size_t physics3d_contacts{0};
+    std::size_t physics3d_contact_events{0};
 
     [[nodiscard]] explicit operator bool() const noexcept {
         return error == RuntimeError::None &&
@@ -89,6 +98,7 @@ class EngineRuntime;
 namespace hook_points {
 inline constexpr char runtime_update[] = "dream.engine.runtime.update";
 inline constexpr char physics2d_step[] = "dream.engine.physics2d.step";
+inline constexpr char physics3d_step[] = "dream.engine.physics3d.step";
 inline constexpr char scene_system[] = "dream.engine.scene.system";
 inline constexpr char begin_render_frame[] = "dream.engine.runtime.begin_render_frame";
 inline constexpr char render_frame[] = "dream.engine.runtime.render_frame";
@@ -107,6 +117,11 @@ struct RuntimePhysics2DStepHookDataV1 final {
     EngineRuntime* runtime{};
     float delta_seconds{};
     physics2d::PhysicsStepReport2D report{};
+};
+struct RuntimePhysics3DStepHookDataV1 final {
+    EngineRuntime* runtime{};
+    float delta_seconds{};
+    physics3d::PhysicsStepReport3D report{};
 };
 struct RuntimeSystemHookDataV1 final {
     EngineRuntime* runtime{};
@@ -158,6 +173,7 @@ public:
         : config_(std::move(config)),
           scene_(config_.scene_name),
           physics_(config_.physics2d),
+          physics3d_(config_.physics3d),
           simulation_clock_(config_.fixed_step),
           frame_builder_(config_.frame_builder),
           render_device_(surfaces, render_backend),
@@ -182,12 +198,17 @@ public:
             interfaces_valid &&
             simulation_clock_.valid() &&
             physics_.valid() &&
+            physics3d_.valid() &&
             config_.fixed_step.fixed_delta_seconds <=
                 static_cast<double>(config_.physics2d.maximum_delta_seconds) &&
             config_.frame_builder.maximum_quads_2d <=
                 std::numeric_limits<std::uint32_t>::max() / 4U &&
             config_.frame_builder.maximum_quads_2d <=
                 std::numeric_limits<std::uint32_t>::max() / 6U;
+
+        configuration_valid_ = configuration_valid_ &&
+            assets::register_builtin_importers(asset_importers_) ==
+                assets::AssetImporterRegistryError::None;
 
         const auto physics_system = scene_.systems().add_system(
             "DreamEngine.PhysicsWorld2D",
@@ -218,8 +239,54 @@ public:
                 saturating_add(frame_physics_events_, hook_data.report.events.size());
             });
 
-        if (!physics_system) configuration_valid_ = false;
+        const auto animation_system = scene_.systems().add_system(
+            "DreamEngine.AnimationRuntime",
+            world::SystemPhase::PreUpdate,
+            std::numeric_limits<std::int32_t>::min(),
+            [this](world::World& world, const world::SystemContext& context) {
+                last_animation_report_ = animation_runtime_.update(
+                    world, static_cast<double>(context.delta_seconds));
+            });
+
+        const auto physics3d_system = scene_.systems().add_system(
+            "DreamEngine.PhysicsWorld3D",
+            world::SystemPhase::Update,
+            std::numeric_limits<std::int32_t>::min(),
+            [this](world::World&, const world::SystemContext& context) {
+                RuntimePhysics3DStepHookDataV1 hook_data{
+                    this, context.delta_seconds, {}
+                };
+                const auto dispatched = mod_manager_.dispatch_hooks(
+                    hook_points::physics3d_step,
+                    &hook_data,
+                    [](void* opaque) noexcept {
+                        auto& call =
+                            *static_cast<RuntimePhysics3DStepHookDataV1*>(opaque);
+                        try {
+                            call.report = call.runtime->physics3d_.update(
+                                call.delta_seconds);
+                        } catch (...) {
+                            call.report.error =
+                                physics3d::PhysicsStepError3D::InvalidBodyState;
+                        }
+                    });
+                if (!dispatched.success) {
+                    last_physics3d_error_ =
+                        physics3d::PhysicsStepError3D::InvalidBodyState;
+                    return;
+                }
+                last_physics3d_error_ = hook_data.report.error;
+                saturating_add(frame_physics3d_contacts_,
+                    hook_data.report.contact_count);
+                saturating_add(frame_physics3d_events_,
+                    hook_data.report.events.size());
+            });
+
+        if (!physics_system || !animation_system || !physics3d_system)
+            configuration_valid_ = false;
         physics_system_ = physics_system.handle;
+        animation_system_ = animation_system.handle;
+        physics3d_system_ = physics3d_system.handle;
     }
 
     EngineRuntime(const EngineRuntime&) = delete;
@@ -342,6 +409,21 @@ public:
     [[nodiscard]] const physics2d::PhysicsWorld2D& physics2d() const noexcept {
         return physics_;
     }
+    [[nodiscard]] physics3d::PhysicsWorld3D& physics3d() noexcept {
+        return physics3d_;
+    }
+    [[nodiscard]] const physics3d::PhysicsWorld3D& physics3d() const noexcept {
+        return physics3d_;
+    }
+    [[nodiscard]] animation::AnimationRuntime& animations() noexcept {
+        return animation_runtime_;
+    }
+    [[nodiscard]] audio::AudioMixer& audio() noexcept { return audio_mixer_; }
+    [[nodiscard]] ui::UiRuntime& ui() noexcept { return ui_runtime_; }
+    [[nodiscard]] assets::AssetImporterRegistry& asset_importers() noexcept {
+        return asset_importers_;
+    }
+
 
     [[nodiscard]] core::FixedStepClock& simulation_clock() noexcept {
         return simulation_clock_;
@@ -411,7 +493,10 @@ private:
         last_frame_delta_seconds_ = frame_delta_seconds;
         frame_physics_contacts_ = 0U;
         frame_physics_events_ = 0U;
+        frame_physics3d_contacts_ = 0U;
+        frame_physics3d_events_ = 0U;
         last_physics_error_ = physics2d::PhysicsStepError::None;
+        last_physics3d_error_ = physics3d::PhysicsStepError3D::None;
 
         action_map_.begin_frame();
         for (const auto& event : input_events) {
@@ -436,6 +521,9 @@ private:
             result.physics_contacts = frame_physics_contacts_;
             result.physics_contact_events = frame_physics_events_;
             result.physics_error = last_physics_error_;
+            result.physics3d_error = last_physics3d_error_;
+            result.physics3d_contacts = frame_physics3d_contacts_;
+            result.physics3d_contact_events = frame_physics3d_events_;
             return result;
         }
 
@@ -445,6 +533,11 @@ private:
         result.physics_contacts = frame_physics_contacts_;
         result.physics_contact_events = frame_physics_events_;
         result.physics_error = last_physics_error_;
+        result.physics3d_error = last_physics3d_error_;
+        result.physics3d_contacts = frame_physics3d_contacts_;
+        result.physics3d_contact_events = frame_physics3d_events_;
+        if (last_animation_report_.error != animation::AnimationError::None)
+            saturating_add(result.system_failures, std::size_t{1});
         return result;
     }
 
@@ -506,7 +599,12 @@ private:
     EngineRuntimeConfig config_;
     world::Scene scene_;
     physics2d::PhysicsWorld2D physics_;
+    physics3d::PhysicsWorld3D physics3d_;
     core::FixedStepClock simulation_clock_;
+    animation::AnimationRuntime animation_runtime_;
+    audio::AudioMixer audio_mixer_;
+    ui::UiRuntime ui_runtime_;
+    assets::AssetImporterRegistry asset_importers_;
     input::ActionMap action_map_;
     render::RenderFrameBuilder frame_builder_;
     render::RenderDevice render_device_;
