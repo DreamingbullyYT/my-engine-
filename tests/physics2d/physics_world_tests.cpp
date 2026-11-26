@@ -313,6 +313,99 @@ int main() {
             static_sensor_report.contacts[0].sensor,
             "static sensor overlaps are reported");
 
+    PhysicsWorld2D queries(PhysicsSettings2D{.gravity = {0, 0}});
+    const auto near_circle = queries.create_body(BodyDescription2D{
+        .type = BodyType::Static,
+        .position = {5.0F, 0.0F},
+        .collider = CircleCollider2D{{}, 1.0F},
+        .collision_filter = CollisionFilter2D{0x1U, 0xFFFFFFFFU, 0}
+    });
+    const auto far_box = queries.create_body(BodyDescription2D{
+        .type = BodyType::Static,
+        .position = {8.0F, 0.0F},
+        .collider = BoxCollider2D{{}, {1.0F, 2.0F}, 0.3F},
+        .collision_filter = CollisionFilter2D{0x2U, 0xFFFFFFFFU, 0},
+        .sensor = true
+    });
+    require(near_circle && far_box, "ray query colliders create");
+    const auto ray_hits = queries.raycast_all(
+        Ray2D{{0, 0}, {2, 0}, 20.0F});
+    require(ray_hits.size() == 2U &&
+            ray_hits[0].body == near_circle.handle &&
+            ray_hits[1].body == far_box.handle,
+            "raycast-all returns circle and rotated box ordered by distance");
+    require(near(ray_hits[0].distance, 4.0F) &&
+            near(ray_hits[0].point.x, 4.0F) &&
+            near(ray_hits[0].normal.x, -1.0F),
+            "circle raycast returns nearest world-space hit");
+    require(ray_hits[1].sensor && near(ray_hits[1].distance, 7.0F, 0.01F),
+            "rotated OBB raycast reports sensor and world distance");
+    const auto nearest_hit = queries.raycast(Ray2D{{0, 0}, {1, 0}, 20.0F});
+    require(nearest_hit && nearest_hit->body == near_circle.handle,
+            "single raycast returns the nearest collider");
+
+    const auto filtered_hits = queries.raycast_all(
+        Ray2D{{0, 0}, {1, 0}, 20.0F}, RaycastFilter2D{0x1U, 0x1U});
+    require(filtered_hits.size() == 1U &&
+            filtered_hits[0].body == near_circle.handle,
+            "raycast respects category and mask query filtering");
+
+    const auto inside_hit = queries.raycast(
+        Ray2D{{5, 0}, {1, 0}, 20.0F});
+    require(inside_hit && inside_hit->body == near_circle.handle &&
+            inside_hit->distance == 0.0F &&
+            near(inside_hit->normal.x, -1.0F),
+            "ray beginning inside a collider returns a zero-distance hit");
+    require(queries.raycast(Ray2D{{0, 0}, {0, 0}, 20.0F}) == std::nullopt,
+            "zero-direction ray is rejected");
+    require(queries.raycast(Ray2D{{0, 0}, {1, 0}, -1.0F}) == std::nullopt,
+            "negative ray distance is rejected");
+
+    const auto point_hits = queries.overlap_point({5.0F, 0.0F});
+    require(point_hits.size() == 1U && point_hits[0] == near_circle.handle,
+            "point overlap query finds containing circle");
+    const auto rotated_box_point = rotate(
+        Vec2{0.5F, 0.0F}, 0.3F) + Vec2{8.0F, 0.0F};
+    const auto box_point_hits = queries.overlap_point(rotated_box_point);
+    require(box_point_hits.size() == 1U && box_point_hits[0] == far_box.handle,
+            "point overlap query handles rotated boxes");
+    require(queries.overlap_point({100, 100}).empty(),
+            "point outside every collider returns no results");
+
+    PhysicsWorld2D invalid_bounds(PhysicsSettings2D{.gravity = {0, 0}});
+    const float huge = std::numeric_limits<float>::max() * 0.75F;
+    const auto edge_body = invalid_bounds.create_body(BodyDescription2D{
+        .type = BodyType::Static,
+        .position = {0, 0},
+        .collider = CircleCollider2D{{}, huge}
+    });
+    require(static_cast<bool>(edge_body),
+            "large but finite static collider has valid initial bounds");
+    const auto edge_state_before = invalid_bounds.body_state(edge_body.handle);
+    require(!invalid_bounds.set_transform(edge_body.handle, {huge, 0}, 0),
+            "transform producing infinite collider bounds is rejected");
+    const auto edge_state_after = invalid_bounds.body_state(edge_body.handle);
+    require(edge_state_before && edge_state_after &&
+            edge_state_after->position.x == edge_state_before->position.x,
+            "failed transform update restores the previous body transform");
+
+    const auto overflowing_body = invalid_bounds.create_body(BodyDescription2D{
+        .type = BodyType::Static,
+        .position = {huge, 0},
+        .collider = CircleCollider2D{{}, huge}
+    });
+    require(overflowing_body.error == BodyCreateError::InvalidWorldBounds,
+            "body with overflowing initial world bounds is rejected");
+
+    const auto tiny_dynamic = invalid_bounds.create_body(BodyDescription2D{
+        .type = BodyType::Dynamic,
+        .position = {0, 10},
+        .mass = 1.0F,
+        .collider = CircleCollider2D{{}, 1.0e-12F}
+    });
+    require(tiny_dynamic.error == BodyCreateError::InvalidInertia,
+            "dynamic body with unusably small inertia is rejected");
+
     std::cout << "Dream Engine 2D physics world tests passed.\n";
     return EXIT_SUCCESS;
 }
