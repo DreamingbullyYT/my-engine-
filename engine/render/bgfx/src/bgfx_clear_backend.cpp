@@ -414,10 +414,10 @@ bool BgfxClearBackend::initialize(
 
     capabilities = {};
     capabilities.supports_2d = impl_->supports_2d;
-    capabilities.supports_3d = false;
+    capabilities.supports_3d = impl_->supports_3d;
     capabilities.supports_instancing = false;
     capabilities.maximum_draws_per_frame =
-        impl_->supports_2d ? 100000U : 0U;
+        (impl_->supports_2d || impl_->supports_3d) ? 100000U : 0U;
     capabilities.maximum_texture_dimension = impl_->maximum_texture_dimension;
     return true;
 }
