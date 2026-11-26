@@ -230,6 +230,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     set_target_properties(dream_scene_archive_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.world.scene_archive COMMAND dream_scene_archive_tests)
 
+    add_executable(dream_core_fixed_step_tests tests/core/fixed_step_clock_tests.cpp)
+    target_link_libraries(dream_core_fixed_step_tests PRIVATE DreamEngine::Core)
+    target_compile_features(dream_core_fixed_step_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_core_fixed_step_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.core.fixed_step_clock COMMAND dream_core_fixed_step_tests)
+
     add_executable(dream_world_camera_tests tests/world/camera_tests.cpp)
     target_link_libraries(dream_world_camera_tests PRIVATE DreamEngine::World)
     target_compile_features(dream_world_camera_tests PRIVATE cxx_std_20)
