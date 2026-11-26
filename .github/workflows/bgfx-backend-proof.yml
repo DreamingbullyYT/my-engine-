@@ -99,6 +99,13 @@ jobs:
             --platform linux --profile 330 --type fragment \
             --varyingdef "$VARYINGS_3D" -i /tmp/bgfx/src
 
+      - name: Verify checked-in Android GLES 3 binaries match pinned shader sources
+        run: |
+          for shader in vs_sprite_essl300.bin fs_sprite_essl300.bin vs_mesh_essl300.bin fs_mesh_essl300.bin; do
+            cmp "build-bgfx/shaders/$shader" "android-host/app/src/main/assets/shaders/$shader"
+          done
+          (cd android-host/app/src/main/assets/shaders && sha256sum --check SHA256SUMS)
+
       - name: Build and execute bgfx compile proof
         run: |
           cmake --build build-bgfx --target dream_bgfx_compile_proof --parallel 2
