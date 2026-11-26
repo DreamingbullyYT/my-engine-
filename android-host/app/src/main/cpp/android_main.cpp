@@ -285,7 +285,7 @@ void render_demo_frame(
     const auto player = engine.physics2d().body_state(demo.player_2d);
     if (player) {
         world::Transform2D transform;
-        transform.position = player->position;
+        transform.position = {player->position.x, player->position.y};
         transform.rotation_radians = player->rotation_radians;
         transform.scale = {0.8F, 0.8F};
         render::SpriteQuad2D sprite;
@@ -303,7 +303,7 @@ void render_demo_frame(
     const auto ball = engine.physics3d().body_state(demo.ball_3d);
     if (ball && demo.gpu_resources_created) {
         world::Transform3D transform;
-        transform.position = ball->position;
+        transform.position = {ball->position.x, ball->position.y, ball->position.z};
         transform.rotation = {
             ball->rotation.x, ball->rotation.y,
             ball->rotation.z, ball->rotation.w
