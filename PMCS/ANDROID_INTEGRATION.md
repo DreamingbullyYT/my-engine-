@@ -56,3 +56,28 @@ Pass virtual paths relative to APK assets, for example `textures/terrain.png` (d
 - Each acquired `SurfaceId` owns an `ANativeWindow_acquire` reference and must be released. The adapter releases any remaining leases during shutdown.
 - Input uses GameActivity's swapped `android_input_buffer` and clears both event arrays after consuming them. The adapter maps Android key codes to USB HID usages where known; unrecognized keys are omitted. It explicitly enables non-default joystick axes and converts pointer coordinates from Android surface pixels into the logical-pixel convention used by the engine. `unicodeChar` is exposed as best-effort `TextInput`; full IME composition and soft-keyboard state are a separate integration task.
 - The adapter does not create an APK, manifest, Java/Kotlin Activity or Gradle project. Those remain the responsibility of the embedding application.
+## Current APK/host status — 2026-11-26
+
+This update supersedes the older note that the repository did not yet contain a Gradle host or APK workflow.
+
+- Gradle Android application path: `android-host/`.
+- Activity extends AndroidX `GameActivity` 4.4.2; namespace/application ID `dev.dreamengine.host`.
+- minSdk 26, compile/target SDK 36, NDK `28.2.13676358`, CMake 3.31.6, Gradle 9.6, ABI filter `arm64-v8a`.
+- Native host links `DreamEngine::PlatformAndroidGameActivity` and `DreamEngine::AudioAndroidAAudio`; Java loads `dream_engine_android_host`.
+- `android_main` creates `AndroidGameActivityBackend`, creates a native window, runs the platform `Application` loop and drains window/input events. Window is destroyed on shutdown.
+- APK build workflow verifies that `lib/arm64-v8a/libdream_engine_android_host.so` is present and uploads the installable debug APK. Emulator smoke test was removed; physical testing is reserved for the user.
+
+### Successful artifact
+[Android APK run 45859471974](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45859471974) produced artifact `dream-engine-android-host-arm64-debug` (ID `15138770221`, 3,145,963 bytes, SHA-256 `345306a9572ae92f5b88052c4be06ae9835235a8b5ca2dd6a81fbf15614261e6`, expires 2026-12-10).
+
+That APK run used commit `ee57832717d141e8408f9e6887d402a9ef371ca8`. The Activity/native host/CMake files have not changed in the later engine service-hook commit. The current engine runtime itself was separately cross-compiled successfully in [CI run 45859870368](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45859870368), but do not assume that this older APK contains every later engine runtime change.
+
+### Critical current limitation
+The APK is presently a native host/window/lifecycle smoke application. It does **not** yet instantiate `EngineRuntime`, initialize bgfx, package/load the generated shader binaries, or draw either sample game. It is not a playable game build.
+
+### Next Android steps
+1. Construct EngineRuntime from the GameActivity native lifecycle and map input, pause/resume, surface recreation and frame delta.
+2. Package ESSL300 sprite/mesh shaders as Android assets and load them before bgfx initialization.
+3. Initialize bgfx against the current native surface; handle orientation/density/resize and surface loss.
+4. Render the 2D/3D sample on device, connect AudioMixer to AAudio output, and rebuild/upload APK.
+5. User performs installation/launch/resume/pause/rotation test on their phone; record exact model/API results. CI cross-compilation alone never marks this complete.

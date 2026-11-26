@@ -104,3 +104,16 @@
 - Physics3D collision geometry and its test passed Linux GCC/Clang CTest and Android ARM64 compile in [run 45828037777](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45828037777).
 - Current native interface enumeration is verified in [run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851).
 - Renderer backend proof is verified in [run 45790590738](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45790590738).
+## Architecture update — 2026-11-26
+
+The live engine now has these additional service boundaries and composition paths (supersedes earlier statements that these areas were not implemented):
+
+- **Physics3D:** body world with sphere and oriented-box colliders, broadphase proxy maintenance, sequential impulse contact solving, friction/restitution, filters, sensors and Begin/Stay/End events. Query APIs expose normalized raycasts (nearest and sorted all hits), sphere overlap and oriented-box overlap. CCD, constraints, sleeping and multi-fixture bodies remain outside the current model.
+- **Render:** backend-neutral `RenderFramePacket` and `RenderDevice`; bgfx backend tracks textures, static mesh vertex/index buffers and material descriptions. 3D and 2D render through ordered views (3D before UI/sprites). The selected renderer needs compatible shader binaries installed before backend initialization. No automatic APK asset packaging/renderer initialization yet.
+- **UI:** retained UI still owns layout/input/focus; `UiRenderAdapter` converts draw-sink rectangles/images and externally provided glyph quads into `SpriteQuad2D` entries. UI is enqueued after 2D camera setup and before `render_frame`.
+- **Assets:** `AssetImporterRegistry::find_for_path` selects importers by virtual-path extension. Runtime importer invocation has a native hook context; filesystem reads, output bounds/validation and hashing remain the responsibility of `AssetImportPipeline`. Built-in OBJ importer serializes typed/versioned DMES meshes.
+- **Services:** AnimationRuntime is scheduled in fixed PreUpdate; AudioMixer has a hookable ordinary-thread mix entry. AAudio realtime callbacks use atomically published callbacks and bypass native hooks.
+- **Native extension dispatch:** `NativeHookRegistry` supports Before/Around/Replace/After, stable priority and registration ordering, multiple continuation calls, module ownership, disable/unload cleanup and deferred unload while executing. Runtime hook points include update, Physics2D/3D, scene systems, render begin/render, animation update, asset importer invocation, UI draw and ordinary audio mix. Hooks are explicit call sites, not automatic interception of every C++ method.
+- **Android:** AndroidX GameActivity app and native host build an ARM64 APK; the host currently validates platform Application/window/surface/input loop only. EngineRuntime and bgfx still need to be attached to that loop.
+
+Native modules are trusted same-process code. They may mutate engine state directly and are not isolated from host memory or operating-system capabilities.

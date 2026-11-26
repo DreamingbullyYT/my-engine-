@@ -99,3 +99,28 @@ The user chose to complete the engine foundation before expanding advanced DMod/
 - Sandboxing or capability restrictions for native mods. Native modules are trusted in-process code by user decision.
 - Compiling mods on the end user's device or requiring an APK/engine rebuild for mod installation.
 - Claiming Android runtime correctness from cross-compilation alone.
+## Current execution status — 2026-11-26
+
+This live status supersedes older checkboxes above where they conflict. Evidence: [CI 45859870368](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45859870368); current main `54f6e8c39f599be919c669e6316b807cdf220654`.
+
+### Verified complete in this milestone
+- [x] AndroidX GameActivity Gradle host builds an ARM64 debug APK and contains `libdream_engine_android_host.so`. This is a platform-host shell, not a playable engine app.
+- [x] Runtime integration test suite and two executable headless 2D/3D sample games pass 46/46 under GCC, Clang and Clang ASan/UBSan.
+- [x] Android ARM64 cross-compilation of the engine runtime, Android audio backend and sample-game source succeeds.
+- [x] Physics3D raycast, raycast-all and sphere/OBB overlap queries.
+- [x] bgfx CPU/GPU resource API implementation for sprites, textures, meshes and materials; renderer-specific shader compilation is a separate proof workflow.
+- [x] Retained UI-to-2D-renderer adapter and EngineRuntime frame-order integration.
+- [x] Bounded OBJ importer and versioned binary mesh decoding.
+- [x] Native hooks now cover animation, importer invocation, UI drawing and regular (non-real-time) audio mixing in addition to existing runtime/physics/scene/render hooks.
+
+### Remaining work, in priority order
+1. **Android runtime host:** create EngineRuntime in the GameActivity native loop, wire real input/window metrics/lifecycle, initialize bgfx on the borrowed native surface, load renderer-compatible shaders and render a sample scene. Rebuild the APK after this integration.
+2. **Phone validation:** user installs the first APK and reports launch/surface/lifecycle results. Do not mark device validation complete from Actions.
+3. **Renderer completion:** automatic shader packaging/loading; validate GLES3 on-device; 2D texture/font/sprite path; 3D mesh/material pipeline on device; add material maps, samplers, depth/culling correctness, and GPU resource lifecycle/recreation tests.
+4. **Physics:** add CCD, distance/revolute joints, sleeping/waking, multi-fixture bodies, robust OBB clipping/multi-point manifolds, query acceleration and deterministic stress tests.
+5. **Assets:** robust concave OBJ triangulation, MTL, glTF/GLB, image/texture and audio importers, dependency graph and importer validation tests.
+6. **Services:** built-in text shaping/font atlas or documented provider package; UI rounded-corner shader/clipping validation; connect audio mixer to AAudio output with device lifecycle and underrun telemetry; animation blending/events/curves.
+7. **Native mod API:** add hook sites for ECS structural/component mutations and asset load/decode/register lifecycle; ABI version/capability metadata and crash/reload policy. No sandbox (user decision).
+8. **Stability/performance:** concurrency stress/race tests, allocator and memory-budget tests, deterministic replay, CPU/GPU profiling, soak tests, Android lifecycle recovery and two sample games on a real backend.
+
+Physical-device validation remains a user action and is explicitly not part of CI completion.

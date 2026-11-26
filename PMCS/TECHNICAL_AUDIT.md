@@ -229,3 +229,31 @@ Before adoption, pin repository, tag/commit and exact license files; inspect tra
 - [Run 45828037777](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45828037777) passed Linux GCC and Clang build/CTest, Android arm64-v8a cross-compilation (including the new geometry test), and DMod AST proof.
 - This is not a Physics3D simulation world. Broadphase, body handles/state, force integration, angular solver, contact persistence, joints, CCD and sleeping remain unimplemented.
 - Scene scheduler per-system native hook dispatch is implemented via dream.engine.scene.system; remaining automatic hook sites are World/ECS structural/component operations and asset load/decode/register lifecycle.
+## Current audit correction — 2026-11-26
+
+Verified against main `54f6e8c39f599be919c669e6316b807cdf220654` and [CI run 45859870368](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45859870368): all five jobs passed, with 46/46 CTest cases on GCC, Clang and Clang ASan/UBSan; Android ARM64 and DMod AST proof passed.
+
+### Implemented since the older audit snapshot
+- Physics3D broadphase/world/body handles, static/kinematic/dynamic integration, angular contact solver, filtering/sensors/contact transitions, raycast/raycast-all and sphere/OBB overlap queries. This corrects the older blanket statement that Physics3D world/body integration was absent.
+- Renderer mesh/material resource contracts and bgfx GPU vertex/index/texture uploads plus 3D shader pipeline. Visual correctness on actual Android GPU remains unverified.
+- Retained UI render adapter and EngineRuntime UI enqueue method.
+- Built-in OBJ importer with bounded source/face/vertex/index limits, negative indices, fan triangulation, deduplication, generated normals, DMES serialization and decoder.
+- Native hook sites for animation update, asset importer invocation, UI drawing and ordinary-thread audio mixing. This corrects older notes that only runtime/physics/scene hooks existed.
+- AAudio callback/context atomic publication and synchronized stream configuration read.
+- Two headless sample executables are now part of CTest and passed.
+
+### Remaining technical risks / known limitations
+- Android host APK currently launches a minimal GameActivity `Application` loop; it does not create EngineRuntime, bgfx, or game rendering. Actual window lifecycle and rendering must be validated on the user's phone.
+- Separate bgfx workflow builds the Android static library and compiles 2D/3D ESSL300 plus desktop GLSL330 shaders. Shader binaries are not yet bundled in APK and loaded by an Android runtime.
+- Physics3D query APIs currently scan body maps; broadphase-based query pruning is pending. No CCD, joints, sleeping/wake, multi-fixture support, persistent warm-start or robust multi-point OBB clipping.
+- Physics2D still lacks CCD, joints, sleeping and multiple fixtures; OBB/OBB contact is approximate.
+- OBJ n-gons use fan triangulation (not general concave ear clipping); no MTL/glTF/GLB/image/audio importers.
+- UI text depends on `IUiGlyphProvider`; no built-in shaping/font rasterizer/atlas. Rounded-corner masks need a shader.
+- AAudio has only CI cross-compilation; no device playback/underrun/route/lifecycle measurement.
+- Runtime's direct importer entry calls the registered importer and hooks it; full AssetImportPipeline remains separately responsible for filesystem load, validation, dependency handling and hashing.
+- Native mods are fully trusted in-process code: no sandbox, memory protection, crash isolation or ABI stability guarantee. A mod may corrupt/terminate the engine or access host process resources.
+- Headless example backend validates API composition and draw submission, not pixels, GPU state or frame pacing.
+
+### Verification pointers
+- Engine: [45859870368](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45859870368).
+- Android host APK: [45859471974](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45859471974), artifact ID `15138770221`; the host's Android sources are unchanged since that successful build, but rebuild after EngineRuntime integration.

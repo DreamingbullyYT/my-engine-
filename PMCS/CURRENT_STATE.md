@@ -103,3 +103,34 @@
 - Android uses the NDK toolchain for arm64-v8a (ARMv8-A); cross-compilation must never be reported as physical-device execution.
 - The user chose to finish the engine foundation before expanding advanced DMod/modding features; keep modding maintenance-only until platform, rendering, simulation and runtime-service foundations are complete.
 - C++20 remains the current implementation baseline; final compiler-support policy is still open.
+## Authoritative status update — 2026-11-26
+
+This section supersedes earlier status statements in this file wherever they conflict.
+
+- **Current main commit:** `54f6e8c39f599be919c669e6316b807cdf220654`.
+- **Verified CI:** [Dream Engine CI run 45859870368](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45859870368) passed all five jobs: Linux GCC, Linux Clang, Linux Clang ASan+UBSan, Android arm64-v8a (ARMv8-A), and the DMod/ChaiScript direct-AST proof.
+- **Tests:** 46/46 CTest cases passed under GCC, Clang, and Clang ASan+UBSan. This includes the executable 2D platformer and 3D physics/render integration samples.
+- **Android compile coverage:** engine runtime, AAudio integration and both sample-game translation units cross-compiled for Android arm64-v8a. This is not device execution.
+- **APK:** the GameActivity host APK was assembled successfully in [Android APK run 45859471974](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45859471974); artifact `dream-engine-android-host-arm64-debug`, artifact ID `15138770221`, SHA-256 `345306a9572ae92f5b88052c4be06ae9835235a8b5ca2dd6a81fbf15614261e6`. The artifact was built from `ee57832717d141e8408f9e6887d402a9ef371ca8`; the Android host sources did not change in the subsequent runtime-hook commit. Do not describe this artifact as containing the latest runtime implementation until a fresh APK build is verified.
+
+### Newly implemented and CI-verified
+
+- Physics3D dynamic/static/kinematic sphere and oriented-box world with broadphase, angular/linear solving, filters, sensor/contact lifecycle, transactional integration, nearest/all raycasts, and sphere/OBB overlap queries.
+- bgfx backend resource path for 2D textures/sprites and 3D mesh/material resources, with separate 3D and 2D passes. Runtime use requires supplying compatible offline shader binaries before initialization.
+- Retained UI draw adapter that converts panels, images and provided glyph quads into indexed 2D sprite draws; `EngineRuntime::enqueue_ui_draws` enforces frame ordering.
+- Bounded OBJ importer with negative indices, fan triangulation, vertex deduplication, generated normals, versioned DMES output and decoder. This is not a full interchange-format importer.
+- Native hook call sites for runtime update, Physics2D, Physics3D, scene systems, begin/render frame, animation update, asset importer invocation, retained UI draw and ordinary-thread audio mix. Hooks are owner/lifecycle-aware and support Before/Around/Replace/After ordering.
+- Native mods receive live service interfaces for runtime, scene/world, physics worlds, animation, audio, UI, assets/importers, input/action maps, clock, renderer, mods and hooks.
+- The AAudio callback/context publication is atomic and configuration reads synchronize with stream lifecycle operations. Arbitrary native mod callbacks are intentionally not dispatched from the real-time audio callback.
+- Two headless sample games are run by CTest: `examples/2d_platformer` and `examples/3d_physics_lab`.
+
+### Important boundaries still open
+
+- The Android APK is currently a GameActivity platform-host smoke app: it creates a native window/surface, runs the platform application loop and consumes queued input. It does **not yet instantiate EngineRuntime, load the bgfx backend/shaders, or display the sample games**.
+- Physical phone testing has not been performed. The user will perform the first install/launch/resume/pause test on their phone.
+- bgfx shader binaries are compiled in a separate proof workflow, but are not yet automatically packaged into the APK or loaded by an Android EngineRuntime host. Linux bgfx proof completion must be verified separately; Android bgfx static-library build has passed.
+- Physics3D still lacks joints, CCD, sleeping/wake policy, multiple fixtures per body and robust multi-point OBB contact manifolds. World overlap/ray queries currently scan registered bodies rather than querying a spatial tree.
+- The retained UI has no built-in text shaper/font rasterizer/atlas; callers must provide `IUiGlyphProvider`. Rounded-corner masking needs a dedicated shader.
+- Built-in asset import currently covers OBJ only. MTL, glTF/GLB, texture/image and audio importers are not present.
+- Audio mixing and the Android AAudio output backend compile, but playback, latency, route changes and lifecycle recovery have not been tested on hardware.
+- Native mods are intentionally unrestricted in-process native code. They can crash/corrupt the engine or access host resources. There is no sandbox or security isolation; ABI compatibility remains the host/mod developer's responsibility.

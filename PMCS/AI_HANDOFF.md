@@ -55,3 +55,36 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android arm64-v8
 - Update DECISIONS.md when the user explicitly changes or accepts a design direction.
 - Never mark work VERIFIED without a reproducible run or device test.
 - Record exact commit/run IDs, limitations and the next concrete action.
+## Live handoff — 2026-11-26
+
+**Current main:** `54f6e8c39f599be919c669e6316b807cdf220654`. **Last fully passing engine CI:** [45859870368](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45859870368) — GCC, Clang, ASan/UBSan, Android ARM64 and DMod AST proof all passed; 46/46 tests across each Linux test matrix.
+
+### Verified current capabilities
+- C++20 general-purpose engine foundation, World/ECS/system scheduler, fixed-step clock, platform contracts and Android GameActivity host shell.
+- Physics2D world and Physics3D world (spheres/OBBs), filters, sensors, contact events and 3D ray/overlap queries.
+- Backend-neutral frame builder/render device plus bgfx 2D sprites/textures and 3D meshes/materials. Shader binaries must currently be supplied to the backend explicitly.
+- Retained UI runtime and indexed-2D rendering adapter; `EngineRuntime::enqueue_ui_draws` is the frame-loop integration point.
+- Asset loader/cache/coordinator and bounded OBJ-to-DMES importer.
+- Audio mixer, animation runtime and Android AAudio backend.
+- Unrestricted native in-process DMod modules and automatic hooks at runtime, physics, scene, animation, importer invocation, UI draw and non-real-time audio mix boundaries.
+- Two CTest headless sample games in `examples/`.
+
+### Do not overstate
+- The APK artifact is a GameActivity host smoke app, not a playable 2D/3D game. It does not initialize EngineRuntime or bgfx and does not package/load shader binaries.
+- APK artifact page: [run 45859471974](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45859471974), artifact `15138770221` (built from `ee578327...`; Android host source remained unchanged after that). A newer APK needs to be built after runtime-host integration.
+- No physical phone test has been done. User explicitly reserved that step for their phone.
+- Headless examples test simulation and draw submission, not GPU pixels.
+- Physics3D lacks CCD, joints, sleeping and multi-fixture bodies. OBJ is the only built-in model importer. UI text needs caller-supplied glyph provider.
+- Native modules are not sandboxed and may crash/corrupt the process.
+
+### Immediate next tasks
+1. Verify/finish the Linux bgfx static-library/shader proof run; Android bgfx static-library proof already passed.
+2. Build the actual GameActivity EngineRuntime host: map Android app lifecycle/window/input to EngineRuntime, load compiled shader assets and initialize bgfx on the native surface.
+3. Run a fresh APK build and give the user that artifact for first phone smoke test.
+4. Continue Physics3D CCD/joints and expand asset importers; keep CI tests and PMCS synchronized.
+
+### Workflow discipline
+- Fetch current main before editing; preserve concurrent changes.
+- Use GitHub Actions for builds/tests (user has no PC).
+- Record run IDs, commit hashes, and exact limitations. Cross-compilation is never physical-device validation.
+- Native mods have no sandbox by explicit user choice; don't add sandbox/capability restrictions.
