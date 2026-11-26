@@ -103,6 +103,32 @@ struct BodyCreateResult final {
     }
 };
 
+struct Ray2D final {
+    Vec2 origin{};
+    Vec2 direction{1.0F, 0.0F};
+    float maximum_distance{1000.0F};
+
+    [[nodiscard]] bool valid() const noexcept {
+        return std::isfinite(origin.x) && std::isfinite(origin.y) &&
+               std::isfinite(direction.x) && std::isfinite(direction.y) &&
+               std::isfinite(maximum_distance) && maximum_distance >= 0.0F &&
+               length_squared(direction) > 1.0e-12F;
+    }
+};
+
+struct RaycastFilter2D final {
+    std::uint32_t category_bits{0xFFFFFFFFU};
+    std::uint32_t mask_bits{0xFFFFFFFFU};
+};
+
+struct RaycastHit2D final {
+    BodyHandle body{};
+    Vec2 point{};
+    Vec2 normal{};
+    float distance{0.0F};
+    bool sensor{false};
+};
+
 struct BodyState2D final {
     BodyHandle handle{};
     BodyType type{BodyType::Static};
@@ -238,6 +264,62 @@ public:
             body->inertia, body->friction, body->restitution,
             body->sensor, body->collision_filter
         };
+    }
+
+    // Ray queries normalize the supplied direction, so maximum_distance and
+    // returned distances are always expressed in world units. A ray starting
+    // inside a collider reports a zero-distance hit with normal opposite travel.
+    [[nodiscard]] std::vector<RaycastHit2D> raycast_all(
+        const Ray2D& ray, RaycastFilter2D filter = {}) const {
+        std::vector<RaycastHit2D> hits;
+        if (!ray.valid()) return hits;
+        const Vec2 direction = normalized(ray.direction);
+
+        for (const auto& [index, body] : bodies_) {
+            (void)index;
+            if ((filter.mask_bits & body.collision_filter.category_bits) == 0U ||
+                (body.collision_filter.mask_bits & filter.category_bits) == 0U) {
+                continue;
+            }
+
+            const auto hit = raycast_shape(ray.origin, direction,
+                                           ray.maximum_distance, world_shape(body));
+            if (!hit) continue;
+            hits.push_back({
+                body.handle, hit->point, hit->normal, hit->distance, body.sensor
+            });
+        }
+
+        std::sort(hits.begin(), hits.end(),
+            [](const RaycastHit2D& left, const RaycastHit2D& right) {
+                if (left.distance != right.distance)
+                    return left.distance < right.distance;
+                return left.body.index() < right.body.index();
+            });
+        return hits;
+    }
+
+    [[nodiscard]] std::optional<RaycastHit2D> raycast(
+        const Ray2D& ray, RaycastFilter2D filter = {}) const {
+        auto hits = raycast_all(ray, filter);
+        if (hits.empty()) return std::nullopt;
+        return hits.front();
+    }
+
+    [[nodiscard]] std::vector<BodyHandle> overlap_point(
+        Vec2 point, RaycastFilter2D filter = {}) const {
+        std::vector<BodyHandle> result;
+        if (!finite(point)) return result;
+        for (const auto& [index, body] : bodies_) {
+            (void)index;
+            if ((filter.mask_bits & body.collision_filter.category_bits) == 0U ||
+                (body.collision_filter.mask_bits & filter.category_bits) == 0U) {
+                continue;
+            }
+            if (point_inside_shape(point, world_shape(body)))
+                result.push_back(body.handle);
+        }
+        return result;
     }
 
     [[nodiscard]] bool set_transform(
@@ -602,6 +684,116 @@ private:
                 };
             }
         }, body.collider);
+    }
+
+    struct ShapeRayHit final {
+        Vec2 point{};
+        Vec2 normal{};
+        float distance{0.0F};
+    };
+
+    [[nodiscard]] static std::optional<ShapeRayHit> raycast_shape(
+        Vec2 origin, Vec2 direction, float maximum_distance,
+        const WorldShape& shape) noexcept {
+        return std::visit([&](const auto& collider)
+            -> std::optional<ShapeRayHit> {
+            using Shape = std::decay_t<decltype(collider)>;
+            if constexpr (std::is_same_v<Shape, Circle>) {
+                const Vec2 offset = origin - collider.center;
+                const float radius_squared = collider.radius * collider.radius;
+                const float c = length_squared(offset) - radius_squared;
+                if (c <= 0.0F) {
+                    return ShapeRayHit{
+                        origin, direction * -1.0F, 0.0F
+                    };
+                }
+
+                const float projection = dot(offset, direction);
+                const float discriminant =
+                    projection * projection - c;
+                if (discriminant < 0.0F) return std::nullopt;
+                const float distance = -projection - std::sqrt(discriminant);
+                if (distance < 0.0F || distance > maximum_distance)
+                    return std::nullopt;
+                const Vec2 point = origin + direction * distance;
+                return ShapeRayHit{
+                    point, normalized(point - collider.center), distance
+                };
+            } else {
+                const Vec2 local_origin = rotate(
+                    origin - collider.center, -collider.rotation_radians);
+                const Vec2 local_direction = rotate(
+                    direction, -collider.rotation_radians);
+                const Vec2 extent = collider.half_extents;
+
+                if (std::abs(local_origin.x) <= extent.x &&
+                    std::abs(local_origin.y) <= extent.y) {
+                    return ShapeRayHit{
+                        origin, direction * -1.0F, 0.0F
+                    };
+                }
+
+                float near_distance = 0.0F;
+                float far_distance = maximum_distance;
+                Vec2 local_normal{};
+
+                const auto clip_axis = [&](float origin_axis, float direction_axis,
+                                           float extent_axis, Vec2 negative_normal,
+                                           Vec2 positive_normal,
+                                           float& near_value, float& far_value,
+                                           Vec2& normal_value) {
+                    if (std::abs(direction_axis) <= 1.0e-8F)
+                        return origin_axis >= -extent_axis &&
+                               origin_axis <= extent_axis;
+
+                    float first = (-extent_axis - origin_axis) / direction_axis;
+                    float second = (extent_axis - origin_axis) / direction_axis;
+                    Vec2 first_normal = negative_normal;
+                    if (first > second) {
+                        std::swap(first, second);
+                        first_normal = positive_normal;
+                    }
+                    if (first > near_value) {
+                        near_value = first;
+                        normal_value = first_normal;
+                    }
+                    far_value = std::min(far_value, second);
+                    return near_value <= far_value;
+                };
+
+                if (!clip_axis(local_origin.x, local_direction.x, extent.x,
+                               {-1.0F, 0.0F}, {1.0F, 0.0F},
+                               near_distance, far_distance, local_normal) ||
+                    !clip_axis(local_origin.y, local_direction.y, extent.y,
+                               {0.0F, -1.0F}, {0.0F, 1.0F},
+                               near_distance, far_distance, local_normal) ||
+                    near_distance < 0.0F || near_distance > maximum_distance) {
+                    return std::nullopt;
+                }
+
+                const Vec2 point = origin + direction * near_distance;
+                return ShapeRayHit{
+                    point, rotate(local_normal, collider.rotation_radians),
+                    near_distance
+                };
+            }
+        }, shape);
+    }
+
+    [[nodiscard]] static bool point_inside_shape(
+        Vec2 point, const WorldShape& shape) noexcept {
+        return std::visit([&](const auto& collider) {
+            using Shape = std::decay_t<decltype(collider)>;
+            if constexpr (std::is_same_v<Shape, Circle>) {
+                return length_squared(point - collider.center) <=
+                       collider.radius * collider.radius;
+            } else {
+                const Vec2 local = rotate(
+                    point - collider.center, -collider.rotation_radians);
+                return std::abs(local.x) <= collider.half_extents.x &&
+                       std::abs(local.y) <= collider.half_extents.y;
+            }
+        }, shape);
     }
 
     [[nodiscard]] Aabb world_bounds(const Body& body) const noexcept {
