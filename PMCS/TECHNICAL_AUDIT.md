@@ -1,6 +1,6 @@
 # Technical Audit
 
-**Status:** Core services, typed resource identity/ownership, keyed ResourceStore, bounded async asset loading and DMod package parsing are CI-verified. Asset dependency planning is implemented and awaiting CI. ChaiScript remains a proof-only candidate; no script runtime has been approved for production use.
+**Status:** Core services, typed resource identity/ownership, keyed ResourceStore, asset dependency planning, bounded async asset loading, CPU-side AssetCache and optional cached loading are CI-verified. ChaiScript remains a proof-only candidate; no script runtime has been approved for production use.
 
 ## Core resource identity
 - Initial typed handle design is a tag-typed (index, generation) pair. Tag types prevent accidental interchange between domains such as textures and buffers at compile time.
@@ -28,8 +28,11 @@
 - `load_async` validates the virtual path and key before I/O, requests a bounded read (64 MiB default, configurable), decodes a byte span on a JobSystem worker and registers the decoded value in ResourceStore.
 - The filesystem, ResourceStore and JobSystem are borrowed; all must outlive the submitted task. Decoder execution is on a worker thread, so shared decoder state must be synchronized by its owner. Futures propagate thrown exceptions.
 - `IFileSystem` implementations must check the file size against `max_bytes` before allocating the output buffer and report `FileError::TooLarge` when exceeded. The current fake filesystem test follows this contract; audit future concrete backends against it.
-- The asset dependency planner is a pure deterministic Kahn topological sort. It rejects invalid/duplicate keys and duplicate dependency declarations, reports missing required/optional dependencies, and returns no partial order on cycles. It does not execute loads or manage resource lifetimes/cache. Its CI verification is pending.
-- Bounded async loader tests passed Linux GCC/Clang and Android ARM64 cross-compilation in [run 45765620129](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45765620129). Android is compile-only, not physical-device execution.
+- The asset dependency planner is a pure deterministic Kahn topological sort. It rejects invalid/duplicate keys and duplicate dependency declarations, reports missing required/optional dependencies, and returns no partial order on cycles. It does not execute loads or manage resource lifetimes/cache. All four CI jobs passed in [run 45766502045](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45766502045).
+- Bounded async loader tests passed in [run 45765620129](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45765620129).
+- AssetCache is a CPU-side byte-budgeted LRU over ResourceStore. Size is caller-estimated, not measured; eviction is based on least-recently-used access through cache APIs. Shrinking the budget evicts until within budget. Construction/insertion exception safety and cache behavior passed all four jobs in [run 45768090059](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768090059).
+- `load_async_cached` checks for an existing cache key before file I/O, then bounded-reads, decodes and inserts with the supplied size estimator. It returns a distinct CacheHit status and reports cache budget/duplicate-key rejection. Tests prove cache hits avoid additional filesystem reads. All four jobs passed in [run 45768508344](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768508344).
+- The cached loader currently has a check-then-load race: concurrent requests for the same absent key may both read/decode; one insertion succeeds and the other reports CacheRejected/DuplicateKey. In-flight deduplication is not implemented. Cache and other borrowed dependencies must outlive submitted tasks. Android verification is compile-only, not physical-device execution.
 
 ## Engine references
 - Luanti: study runtime modding, API exposure, package lifecycle and server/client boundaries.
