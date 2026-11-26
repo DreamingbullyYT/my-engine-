@@ -4,6 +4,7 @@
 #include <dream/core/log.hpp>
 #include <dream/animation/animation_runtime.hpp>
 #include <dream/assets/builtin_importers.hpp>
+#include <dream/assets/asset_loader.hpp>
 #include <dream/audio/audio_mixer.hpp>
 #include <dream/physics3d/physics_world.hpp>
 #include <dream/ui/ui_render_adapter.hpp>
@@ -20,10 +21,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <memory>
+#include <mutex>
 #include <span>
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace dream::runtime {
 
@@ -107,6 +111,9 @@ inline constexpr char begin_render_frame[] = "dream.engine.runtime.begin_render_
 inline constexpr char render_frame[] = "dream.engine.runtime.render_frame";
 inline constexpr char animation_update[] = "dream.engine.animation.update";
 inline constexpr char asset_import[] = "dream.engine.assets.import";
+inline constexpr char asset_read[] = "dream.engine.assets.read";
+inline constexpr char asset_decode[] = "dream.engine.assets.decode";
+inline constexpr char asset_register[] = "dream.engine.assets.register";
 inline constexpr char ui_draw[] = "dream.engine.ui.draw";
 inline constexpr char audio_mix[] = "dream.engine.audio.mix";
 inline constexpr char world_entity_create[] = "dream.engine.world.entity.create";
@@ -180,6 +187,19 @@ struct RuntimeAssetImportHookDataV1 final {
     assets::AssetImporterOutput output{};
     assets::AssetImporterRegistryError registry_error{
         assets::AssetImporterRegistryError::None};
+};
+
+struct RuntimeAssetLoadHookDataV1 final {
+    EngineRuntime* runtime{};
+    const assets::AssetLoadEventV1 event{};
+};
+
+struct RuntimeAssetLoadEventQueueV1 final {
+    std::mutex mutex;
+    std::vector<assets::AssetLoadEventV1> pending;
+    std::uint64_t next_sequence{1U};
+    std::size_t dropped{0U};
+    bool accepting{true};
 };
 
 struct RuntimeUiDrawHookDataV1 final {
@@ -604,6 +624,7 @@ public:
         log_message(core::LogLevel::info, "runtime.lifecycle",
                     "EngineRuntime shutdown started");
         scene_.world().set_mutation_dispatcher(nullptr, nullptr);
+        stop_asset_load_events();
         mod_manager_.shutdown();
         render_device_.shutdown();
         simulation_clock_.reset();
@@ -648,6 +669,13 @@ public:
         return asset_importers_;
     }
 
+    // Pass this observer to load_async()/load_async_cached() and their
+    // coordinated variants. Worker callbacks only enqueue owned event data;
+    // native mod hooks are dispatched later from EngineRuntime::update().
+    [[nodiscard]] assets::AssetLoadObserverV1 asset_load_observer() const noexcept {
+        return {asset_load_event_queue_, &EngineRuntime::queue_asset_load_event};
+    }
+
 
     [[nodiscard]] core::FixedStepClock& simulation_clock() noexcept {
         return simulation_clock_;
@@ -681,6 +709,82 @@ public:
     }
 
 private:
+    static void queue_asset_load_event(
+        void* context,const assets::AssetLoadEventV1& event) {
+        if(context==nullptr) return;
+        auto& queue=*static_cast<RuntimeAssetLoadEventQueueV1*>(context);
+        try {
+            std::lock_guard lock(queue.mutex);
+            if(!queue.accepting) return;
+            constexpr std::size_t maximum_pending_events=8192U;
+            if(queue.pending.size()>=maximum_pending_events) {
+                if(queue.dropped!=std::numeric_limits<std::size_t>::max())
+                    ++queue.dropped;
+                return;
+            }
+            auto copy=event;
+            copy.sequence=queue.next_sequence;
+            if(queue.next_sequence!=std::numeric_limits<std::uint64_t>::max())
+                ++queue.next_sequence;
+            queue.pending.push_back(std::move(copy));
+        } catch(...) {
+            try {
+                std::lock_guard lock(queue.mutex);
+                if(queue.dropped!=std::numeric_limits<std::size_t>::max())
+                    ++queue.dropped;
+            } catch(...) {}
+        }
+    }
+
+    static std::string_view asset_load_hook_point(
+        assets::AssetLoadPhaseV1 phase) noexcept {
+        switch(phase) {
+        case assets::AssetLoadPhaseV1::ReadBegin:
+        case assets::AssetLoadPhaseV1::ReadComplete:
+            return hook_points::asset_read;
+        case assets::AssetLoadPhaseV1::DecodeBegin:
+        case assets::AssetLoadPhaseV1::DecodeComplete:
+            return hook_points::asset_decode;
+        case assets::AssetLoadPhaseV1::ResourceRegisterBegin:
+        case assets::AssetLoadPhaseV1::ResourceRegisterComplete:
+        case assets::AssetLoadPhaseV1::CacheLookup:
+        case assets::AssetLoadPhaseV1::CacheStoreBegin:
+        case assets::AssetLoadPhaseV1::CacheStoreComplete:
+            return hook_points::asset_register;
+        }
+        return hook_points::asset_register;
+    }
+
+    void process_asset_load_events() noexcept {
+        if(!asset_load_event_queue_) return;
+        std::vector<assets::AssetLoadEventV1> events;
+        std::size_t dropped=0U;
+        {
+            std::lock_guard lock(asset_load_event_queue_->mutex);
+            events.swap(asset_load_event_queue_->pending);
+            dropped=asset_load_event_queue_->dropped;
+            asset_load_event_queue_->dropped=0U;
+        }
+        for(const auto& event:events) {
+            RuntimeAssetLoadHookDataV1 hook_data{this,event};
+            (void)mod_manager_.dispatch_hooks(
+                asset_load_hook_point(event.phase),&hook_data,
+                [](void*) noexcept {});
+        }
+        if(dropped>0U) {
+            log_message(core::LogLevel::warning,"assets.lifecycle",
+                "asset lifecycle event queue dropped "+std::to_string(dropped)+
+                " event(s) because its bounded capacity was reached");
+        }
+    }
+
+    void stop_asset_load_events() noexcept {
+        if(!asset_load_event_queue_) return;
+        std::lock_guard lock(asset_load_event_queue_->mutex);
+        asset_load_event_queue_->accepting=false;
+        asset_load_event_queue_->pending.clear();
+    }
+
     void log_message(
         core::LogLevel level,
         std::string_view category,
@@ -769,6 +873,7 @@ private:
         last_physics_error_ = physics2d::PhysicsStepError::None;
         last_physics3d_error_ = physics3d::PhysicsStepError3D::None;
 
+        process_asset_load_events();
         action_map_.begin_frame();
         for (const auto& event : input_events) {
             bool handled = action_map_.process_event(event);
@@ -931,6 +1036,8 @@ private:
     render::RenderDevice render_device_;
     dmod::NativeModHost mod_host_;
     dmod::NativeModManager mod_manager_;
+    std::shared_ptr<RuntimeAssetLoadEventQueueV1> asset_load_event_queue_{
+        std::make_shared<RuntimeAssetLoadEventQueueV1>()};
     world::SystemHandle physics_system_{};
     world::SystemHandle physics3d_system_{};
     world::SystemHandle animation_system_{};
