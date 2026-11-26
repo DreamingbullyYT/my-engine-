@@ -55,4 +55,5 @@ android {
 
 dependencies {
     implementation("androidx.games:games-activity:4.4.2")
+    implementation("androidx.core:core:1.13.1")
 }
