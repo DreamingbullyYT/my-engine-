@@ -27,7 +27,8 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - ResourceRegistry<T, Tag> owns resources through unique_ptr, provides callback-scoped access and rejects stale handles; tests passed in [run 45715803430](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715803430).
 - ResourceStore<T, Tag> maps case-sensitive string keys (non-empty, maximum 4096 bytes) to typed generational handles. Duplicate/invalid keys are rejected; find/erase and callback-scoped access by key or handle are supported. Linux tests and Android ARM64 cross-compilation passed in [run 45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493).
 - ResourceStore is not an asset loader; it remains a key-to-handle owner.
-- Initial dream_assets helper schedules virtual filesystem reads on JobSystem, invokes a caller-provided decoder, and registers the decoded object in ResourceStore. Its CI run is pending. It deliberately has no dependency graph, cancellation, cache policy or GPU upload yet.
+- `dream_assets::load_async` schedules bounded virtual filesystem reads on JobSystem (64 MiB default limit), invokes a caller-provided decoder on a worker thread and registers the decoded object in ResourceStore. Linux GCC/Clang tests and Android ARM64 cross-compilation passed in [run 45765620129](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45765620129). The filesystem, store and JobSystem are borrowed and must outlive the task; decoder thread safety is caller-owned.
+- Asset dependency planner is implemented in `engine/assets/include/dream/assets/dependency_graph.hpp`; it computes deterministic dependency-first order, reports missing required/optional dependencies and detects cycles. CI verification is pending.
 - dream_core: version API, logging, diagnostics, event dispatcher, worker job system, typed generational handle pool, ResourceRegistry and ResourceStore.
 - dream_platform: application lifecycle, window/surface/input contracts and virtual filesystem path validation.
 - dream_dmod: manifest model, validation, dependency resolver, TOML parser and read-only in-memory ZIP package reader with local-header validation.
@@ -38,8 +39,8 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - C++20 remains a provisional implementation baseline.
 
 ## Next work
-1. Verify the new async asset loader CI run, fix any compiler/test issues, and audit its lifetime contract.
-2. Add dependency tracking and cache policy as separate layers, not inside ResourceStore.
+1. Verify the asset dependency planner in CI and fix any issues.
+2. Add cancellation/lifetime and cache policy as separate layers, not inside ResourceStore.
 3. Research renderer candidates and define engine-owned 2D/3D rendering interfaces before selecting a backend.
 4. Continue DMod package trust/versioning and interpreter security audit.
 
