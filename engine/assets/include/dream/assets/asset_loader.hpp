@@ -74,7 +74,7 @@ template <typename T, typename Tag, typename Decoder>
     return jobs.submit(
         [&filesystem, &store, key = std::move(key),
          path = std::move(virtual_path),
-         decode = Decode(std::forward<Decoder>(decoder))]() mutable -> Result {
+         decode = Decode(std::forward<Decoder>(decoder)), max_file_bytes]() mutable -> Result {
             if (!platform::is_valid_virtual_path(path)) {
                 return {AssetLoadStatus::InvalidPath, {}, platform::FileError::InvalidPath,
                         "Asset path is not a valid virtual path"};
