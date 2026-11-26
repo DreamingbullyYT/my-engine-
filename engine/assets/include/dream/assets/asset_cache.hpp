@@ -142,7 +142,7 @@ private:
         std::uint64_t last_used;
     };
 
-    [[nodiscard]] std::uint64_t next_stamp() noexcept {
+    [[nodiscard]] std::uint64_t next_stamp() {
         // On wrap, renormalize the small metadata set while preserving LRU order.
         if (clock_ == UINT64_MAX) {
             std::vector<Entry*> ordered;
