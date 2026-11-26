@@ -19,11 +19,15 @@ void require(bool condition, std::string_view message) {
 class MemoryFileSystem final : public dream::platform::IFileSystem {
 public:
     bool read_file(std::string_view path, std::vector<std::byte>& output,
-                   dream::platform::FileError& error) const override {
+                   std::size_t max_bytes, dream::platform::FileError& error) const override {
         ++read_count;
         const auto found = files.find(std::string(path));
         if (found == files.end()) {
             error = dream::platform::FileError::NotFound;
+            return false;
+        }
+        if (found->second.size() > max_bytes) {
+            error = dream::platform::FileError::TooLarge;
             return false;
         }
         output = found->second;
@@ -87,6 +91,7 @@ int main() {
         std::byte{'h'}, std::byte{'e'}, std::byte{'l'}, std::byte{'l'}, std::byte{'o'}
     };
     filesystem.files["assets/bad.txt"] = {std::byte{'b'}, std::byte{'a'}, std::byte{'d'}};
+    filesystem.files["assets/large.txt"] = {std::byte{'1'}, std::byte{'2'}, std::byte{'3'}};
 
     core::ResourceStore<TextAsset, TextAssetTag> store;
 
@@ -102,6 +107,18 @@ int main() {
             "missing file reports read failure");
     require(missing.file_error == platform::FileError::NotFound,
             "filesystem error is preserved");
+
+    auto too_large = assets::load_async(
+        jobs, filesystem, store, "large", "assets/large.txt", decode_text, 2).get();
+    require(too_large.status == assets::AssetLoadStatus::ReadFailed,
+            "oversized file is rejected by bounded filesystem read");
+    require(too_large.file_error == platform::FileError::TooLarge,
+            "oversized file reports the size limit error");
+
+    auto invalid_limit = assets::load_async(
+        jobs, filesystem, store, "zero-limit", "assets/hello.txt", decode_text, 0).get();
+    require(invalid_limit.status == assets::AssetLoadStatus::InvalidLimit,
+            "zero maximum file size is rejected");
 
     auto decode_failed = assets::load_async(
         jobs, filesystem, store, "bad", "assets/bad.txt", decode_text).get();
