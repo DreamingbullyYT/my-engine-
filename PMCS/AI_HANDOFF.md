@@ -38,8 +38,8 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - C++20 remains a provisional implementation baseline.
 
 ## Next work
-1. Add deterministic callback-vs-destroy synchronization tests for resource lifetime/thread-safety.
-2. Design a separate asset loading pipeline for file I/O, decoding, async scheduling and dependency tracking.
+1. Verify the new async asset loader CI run, fix any compiler/test issues, and audit its lifetime contract.
+2. Add dependency tracking and cache policy as separate layers, not inside ResourceStore.
 3. Research renderer candidates and define engine-owned 2D/3D rendering interfaces before selecting a backend.
 4. Continue DMod package trust/versioning and interpreter security audit.
 
