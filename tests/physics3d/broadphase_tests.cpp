@@ -43,9 +43,8 @@ int main() {
         "pairs are canonical and sorted independently of insertion order");
 
     require(broadphase.upsert(20,box(0)),"existing proxy can update bounds");
-    require(std::find(broadphase.query_aabb(box(0)).begin(),
-                      broadphase.query_aabb(box(0)).end(),20U)!=
-                broadphase.query_aabb(box(0)).end(),
+    const auto moved_query=broadphase.query_aabb(box(0));
+    require(std::find(moved_query.begin(),moved_query.end(),20U)!=moved_query.end(),
         "updating a proxy invalidates and rebuilds the query index");
     const auto updated=broadphase.compute_pairs();
     require(updated.size()==6,"updating a proxy refreshes candidate pairs");
