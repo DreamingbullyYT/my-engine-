@@ -164,7 +164,7 @@ jobs:
       - name: Cross-compile bgfx shader asset loader tests for Android ARM64
         run: |
           "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
-            -std=c++20 -Iengine/core/include -Iengine/platform/include -Iengine/render/include -Iengine/render/bgfx/include \
+            -std=c++20 -Iengine/core/include -Iengine/platform/include -Iengine/world/include -Iengine/serialization/include -Iengine/render/include -Iengine/render/bgfx/include \
             -c tests/render/bgfx_shader_assets_tests.cpp \
             -o /tmp/bgfx-shader-assets-tests-android.o
 
