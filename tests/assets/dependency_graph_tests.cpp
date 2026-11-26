@@ -28,8 +28,6 @@ int main() {
     const auto plan = resolve_dependencies(graph);
     require(plan.resolved(), "valid graph resolves");
     require(plan.load_order == std::vector<std::string>{
-        "shader/basic", "material/player", "mesh/player", "scene/main", "texture/player"
-    } || plan.load_order == std::vector<std::string>{
         "shader/basic", "material/player", "mesh/player", "texture/player", "scene/main"
     }, "dependencies precede dependents with deterministic lexical tie-breaking");
 
