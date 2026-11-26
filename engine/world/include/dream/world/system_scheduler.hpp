@@ -126,11 +126,14 @@ public:
             return report;
         }
 
-        std::unique_lock tick_lock(update_mutex_, std::try_to_lock);
-        if (!tick_lock.owns_lock()) {
+        if (updating_.test_and_set(std::memory_order_acquire)) {
             report.error = SystemUpdateError::AlreadyUpdating;
             return report;
         }
+        struct UpdateGuard final {
+            std::atomic_flag& flag;
+            ~UpdateGuard() { flag.clear(std::memory_order_release); }
+        } update_guard{updating_};
 
         std::vector<std::shared_ptr<Entry>> snapshot;
         {
@@ -212,7 +215,7 @@ private:
     }
 
     mutable std::shared_mutex mutex_;
-    std::mutex update_mutex_;
+    std::atomic_flag updating_ = ATOMIC_FLAG_INIT;
     core::HandlePool<SystemTag> handles_;
     std::map<std::uint32_t, std::shared_ptr<Entry>> systems_;
     std::uint64_t next_order_{0};
