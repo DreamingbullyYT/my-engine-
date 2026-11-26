@@ -8,6 +8,7 @@ project(DreamEngine
 
 option(DREAM_BUILD_TESTS "Build Dream Engine tests" ON)
 option(DREAM_BUILD_BGFX_BACKEND "Build the optional bgfx clear/present backend (requires an existing bgfx target)" OFF)
+option(DREAM_BUILD_ANDROID_GAME_ACTIVITY_BACKEND "Build the AndroidX GameActivity platform adapter (requires the GameActivity Prefab package)" OFF)
 
 include(FetchContent)
 include(GenerateExportHeader)
@@ -92,6 +93,28 @@ set_target_properties(dream_platform PROPERTIES
     CXX_EXTENSIONS OFF
     POSITION_INDEPENDENT_CODE ON
 )
+
+if(DREAM_BUILD_ANDROID_GAME_ACTIVITY_BACKEND)
+    if(NOT ANDROID)
+        message(FATAL_ERROR "DREAM_BUILD_ANDROID_GAME_ACTIVITY_BACKEND is only available for Android builds")
+    endif()
+    find_package(game-activity REQUIRED CONFIG)
+    add_library(dream_platform_android_game_activity STATIC
+        engine/platform/android/src/game_activity_backend.cpp
+    )
+    add_library(DreamEngine::PlatformAndroidGameActivity ALIAS dream_platform_android_game_activity)
+    target_include_directories(dream_platform_android_game_activity PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/platform/android/include>
+    )
+    target_compile_features(dream_platform_android_game_activity PUBLIC cxx_std_20)
+    target_link_libraries(dream_platform_android_game_activity
+        PUBLIC DreamEngine::Platform game-activity::game-activity_static android log
+    )
+    set_target_properties(dream_platform_android_game_activity PROPERTIES
+        CXX_EXTENSIONS OFF
+        POSITION_INDEPENDENT_CODE ON
+    )
+endif()
 
 add_library(dream_dmod STATIC
     engine/dmod/src/manifest.cpp

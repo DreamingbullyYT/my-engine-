@@ -100,6 +100,24 @@ jobs:
       - name: Build Android ARM64
         run: cmake --build build-android --parallel 2
 
+      - name: Download AndroidX GameActivity 4.4.2 headers
+        run: |
+          curl --fail --location --retry 3 \
+            https://dl.google.com/dl/android/maven2/androidx/games/games-activity/4.4.2/games-activity-4.4.2.aar \
+            --output /tmp/games-activity-4.4.2.aar
+          mkdir -p /tmp/games-activity-aar
+          unzip -q /tmp/games-activity-4.4.2.aar -d /tmp/games-activity-aar
+          test -f /tmp/games-activity-aar/prefab/modules/game-activity/include/game-activity/native_app_glue/android_native_app_glue.h
+
+      - name: Cross-compile Android GameActivity backend for ARM64
+        run: |
+          "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
+            -std=c++20 -Wall -Wextra -Wpedantic \
+            -Iengine/platform/include -Iengine/platform/android/include \
+            -I/tmp/games-activity-aar/prefab/modules/game-activity/include \
+            -c engine/platform/android/src/game_activity_backend.cpp \
+            -o /tmp/game-activity-backend-android.o
+
       - name: Cross-compile resource store tests for Android ARM64
         run: |
           "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
