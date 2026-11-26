@@ -25,6 +25,14 @@ struct ActionState final {
     std::uint64_t timestamp_ns{0};
 };
 
+// Bounds are normalized to the touch viewport: [0, 1] on each axis.
+struct NormalizedTouchRect final {
+    float left{0.0F};
+    float top{0.0F};
+    float right{1.0F};
+    float bottom{1.0F};
+};
+
 enum class ActionMapError : std::uint8_t {
     None,
     InvalidName,
@@ -91,6 +99,26 @@ public:
             .kind = BindingKind::MouseButton,
             .control = button,
             .scale = scale
+        });
+    }
+
+    [[nodiscard]] bool set_touch_viewport(float logical_width, float logical_height) {
+        if (!std::isfinite(logical_width) || !std::isfinite(logical_height) ||
+            logical_width <= 0.0F || logical_height <= 0.0F) return false;
+        std::lock_guard lock(mutex_);
+        touch_viewport_width_ = logical_width;
+        touch_viewport_height_ = logical_height;
+        return true;
+    }
+
+    [[nodiscard]] ActionMapError bind_touch_region(
+        std::string_view action, NormalizedTouchRect region, float scale = 1.0F) {
+        if (!valid_touch_region(region) || !valid_scale(scale))
+            return ActionMapError::InvalidBinding;
+        return add_binding(action, Binding{
+            .kind = BindingKind::TouchRegion,
+            .scale = scale,
+            .touch_region = region
         });
     }
 
@@ -175,6 +203,19 @@ public:
                         changed = true;
                     }
                     handled = true;
+                } else if (binding.kind == BindingKind::TouchRegion &&
+                           event.pointer_kind == platform::PointerKind::Touch &&
+                           contains_touch_point(binding, event.x, event.y)) {
+                    const auto found = std::find(
+                        binding.pointer_ids.begin(), binding.pointer_ids.end(),
+                        event.pointer_id);
+                    if (found == binding.pointer_ids.end()) {
+                        binding.pointer_ids.push_back(event.pointer_id);
+                        binding.active = true;
+                        binding.value = binding.scale;
+                        changed = true;
+                    }
+                    handled = true;
                 }
                 break;
 
@@ -187,6 +228,18 @@ public:
                     binding.value = 0.0F;
                     changed = true;
                     handled = true;
+                } else if (binding.kind == BindingKind::TouchRegion &&
+                           event.pointer_kind == platform::PointerKind::Touch) {
+                    const auto found = std::find(
+                        binding.pointer_ids.begin(), binding.pointer_ids.end(),
+                        event.pointer_id);
+                    if (found != binding.pointer_ids.end()) {
+                        binding.pointer_ids.erase(found);
+                        binding.active = !binding.pointer_ids.empty();
+                        binding.value = binding.active ? binding.scale : 0.0F;
+                        changed = true;
+                        handled = true;
+                    }
                 }
                 break;
 
@@ -252,8 +305,17 @@ public:
                 }
                 break;
 
-            case platform::InputEventType::TextInput:
             case platform::InputEventType::PointerMove:
+                if (binding.kind == BindingKind::TouchRegion &&
+                    event.pointer_kind == platform::PointerKind::Touch &&
+                    std::find(binding.pointer_ids.begin(), binding.pointer_ids.end(),
+                              event.pointer_id) != binding.pointer_ids.end()) {
+                    // Captured touch buttons remain held while a finger slides out.
+                    handled = true;
+                }
+                break;
+
+            case platform::InputEventType::TextInput:
             case platform::InputEventType::Scroll:
             case platform::InputEventType::GamepadConnected:
                 break;
@@ -280,6 +342,7 @@ public:
         for (auto& binding : bindings_) {
             binding.active = false;
             binding.value = 0.0F;
+            binding.pointer_ids.clear();
         }
         for (std::size_t index = 0; index < actions_.size(); ++index)
             recompute_action(index, timestamp_ns);
@@ -310,7 +373,8 @@ private:
         Key,
         MouseButton,
         GamepadButton,
-        GamepadAxis
+        GamepadAxis,
+        TouchRegion
     };
 
     struct Action final {
@@ -326,6 +390,8 @@ private:
         std::uint64_t device_id{0};
         float scale{1.0F};
         float deadzone{0.0F};
+        NormalizedTouchRect touch_region{};
+        std::vector<std::uint64_t> pointer_ids;
         bool active{false};
         float value{0.0F};
     };
@@ -352,6 +418,28 @@ private:
             if (!valid) return false;
         }
         return true;
+    }
+
+    static bool valid_touch_region(NormalizedTouchRect region) noexcept {
+        return std::isfinite(region.left) && std::isfinite(region.top) &&
+               std::isfinite(region.right) && std::isfinite(region.bottom) &&
+               region.left >= 0.0F && region.top >= 0.0F &&
+               region.right <= 1.0F && region.bottom <= 1.0F &&
+               region.left < region.right && region.top < region.bottom;
+    }
+
+    [[nodiscard]] bool contains_touch_point(
+        const Binding& binding, float x, float y) const noexcept {
+        if (!std::isfinite(x) || !std::isfinite(y) ||
+            touch_viewport_width_ <= 0.0F || touch_viewport_height_ <= 0.0F) {
+            return false;
+        }
+        const float normalized_x = x / touch_viewport_width_;
+        const float normalized_y = y / touch_viewport_height_;
+        return normalized_x >= binding.touch_region.left &&
+               normalized_x < binding.touch_region.right &&
+               normalized_y >= binding.touch_region.top &&
+               normalized_y < binding.touch_region.bottom;
     }
 
     static bool valid_scale(float scale) noexcept {
@@ -396,6 +484,8 @@ private:
     std::vector<Action> actions_;
     std::vector<Binding> bindings_;
     std::unordered_map<std::string, std::size_t> action_indices_;
+    float touch_viewport_width_{0.0F};
+    float touch_viewport_height_{0.0F};
 };
 
 } // namespace dream::input

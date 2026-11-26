@@ -206,6 +206,94 @@ int main() {
             "removing an action also removes its bindings");
     require(!actions.remove_action("missing"), "unknown action removal fails");
 
+    ActionMap mobile;
+    require(mobile.add_action("mobile/jump") == ActionMapError::None,
+            "mobile jump action registers");
+    require(!mobile.set_touch_viewport(0.0F, 800.0F),
+            "zero touch viewport is rejected");
+    require(mobile.set_touch_viewport(1000.0F, 500.0F),
+            "logical touch viewport is configured");
+    require(mobile.bind_touch_region(
+                "mobile/jump", NormalizedTouchRect{0.8F, 0.8F, 1.0F, 1.0F}) ==
+                ActionMapError::None,
+            "normalized virtual button region binds");
+    require(mobile.bind_touch_region(
+                "mobile/jump", NormalizedTouchRect{0.9F, 0.5F, 0.8F, 0.7F}) ==
+                ActionMapError::InvalidBinding,
+            "inverted touch rectangle is rejected");
+    require(mobile.bind_touch_region(
+                "mobile/jump", NormalizedTouchRect{0.0F, 0.0F, 1.0F, 1.0F},
+                std::numeric_limits<float>::infinity()) ==
+                ActionMapError::InvalidBinding,
+            "non-finite touch scale is rejected");
+
+    InputEvent touch_one;
+    touch_one.type = InputEventType::PointerDown;
+    touch_one.pointer_kind = PointerKind::Touch;
+    touch_one.pointer_id = 101U;
+    touch_one.x = 900.0F;
+    touch_one.y = 450.0F;
+    touch_one.timestamp_ns = 500U;
+    require(mobile.process_event(touch_one),
+            "touch inside virtual button activates action");
+    auto mobile_state = mobile.state("mobile/jump");
+    require(mobile_state && mobile_state->down && mobile_state->just_pressed,
+            "first touch creates a press edge");
+
+    auto touch_move = touch_one;
+    touch_move.type = InputEventType::PointerMove;
+    touch_move.x = 100.0F;
+    touch_move.y = 100.0F;
+    touch_move.timestamp_ns = 510U;
+    require(mobile.process_event(touch_move),
+            "captured touch remains tracked while sliding outside its region");
+    mobile_state = mobile.state("mobile/jump");
+    require(mobile_state && mobile_state->down,
+            "sliding outside a captured virtual button does not release it");
+
+    auto touch_two = touch_one;
+    touch_two.pointer_id = 202U;
+    touch_two.timestamp_ns = 520U;
+    require(mobile.process_event(touch_two),
+            "second finger can capture the same virtual button");
+
+    auto touch_one_up = touch_one;
+    touch_one_up.type = InputEventType::PointerUp;
+    touch_one_up.timestamp_ns = 530U;
+    require(mobile.process_event(touch_one_up),
+            "first captured finger can be released independently");
+    mobile_state = mobile.state("mobile/jump");
+    require(mobile_state && mobile_state->down && !mobile_state->just_released,
+            "action remains held while second finger is still captured");
+
+    auto unrelated_touch_up = touch_one_up;
+    unrelated_touch_up.pointer_id = 303U;
+    require(!mobile.process_event(unrelated_touch_up),
+            "untracked touch release does not change virtual button");
+
+    auto touch_two_cancel = touch_two;
+    touch_two_cancel.type = InputEventType::PointerCancel;
+    touch_two_cancel.timestamp_ns = 540U;
+    require(mobile.process_event(touch_two_cancel),
+            "cancelling the final captured finger releases virtual button");
+    mobile_state = mobile.state("mobile/jump");
+    require(mobile_state && !mobile_state->down && mobile_state->just_released,
+            "last touch cancellation creates release edge");
+
+    auto touch_outside = touch_one;
+    touch_outside.pointer_id = 404U;
+    touch_outside.x = 100.0F;
+    touch_outside.y = 100.0F;
+    require(!mobile.process_event(touch_outside),
+            "touch outside virtual region does not activate action");
+
+    touch_one.pointer_id = 505U;
+    require(mobile.process_event(touch_one), "virtual button can be pressed again");
+    mobile.reset_all(550U);
+    mobile_state = mobile.state("mobile/jump");
+    require(mobile_state && !mobile_state->down && mobile_state->just_released,
+            "global reset clears captured touch pointers");
+
     std::cout << "Dream Engine action map tests passed.\n";
     return EXIT_SUCCESS;
 }
