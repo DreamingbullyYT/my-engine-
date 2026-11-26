@@ -55,7 +55,7 @@
 - Renderer, ECS/world, physics, asset dependency graph/cache policy/GPU upload, audio, serialization, editor and profiling. Initial async asset read/decode/register helper is implemented but pending CI; ResourceStore itself remains only a key-to-handle layer.
 
 ## Immediate next actions
-1. Add deterministic callback-vs-destroy concurrency tests for ResourceRegistry/ResourceStore.
-2. Design a separate asset loading pipeline: filesystem reads, decoding interfaces, async scheduling, dependency tracking and cache/lifetime policy.
+1. Verify the initial async asset loader in Linux GCC/Clang tests and Android ARM64 cross-compilation; review borrowed-service lifetime and decoder thread-safety contracts.
+2. Extend the asset layer with explicit cancellation/lifetime, dependency graph and cache policy only after the initial contract is verified.
 3. Compare renderer candidates and define an engine-owned 2D/3D API without prematurely locking a backend.
 4. Continue DMod package trust/signatures, capability enforcement and interpreter integration/security review.
