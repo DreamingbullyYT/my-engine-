@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.21)
 project(DreamEngineBgfxCompileProof LANGUAGES C CXX)
 
 foreach(required_dir IN ITEMS BGFX_CMAKE_SOURCE_DIR BGFX_DIR BX_DIR BIMG_DIR)
-    if(NOT DEFINED \${required_dir} OR "\${\${required_dir}}" STREQUAL "")
-        message(FATAL_ERROR "\${required_dir} must point to a pinned source checkout")
+    if(NOT DEFINED ${required_dir} OR "${${required_dir}}" STREQUAL "")
+        message(FATAL_ERROR "${required_dir} must point to a pinned source checkout")
     endif()
 endforeach()
 
@@ -25,7 +25,7 @@ set(BIMG_CONFIG_DECODE_ENABLE OFF CACHE BOOL "" FORCE)
 set(BIMG_CONFIG_PARSE_ENABLE OFF CACHE BOOL "" FORCE)
 set(BIMG_CONFIG_USE_STB_IMAGE OFF CACHE BOOL "" FORCE)
 
-add_subdirectory("\${BGFX_CMAKE_SOURCE_DIR}" bgfx-cmake)
+add_subdirectory("${BGFX_CMAKE_SOURCE_DIR}" bgfx-cmake)
 
 add_executable(dream_bgfx_compile_proof main.cpp)
 target_compile_features(dream_bgfx_compile_proof PRIVATE cxx_std_20)
@@ -38,5 +38,5 @@ if(ANDROID)
     find_library(ANDROID_GLES_LIB GLESv2 REQUIRED)
     find_library(ANDROID_LOG_LIB log REQUIRED)
     target_link_libraries(dream_bgfx_compile_proof PRIVATE
-        \${ANDROID_SYSTEM_LIB} \${ANDROID_EGL_LIB} \${ANDROID_GLES_LIB} \${ANDROID_LOG_LIB})
+        ${ANDROID_SYSTEM_LIB} ${ANDROID_EGL_LIB} ${ANDROID_GLES_LIB} ${ANDROID_LOG_LIB})
 endif()
