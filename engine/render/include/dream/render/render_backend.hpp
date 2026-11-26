@@ -3,6 +3,9 @@
 #include <dream/platform/surface.hpp>
 #include <dream/render/render_types.hpp>
 
+#include <cstddef>
+#include <limits>
+#include <span>
 #include <string>
 
 namespace dream::render {
@@ -18,7 +21,9 @@ enum class RenderError : std::uint8_t {
     BackendInitializationFailed,
     BackendResizeFailed,
     InvalidFrame,
-    BackendRenderFailed
+    BackendRenderFailed,
+    InvalidResource,
+    BackendResourceFailed
 };
 
 struct RenderResult final {
@@ -53,6 +58,25 @@ public:
 
     [[nodiscard]] virtual bool render(
         const RenderFramePacket& frame, std::string& error) = 0;
+
+    // RGBA8 texture upload. Asset ID zero is reserved for backend-owned white
+    // texture/default material and cannot be registered by callers.
+    [[nodiscard]] virtual bool create_texture_rgba8(
+        RenderAssetId texture_id, Extent2D extent,
+        std::span<const std::byte> pixels, std::string& error) {
+        (void)texture_id;
+        (void)extent;
+        (void)pixels;
+        error = "Render backend does not support texture uploads";
+        return false;
+    }
+
+    [[nodiscard]] virtual bool destroy_texture(
+        RenderAssetId texture_id, std::string& error) {
+        (void)texture_id;
+        error = "Render backend does not support texture destruction";
+        return false;
+    }
 
     virtual void shutdown() noexcept = 0;
 };
@@ -150,6 +174,51 @@ public:
             }
         }
         surface_info_ = latest;
+        return {};
+    }
+
+    [[nodiscard]] RenderResult create_texture_rgba8(
+        RenderAssetId texture_id, Extent2D extent,
+        std::span<const std::byte> pixels) {
+        if (!initialized_)
+            return {RenderError::NotInitialized, {}, "RenderDevice is not initialized"};
+        if (texture_id == 0U || !extent.valid() ||
+            extent.width > std::numeric_limits<std::size_t>::max() / 4U / extent.height) {
+            return {
+                RenderError::InvalidResource, {},
+                "Texture ID and RGBA8 dimensions must be valid"
+            };
+        }
+        const std::size_t expected_bytes =
+            static_cast<std::size_t>(extent.width) *
+            static_cast<std::size_t>(extent.height) * 4U;
+        if (pixels.size() != expected_bytes ||
+            pixels.size() > std::numeric_limits<std::uint32_t>::max()) {
+            return {
+                RenderError::InvalidResource, {},
+                "RGBA8 texture data size does not match the requested extent"
+            };
+        }
+
+        std::string error;
+        if (!backend_.create_texture_rgba8(texture_id, extent, pixels, error)) {
+            return {RenderError::BackendResourceFailed, {}, std::move(error)};
+        }
+        return {};
+    }
+
+    [[nodiscard]] RenderResult destroy_texture(RenderAssetId texture_id) {
+        if (!initialized_)
+            return {RenderError::NotInitialized, {}, "RenderDevice is not initialized"};
+        if (texture_id == 0U)
+            return {
+                RenderError::InvalidResource, {},
+                "Texture ID zero is reserved for the backend white texture"
+            };
+
+        std::string error;
+        if (!backend_.destroy_texture(texture_id, error))
+            return {RenderError::BackendResourceFailed, {}, std::move(error)};
         return {};
     }
 
