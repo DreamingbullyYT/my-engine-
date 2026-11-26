@@ -391,29 +391,34 @@ int main() {
             "point outside every collider returns no results");
 
     PhysicsWorld2D invalid_bounds(PhysicsSettings2D{.gravity = {0, 0}});
-    const float huge = std::numeric_limits<float>::max() * 0.75F;
+    const float safe_large_radius =
+        std::sqrt(std::numeric_limits<float>::max()) * 0.5F;
     const auto edge_body = invalid_bounds.create_body(BodyDescription2D{
         .type = BodyType::Static,
         .position = {0, 0},
-        .collider = CircleCollider2D{{}, huge}
+        .collider = CircleCollider2D{{}, safe_large_radius}
     });
     require(static_cast<bool>(edge_body),
-            "large but finite static collider has valid initial bounds");
+            "large finite static collider with representable squared radius is accepted");
     const auto edge_state_before = invalid_bounds.body_state(edge_body.handle);
-    require(!invalid_bounds.set_transform(edge_body.handle, {huge, 0}, 0),
-            "transform producing infinite collider bounds is rejected");
+    require(!invalid_bounds.set_transform(
+                edge_body.handle,
+                {std::numeric_limits<float>::infinity(), 0}, 0),
+            "non-finite transform is rejected");
     const auto edge_state_after = invalid_bounds.body_state(edge_body.handle);
     require(edge_state_before && edge_state_after &&
             edge_state_after->position.x == edge_state_before->position.x,
-            "failed transform update restores the previous body transform");
+            "failed transform update leaves the previous body transform intact");
 
+    const float unrepresentable_radius =
+        std::numeric_limits<float>::max() * 0.75F;
     const auto overflowing_body = invalid_bounds.create_body(BodyDescription2D{
         .type = BodyType::Static,
-        .position = {huge, 0},
-        .collider = CircleCollider2D{{}, huge}
+        .position = {0, 0},
+        .collider = CircleCollider2D{{}, unrepresentable_radius}
     });
-    require(overflowing_body.error == BodyCreateError::InvalidWorldBounds,
-            "body with overflowing initial world bounds is rejected");
+    require(overflowing_body.error == BodyCreateError::InvalidCollider,
+            "collider radius with an overflowing squared extent is rejected");
 
     const auto tiny_dynamic = invalid_bounds.create_body(BodyDescription2D{
         .type = BodyType::Dynamic,

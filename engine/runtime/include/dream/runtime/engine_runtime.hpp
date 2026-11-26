@@ -198,7 +198,7 @@ public:
                         static_cast<float>(fixed_delta));
                     saturating_add(result.system_failures, report.failures.size());
                     if (report.error != world::SystemUpdateError::None)
-                        saturating_add(result.system_failures, 1U);
+                        saturating_add(result.system_failures, std::size_t{1});
                 });
         } catch (...) {
             result.error = RuntimeError::SimulationCallbackFailure;

@@ -33,6 +33,8 @@ int main() {
             "frame begins with valid size and delta");
     require(builder.set_camera_2d(CameraMatrices2D{}) == FrameBuilderError::None,
             "2D camera attaches");
+    require(builder.set_camera_3d(CameraMatrices3D{}) == FrameBuilderError::None,
+            "3D camera attaches");
 
     SpriteQuad2D high_layer;
     high_layer.transform = translation(10.0F, 20.0F);

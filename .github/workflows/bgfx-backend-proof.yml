@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - "tests/render/bgfx_backend_proof/**"
+      - "engine/render/bgfx/**"
+      - "CMakeLists.txt"
       - ".github/workflows/bgfx-backend-proof.yml"
 
 permissions:
