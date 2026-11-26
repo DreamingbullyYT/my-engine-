@@ -7,7 +7,9 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace dream::ui {
