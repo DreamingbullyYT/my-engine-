@@ -45,6 +45,15 @@ int main() {
     require(point3d.x == 5.0F && point3d.y == 4.0F && point3d.z == 5.0F,
             "3D transform composition applies parent scale and translation");
 
+    const float half_angle = 0.78539816339F;
+    const Transform3D rotated3d{
+        {}, {0.0F, 0.0F, std::sin(half_angle), std::cos(half_angle)}, {1, 1, 1}};
+    const auto rotated_point = dream::world::transform_point(
+        dream::world::transform_matrix(rotated3d), {1.0F, 0.0F, 0.0F});
+    require(rotated_point.x > -0.001F && rotated_point.x < 0.001F &&
+            rotated_point.y > 0.999F && rotated_point.y < 1.001F,
+            "3D quaternion transform rotates vectors");
+
     World world;
     const auto invalid = dream::world::Entity{};
     require(!world.is_alive(invalid), "default entity is invalid");
@@ -86,7 +95,7 @@ int main() {
     require(world.with_components<Position, Velocity>(
         first, [](dream::world::Entity entity, const Position& position,
                   const Velocity& velocity) {
-            require(entity, "multi-component callback receives entity");
+            require(static_cast<bool>(entity), "multi-component callback receives entity");
             require(position.x == 9.0F && velocity.x == 0.5F,
                     "multi-component callback receives matching components");
         }), "multi-component access succeeds");
