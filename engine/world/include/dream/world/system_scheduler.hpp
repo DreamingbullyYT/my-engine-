@@ -14,6 +14,8 @@
 #include <mutex>
 #include <shared_mutex>
 #include <string>
+#include <string_view>
+#include <exception>
 #include <utility>
 #include <vector>
 
@@ -47,6 +49,19 @@ struct SystemContext final {
     std::uint64_t frame_index{0};
 };
 
+struct SystemExecutionInfo final {
+    SystemHandle handle{};
+    std::string_view name;
+    SystemPhase phase{SystemPhase::Update};
+    std::int32_t priority{};
+    std::uint64_t registration_order{};
+};
+
+using SystemExecutionThunk = void (*)(void*) noexcept;
+using SystemExecutionDispatcher = void (*)(
+    void*, const SystemExecutionInfo&, World*&, SystemContext&,
+    SystemExecutionThunk, void*) noexcept;
+
 struct SystemAddResult final {
     SystemHandle handle{};
     SystemAddError error{SystemAddError::None};
@@ -78,10 +93,21 @@ struct SystemUpdateReport final {
 class SystemScheduler final {
 public:
     using Callback = std::function<void(World&, const SystemContext&)>;
+    using ExecutionDispatcher = SystemExecutionDispatcher;
 
     SystemScheduler() = default;
     SystemScheduler(const SystemScheduler&) = delete;
     SystemScheduler& operator=(const SystemScheduler&) = delete;
+
+    // Set during runtime construction. The dispatcher may wrap, repeat or
+    // replace individual system invocations. Keep it configured while update()
+    // is idle; the function/context are snapshotted for each tick.
+    void set_execution_dispatcher(
+        void* context, ExecutionDispatcher dispatcher) noexcept {
+        std::unique_lock lock(mutex_);
+        execution_dispatch_context_ = context;
+        execution_dispatcher_ = dispatcher;
+    }
 
     [[nodiscard]] SystemAddResult add_system(
         std::string name, SystemPhase phase, std::int32_t priority, Callback callback) {
@@ -136,6 +162,8 @@ public:
         } update_guard{updating_};
 
         std::vector<std::shared_ptr<Entry>> snapshot;
+        ExecutionDispatcher execution_dispatcher{};
+        void* execution_dispatch_context{};
         {
             std::unique_lock lock(mutex_);
             if (frame_index_ != UINT64_MAX) ++frame_index_;
@@ -145,6 +173,8 @@ public:
                 (void)index;
                 snapshot.push_back(entry);
             }
+            execution_dispatcher = execution_dispatcher_;
+            execution_dispatch_context = execution_dispatch_context_;
         }
 
         std::stable_sort(snapshot.begin(), snapshot.end(),
@@ -157,6 +187,24 @@ public:
             });
 
         const SystemContext context{delta_seconds, report.frame_index};
+        struct Invocation final {
+            Entry* entry{};
+            World* world{};
+            SystemContext context{};
+            std::exception_ptr failure{};
+        };
+        const auto invoke_system = [](void* opaque) noexcept {
+            if (opaque == nullptr) return;
+            auto& invocation = *static_cast<Invocation*>(opaque);
+            try {
+                if (invocation.world == nullptr)
+                    throw std::invalid_argument("System hook replaced World with null.");
+                invocation.entry->callback(*invocation.world, invocation.context);
+            } catch (...) {
+                invocation.failure = std::current_exception();
+            }
+        };
+
         for (const auto& entry : snapshot) {
             if (!entry->active.load(std::memory_order_acquire)) {
                 ++report.skipped;
@@ -164,13 +212,31 @@ public:
             }
 
             ++report.executed;
-            try {
-                entry->callback(world, context);
-            } catch (const std::exception& error) {
-                report.failures.push_back({entry->handle, entry->name, error.what()});
-            } catch (...) {
-                report.failures.push_back({
-                    entry->handle, entry->name, "Unknown exception"});
+            Invocation invocation{entry.get(), &world, context, {}};
+            if (execution_dispatcher != nullptr) {
+                const SystemExecutionInfo info{
+                    entry->handle, entry->name, entry->phase,
+                    entry->priority, entry->order
+                };
+                execution_dispatcher(
+                    execution_dispatch_context, info, invocation.world,
+                    invocation.context, &invoke_system, &invocation);
+            } else {
+                invoke_system(&invocation);
+            }
+
+            if (invocation.failure) {
+                try {
+                    std::rethrow_exception(invocation.failure);
+                } catch (const std::exception& error) {
+                    report.failures.push_back({
+                        entry->handle, entry->name, error.what()
+                    });
+                } catch (...) {
+                    report.failures.push_back({
+                        entry->handle, entry->name, "Unknown exception"
+                    });
+                }
             }
         }
         return report;
@@ -220,6 +286,8 @@ private:
     std::map<std::uint32_t, std::shared_ptr<Entry>> systems_;
     std::uint64_t next_order_{0};
     std::uint64_t frame_index_{0};
+    void* execution_dispatch_context_{};
+    ExecutionDispatcher execution_dispatcher_{};
 };
 
 } // namespace dream::world

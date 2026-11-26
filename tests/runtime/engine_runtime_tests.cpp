@@ -140,6 +140,20 @@ void begin_render_before(void* context, dmod::NativeHookInvocationV1* invocation
 void render_frame_after(void* context, dmod::NativeHookInvocationV1*) noexcept {
     if (context) ++static_cast<RenderHookProbe*>(context)->render_calls;
 }
+struct SceneSystemHookProbe final {
+    std::size_t bypassed_calls{0};
+};
+void replace_scene_system(void* context, dmod::NativeHookInvocationV1* invocation) noexcept {
+    if (!context || !invocation || !invocation->user_data) return;
+    auto& probe = *static_cast<SceneSystemHookProbe*>(context);
+    auto& call = *static_cast<RuntimeSystemHookDataV1*>(invocation->user_data);
+    if (call.system.name == "game.hooked") {
+        ++probe.bypassed_calls;
+        return; // Intentionally do not invoke call_next: replace this system.
+    }
+    if (invocation->call_next)
+        (void)invocation->call_next(invocation->next_context);
+}
 }
 
 int main() {
@@ -190,6 +204,7 @@ int main() {
 
     std::vector<std::string> phases;
     std::size_t observed_jump_ticks = 0;
+    std::size_t suppressed_system_body_calls = 0;
     const auto pre = runtime.scene().systems().add_system(
         "game.pre", SystemPhase::PreUpdate, 0,
         [&phases](World&, const SystemContext&) { phases.emplace_back("pre"); });
@@ -206,13 +221,20 @@ int main() {
     const auto post = runtime.scene().systems().add_system(
         "game.post", SystemPhase::PostUpdate, 0,
         [&phases](World&, const SystemContext&) { phases.emplace_back("post"); });
-    require(pre && update && post, "runtime scene accepts application systems");
+    const auto hooked_system = runtime.scene().systems().add_system(
+        "game.hooked", SystemPhase::Update, -1,
+        [&suppressed_system_body_calls](World&, const SystemContext&) {
+            ++suppressed_system_body_calls;
+        });
+    require(pre && update && post && hooked_system,
+            "runtime scene accepts application systems");
     require(static_cast<bool>(runtime.physics_system()),
             "runtime registers its built-in PhysicsWorld2D system");
 
     UpdateHookProbe update_hook_probe{&runtime, 0};
     PhysicsHookProbe physics_hook_probe;
     RenderHookProbe render_hook_probe;
+    SceneSystemHookProbe scene_system_hook_probe;
     auto& runtime_hooks = runtime.mods().hook_registry();
     const auto update_before = runtime_hooks.register_hook(
         "test.runtime", hook_points::runtime_update, dmod::NativeHookStage::Before,
@@ -229,7 +251,11 @@ int main() {
     const auto render_after = runtime_hooks.register_hook(
         "test.runtime", hook_points::render_frame, dmod::NativeHookStage::After,
         0, &render_frame_after, &render_hook_probe);
-    require(update_before && update_after && physics_after && begin_before && render_after,
+    const auto system_replace = runtime_hooks.register_hook(
+        "test.runtime", hook_points::scene_system, dmod::NativeHookStage::Replace,
+        0, &replace_scene_system, &scene_system_hook_probe);
+    require(update_before && update_after && physics_after && begin_before &&
+            render_after && system_replace,
             "game code can register native hooks at runtime extension points");
 
     InputEvent key_down;
@@ -241,8 +267,10 @@ int main() {
     require(static_cast<bool>(first_update) &&
             first_update.fixed_step.steps_executed == 2U &&
             first_update.fixed_step.tick_index == 2U &&
-            update_hook_probe.calls == 1U && physics_hook_probe.calls == 2U,
-            "runtime update and each fixed Physics2D step execute registered hooks");
+            update_hook_probe.calls == 1U && physics_hook_probe.calls == 2U &&
+            scene_system_hook_probe.bypassed_calls == 2U &&
+            suppressed_system_body_calls == 0U,
+            "runtime, physics steps and per-system scene hooks execute in the fixed loop");
     require(first_update.input_events_handled == 1U,
             "runtime forwards platform input into ActionMap");
     require(observed_jump_ticks == 2U,
@@ -285,8 +313,10 @@ int main() {
     require(static_cast<bool>(second_update) &&
             second_update.fixed_step.steps_executed == 1U &&
             second_update.fixed_step.tick_index == 3U &&
-            update_hook_probe.calls == 2U && physics_hook_probe.calls == 3U,
-            "update hooks preserve fractional time while running for every update/physics tick");
+            update_hook_probe.calls == 2U && physics_hook_probe.calls == 3U &&
+            scene_system_hook_probe.bypassed_calls == 3U &&
+            suppressed_system_body_calls == 0U,
+            "scene system replace hooks run for each fixed simulation tick");
     const auto jump = runtime.actions().state("jump");
     require(jump && !jump->down && jump->just_released,
             "runtime resets frame edges and processes the release event");
@@ -307,7 +337,7 @@ int main() {
             "runtime rejects duplicate initialization");
 
     for (const auto registration : {update_before, update_after, physics_after,
-                                    begin_before, render_after})
+                                    begin_before, render_after, system_replace})
         require(runtime_hooks.remove_hook(registration),
                 "remove runtime test hook registration");
     runtime.shutdown();

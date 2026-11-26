@@ -89,6 +89,7 @@ class EngineRuntime;
 namespace hook_points {
 inline constexpr char runtime_update[] = "dream.engine.runtime.update";
 inline constexpr char physics2d_step[] = "dream.engine.physics2d.step";
+inline constexpr char scene_system[] = "dream.engine.scene.system";
 inline constexpr char begin_render_frame[] = "dream.engine.runtime.begin_render_frame";
 inline constexpr char render_frame[] = "dream.engine.runtime.render_frame";
 } // namespace hook_points
@@ -106,6 +107,14 @@ struct RuntimePhysics2DStepHookDataV1 final {
     EngineRuntime* runtime{};
     float delta_seconds{};
     physics2d::PhysicsStepReport2D report{};
+};
+struct RuntimeSystemHookDataV1 final {
+    EngineRuntime* runtime{};
+    world::SystemExecutionInfo system{};
+    // Pointers refer to the current scheduler invocation and are valid only
+    // while this native hook dispatch is executing.
+    world::World** world{};
+    world::SystemContext* context{};
 };
 
 struct RuntimeBeginRenderFrameHookDataV1 final {
@@ -163,6 +172,9 @@ public:
         interfaces_valid = mod_host_.expose("dream.engine.render.device", 1, render_device_) && interfaces_valid;
         interfaces_valid = mod_host_.expose("dream.engine.mods.manager", 1, mod_manager_) && interfaces_valid;
         interfaces_valid = mod_host_.expose("dream.engine.mods.hooks", 1, mod_manager_.hook_registry()) && interfaces_valid;
+
+        scene_.systems().set_execution_dispatcher(
+            this, &EngineRuntime::dispatch_scene_system);
 
         configuration_valid_ =
             interfaces_valid &&
@@ -355,6 +367,41 @@ public:
     }
 
 private:
+    static void dispatch_scene_system(
+        void* context,
+        const world::SystemExecutionInfo& system,
+        world::World*& world,
+        world::SystemContext& system_context,
+        world::SystemExecutionThunk original,
+        void* original_context) noexcept {
+        if (context == nullptr || original == nullptr) {
+            if (original != nullptr) original(original_context);
+            return;
+        }
+        auto& runtime = *static_cast<EngineRuntime*>(context);
+        struct SystemHookDispatchData final {
+            RuntimeSystemHookDataV1 public_data{};
+            world::SystemExecutionThunk original{};
+            void* original_context{};
+        } dispatch_data{
+            RuntimeSystemHookDataV1{&runtime, system, &world, &system_context},
+            original, original_context
+        };
+
+        (void)runtime.mod_manager_.dispatch_hooks(
+            hook_points::scene_system,
+            &dispatch_data.public_data,
+            [](void* opaque) noexcept {
+                // The bridge is immediately following the public context in
+                // SystemHookDispatchData; recover it by pointer arithmetic
+                // through a stable aggregate layout.
+                auto* public_data = static_cast<RuntimeSystemHookDataV1*>(opaque);
+                auto* call = reinterpret_cast<SystemHookDispatchData*>(public_data);
+                if (call->original != nullptr)
+                    call->original(call->original_context);
+            });
+    }
+
     RuntimeUpdateResult update_unhooked(
         double frame_delta_seconds,
         std::span<const platform::InputEvent> input_events) {
