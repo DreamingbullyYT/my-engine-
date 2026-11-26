@@ -130,11 +130,17 @@ jobs:
 
       - name: Cross-compile world scheduler tests for Android ARM64
         run: |
-          \"$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++\" \\\n            -std=c++20 -Iengine/core/include -Iengine/world/include \\\n            -c tests/world/system_scheduler_tests.cpp \\\n            -o /tmp/world-scheduler-tests-android.o
+          "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
+            -std=c++20 -Iengine/core/include -Iengine/world/include \
+            -c tests/world/system_scheduler_tests.cpp \
+            -o /tmp/world-scheduler-tests-android.o
 
       - name: Cross-compile world ECS tests for Android ARM64
         run: |
-          \"$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++\" \\\n            -std=c++20 -Iengine/core/include -Iengine/world/include \\\n            -c tests/world/world_tests.cpp \\\n            -o /tmp/world-tests-android.o
+          "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
+            -std=c++20 -Iengine/core/include -Iengine/world/include \
+            -c tests/world/world_tests.cpp \
+            -o /tmp/world-tests-android.o
 
       - name: Cross-compile asset request coordinator tests for Android ARM64
         run: |
