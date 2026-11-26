@@ -334,6 +334,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     set_target_properties(dream_core_resource_store_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.core.resource_store COMMAND dream_core_resource_store_tests)
 
+    add_executable(dream_assets_import_pipeline_tests tests/assets/import_pipeline_tests.cpp)
+    target_link_libraries(dream_assets_import_pipeline_tests PRIVATE DreamEngine::Assets)
+    target_compile_features(dream_assets_import_pipeline_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_assets_import_pipeline_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.assets.import_pipeline COMMAND dream_assets_import_pipeline_tests)
+
     add_executable(dream_assets_loader_tests tests/assets/asset_loader_tests.cpp)
     target_link_libraries(dream_assets_loader_tests PRIVATE DreamEngine::Assets)
     target_compile_features(dream_assets_loader_tests PRIVATE cxx_std_20)

@@ -7,6 +7,10 @@ android {
     compileSdk = 36
     ndkVersion = "28.2.13676358"
 
+    buildFeatures {
+        prefab = true
+    }
+
     defaultConfig {
         applicationId = "dev.dreamengine.host"
         minSdk = 26
