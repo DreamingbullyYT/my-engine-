@@ -57,7 +57,7 @@ int main() {
     const float world_width = world_height * (800.0F / 600.0F);
     const Vec2 right_edge = transform_point(
         matrices2d.view_projection,
-        {camera2d.position.x, camera2d.position.y - world_width * 0.5F});
+        {camera2d.position.x, camera2d.position.y + world_width * 0.5F});
     require(near(right_edge.x, 1.0F),
             "2D projection respects aspect ratio and rotation");
 
