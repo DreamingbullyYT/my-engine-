@@ -1,7 +1,10 @@
 #include <dream/physics3d/broadphase.hpp>
+
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <string_view>
+#include <vector>
 
 namespace {
 using namespace dream::physics3d;
@@ -23,6 +26,15 @@ int main() {
     require(broadphase.upsert(10,box(1.5F)),"second proxy inserts");
     require(broadphase.upsert(30,box(0,1.5F)),"third proxy inserts");
     require(broadphase.upsert(20,box(8)),"distant proxy inserts");
+    const auto query=broadphase.query_aabb(
+        Aabb3D::from_center_half_extents({0,0,0},{1,1,1}));
+    require(query==std::vector<BroadphaseProxyId3D>{10U,30U,40U},
+        "AABB query returns exact candidates in stable ID order");
+    require(broadphase.query_aabb(Aabb3D{{2,0,0},{1,1,1}}).empty(),
+        "invalid AABB query is rejected");
+    require(broadphase.query_aabb(box(8)).empty() == false,
+        "distant proxy can be queried independently");
+
     const auto pairs=broadphase.compute_pairs();
     require(pairs.size()==3,"all overlapping AABB pairs are reported");
     require((pairs[0]==BroadphasePair3D{10,30}&&
@@ -31,6 +43,10 @@ int main() {
         "pairs are canonical and sorted independently of insertion order");
 
     require(broadphase.upsert(20,box(0)),"existing proxy can update bounds");
+    require(std::find(broadphase.query_aabb(box(0)).begin(),
+                      broadphase.query_aabb(box(0)).end(),20U)!=
+                broadphase.query_aabb(box(0)).end(),
+        "updating a proxy invalidates and rebuilds the query index");
     const auto updated=broadphase.compute_pairs();
     require(updated.size()==6,"updating a proxy refreshes candidate pairs");
     require(broadphase.contains(20),"proxy lookup succeeds");
