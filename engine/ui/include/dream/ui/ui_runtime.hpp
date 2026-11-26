@@ -126,6 +126,34 @@ public:
     [[nodiscard]] std::size_t node_count() const noexcept {return nodes_.size();}
     [[nodiscard]] UiNodeHandle focused_node() const noexcept {return focused_;}
 
+    // Traverses visible, enabled interactive nodes in stable tree order. This
+    // provides a predictable fallback navigation model for keyboard/gamepad UI.
+    [[nodiscard]] bool focus_next(bool reverse = false) {
+        std::vector<UiNodeHandle> focusable;
+        for (const auto handle : roots_) {
+            if (const auto* node = find_node(handle))
+                collect_focusable(*node, focusable);
+        }
+        if (focusable.empty()) {
+            set_focus({});
+            return false;
+        }
+
+        const auto current = std::find(
+            focusable.begin(), focusable.end(), focused_);
+        std::size_t next_index = 0U;
+        if (current == focusable.end()) {
+            next_index = reverse ? focusable.size() - 1U : 0U;
+        } else {
+            const auto index = static_cast<std::size_t>(
+                std::distance(focusable.begin(), current));
+            next_index = reverse
+                ? (index + focusable.size() - 1U) % focusable.size()
+                : (index + 1U) % focusable.size();
+        }
+        return focus(focusable[next_index]);
+    }
+
     [[nodiscard]] UiError layout(UiRect viewport,const IUiTextMetrics& metrics) {
         if(viewport.empty()||!finite(viewport)) return UiError::InvalidViewport;
         viewport_=viewport;
@@ -260,6 +288,19 @@ private:
         if(auto* n=find_node(h))push_event(UiEventType::FocusChanged,*n);
         else events_.push_back({UiEventType::FocusChanged,{},0});
     }
+    void collect_focusable(
+        const Node& node, std::vector<UiNodeHandle>& output) const {
+        if (!node.description.style.visible) return;
+        if (node.description.style.enabled &&
+            interactive(node.description.type)) {
+            output.push_back(node.handle);
+        }
+        for (const auto child : node.children) {
+            if (const auto* child_node = find_node(child))
+                collect_focusable(*child_node, output);
+        }
+    }
+
     void push_event(UiEventType type,const Node& n) {
         events_.push_back({type,n.handle,n.value});
     }

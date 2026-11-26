@@ -732,7 +732,46 @@ private:
 
         action_map_.begin_frame();
         for (const auto& event : input_events) {
-            if (action_map_.process_event(event))
+            bool handled = action_map_.process_event(event);
+            switch (event.type) {
+            case platform::InputEventType::PointerDown:
+                handled = ui_runtime_.pointer_event({
+                    ui::PointerAction::Down, event.x, event.y}) ==
+                    ui::UiError::None || handled;
+                break;
+            case platform::InputEventType::PointerMove:
+                handled = ui_runtime_.pointer_event({
+                    ui::PointerAction::Move, event.x, event.y}) ==
+                    ui::UiError::None || handled;
+                break;
+            case platform::InputEventType::PointerUp:
+                handled = ui_runtime_.pointer_event({
+                    ui::PointerAction::Up, event.x, event.y}) ==
+                    ui::UiError::None || handled;
+                break;
+            case platform::InputEventType::PointerCancel:
+                handled = ui_runtime_.pointer_event({
+                    ui::PointerAction::Cancel, event.x, event.y}) ==
+                    ui::UiError::None || handled;
+                break;
+            case platform::InputEventType::KeyDown:
+                // USB HID Keyboard/Keypad usages: Tab, Enter, arrows and Space.
+                if (event.key_code == 0x28U || event.key_code == 0x2CU) {
+                    handled = ui_runtime_.activate_focused() || handled;
+                } else if (event.key_code == 0x2BU ||
+                           event.key_code == 0x4FU ||
+                           event.key_code == 0x50U ||
+                           event.key_code == 0x51U ||
+                           event.key_code == 0x52U) {
+                    const bool reverse = event.modifiers.shift ||
+                        event.key_code == 0x50U || event.key_code == 0x52U;
+                    handled = ui_runtime_.focus_next(reverse) || handled;
+                }
+                break;
+            default:
+                break;
+            }
+            if (handled)
                 saturating_add(result.input_events_handled, std::size_t{1});
         }
 

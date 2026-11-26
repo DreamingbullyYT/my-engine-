@@ -366,10 +366,40 @@ int main() {
     render_panel.style.height = dream::ui::UiSize::fixed(30.0F);
     render_panel.style.background = {0.1F, 0.2F, 0.3F, 1.0F};
     const auto render_panel_node = runtime.ui().create_node({}, render_panel);
+    dream::ui::UiNodeDescription render_button;
+    render_button.type = dream::ui::UiNodeType::Button;
+    render_button.style.width = dream::ui::UiSize::fill();
+    render_button.style.height = dream::ui::UiSize::fixed(32.0F);
+    const auto render_button_node = runtime.ui().create_node(
+        render_panel_node.handle, render_button);
     require(static_cast<bool>(render_panel_node) &&
+            static_cast<bool>(render_button_node) &&
             runtime.ui().layout({0, 0, 640, 480}, ui_metrics) ==
                 dream::ui::UiError::None,
-            "retained UI panel lays out in the logical window viewport");
+            "retained UI panel and touch button lay out in the logical viewport");
+    const auto button_state = runtime.ui().state(render_button_node.handle);
+    require(button_state.has_value(), "runtime UI exposes its button bounds");
+    InputEvent pointer_down;
+    pointer_down.type = InputEventType::PointerDown;
+    pointer_down.x = button_state->rect.x + 4.0F;
+    pointer_down.y = button_state->rect.y + 4.0F;
+    InputEvent pointer_up = pointer_down;
+    pointer_up.type = InputEventType::PointerUp;
+    const std::array<InputEvent, 2> ui_pointer_events{pointer_down, pointer_up};
+    const auto ui_input_update = runtime.update(0.0, ui_pointer_events);
+    require(static_cast<bool>(ui_input_update) &&
+            ui_input_update.input_events_handled == 2U,
+            "EngineRuntime routes Android-style pointer input to retained UI");
+    bool runtime_button_clicked = false;
+    dream::ui::UiEvent runtime_ui_event;
+    while (runtime.ui().pop_event(runtime_ui_event)) {
+        if (runtime_ui_event.type == dream::ui::UiEventType::Clicked &&
+            runtime_ui_event.target == render_button_node.handle) {
+            runtime_button_clicked = true;
+        }
+    }
+    require(runtime_button_clicked,
+            "runtime pointer routing produces a retained UI Clicked event");
     require(runtime.frame_builder().set_camera_2d(CameraMatrices2D{}) ==
                 FrameBuilderError::None,
             "runtime frame builder accepts a 2D camera");
@@ -400,7 +430,7 @@ int main() {
     require(static_cast<bool>(second_update) &&
             second_update.fixed_step.steps_executed == 1U &&
             second_update.fixed_step.tick_index == 3U &&
-            update_hook_probe.calls == 2U && physics_hook_probe.calls == 3U &&
+            update_hook_probe.calls == 3U && physics_hook_probe.calls == 3U &&
             scene_system_hook_probe.bypassed_calls == 3U &&
             service_hook_probe.animation_calls == 3U &&
             suppressed_system_body_calls == 0U,

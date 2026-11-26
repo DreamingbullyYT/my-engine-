@@ -49,6 +49,15 @@ int main(){
         "vertical flex layout fills button width and keeps fixed height");
     require(ss&&ss->rect.y>bs->rect.y,"children are arranged in order");
 
+    require(ui.focus_next() && ui.focused_node()==button.handle,
+        "focus traversal selects the first visible interactive node");
+    require(ui.focus_next() && ui.focused_node()==toggle.handle,
+        "focus traversal advances in stable tree order");
+    require(ui.focus_next(true) && ui.focused_node()==button.handle,
+        "reverse focus traversal moves to the previous interactive node");
+    require(ui.activate_focused(),
+        "keyboard activation triggers the focused button");
+
     ui.pointer_event({PointerAction::Down,bs->rect.x+10,bs->rect.y+10});
     ui.pointer_event({PointerAction::Up,bs->rect.x+10,bs->rect.y+10});
     UiEvent ev;bool clicked=false;

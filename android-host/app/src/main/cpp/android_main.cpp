@@ -8,6 +8,7 @@
 #include <dream/runtime/engine_runtime.hpp>
 #include <dream/world/camera.hpp>
 #include <dream/audio/android/aaudio_output.hpp>
+#include <dream/ui/bitmap_font.hpp>
 
 #if defined(__ANDROID__)
 #include <android/native_activity.h>
@@ -32,7 +33,7 @@ public:
     [[nodiscard]] dream::ui::UiVec2 measure(
         std::string_view text, float font_size) const noexcept override {
         return {
-            static_cast<float>(text.size()) * font_size * 0.5F,
+            static_cast<float>(text.size()) * font_size * (6.0F / 7.0F),
             font_size
         };
     }
@@ -41,7 +42,9 @@ public:
 struct DemoState final {
     dream::physics2d::BodyHandle player_2d{};
     dream::physics3d::BodyHandle3D ball_3d{};
+    dream::ui::UiNodeHandle root_panel{};
     dream::ui::UiNodeHandle status_panel{};
+    dream::ui::UiNodeHandle action_button{};
     bool scene_created{false};
     bool gpu_resources_created{false};
     std::uint32_t ui_width{0};
@@ -108,19 +111,52 @@ bool create_demo_scene(
     }
     demo.ball_3d = ball_result.handle;
 
+    ui::UiNodeDescription root;
+    root.type = ui::UiNodeType::Panel;
+    root.style.width = ui::UiSize::fill();
+    root.style.height = ui::UiSize::fill();
+    root.style.padding = 12.0F;
+    root.style.align_items = ui::AlignItems::Start;
+    root.style.background = {0.0F, 0.0F, 0.0F, 0.0F};
+    const auto root_result = engine.ui().create_node({}, root);
+    if (!root_result) {
+        log_result(logger, LogLevel::error, "ui",
+                   "Could not create the Android demo root UI node");
+        return false;
+    }
+    demo.root_panel = root_result.handle;
+
     ui::UiNodeDescription panel;
     panel.type = ui::UiNodeType::Panel;
-    panel.style.width = ui::UiSize::fixed(260.0F);
-    panel.style.height = ui::UiSize::fixed(54.0F);
-    panel.style.padding = 10.0F;
-    panel.style.background = {0.035F, 0.055F, 0.09F, 0.88F};
-    const auto panel_result = engine.ui().create_node({}, panel);
+    panel.style.width = ui::UiSize::fixed(240.0F);
+    panel.style.height = ui::UiSize::fixed(56.0F);
+    panel.style.padding = 8.0F;
+    panel.style.background = {0.035F, 0.055F, 0.09F, 0.92F};
+    const auto panel_result = engine.ui().create_node(demo.root_panel, panel);
     if (!panel_result) {
         log_result(logger, LogLevel::error, "ui",
                    "Could not create the Android demo retained UI panel");
         return false;
     }
     demo.status_panel = panel_result.handle;
+
+    ui::UiNodeDescription button;
+    button.type = ui::UiNodeType::Button;
+    button.text = "TAP TO JUMP";
+    button.style.width = ui::UiSize::fill();
+    button.style.height = ui::UiSize::fixed(40.0F);
+    button.style.padding = 8.0F;
+    button.style.background = {0.12F, 0.38F, 0.72F, 1.0F};
+    button.style.foreground = {1.0F, 1.0F, 1.0F, 1.0F};
+    button.style.accent = {0.25F, 0.75F, 1.0F, 1.0F};
+    const auto button_result = engine.ui().create_node(
+        demo.status_panel, button);
+    if (!button_result) {
+        log_result(logger, LogLevel::error, "ui",
+                   "Could not create the Android demo touch button");
+        return false;
+    }
+    demo.action_button = button_result.handle;
     demo.scene_created = true;
 
     logger.write(LogLevel::info, "demo.scene",
@@ -204,11 +240,26 @@ void render_demo_frame(
     double delta_seconds,
     std::span<const dream::platform::InputEvent> input_events,
     HostUiMetrics& text_metrics,
+    const dream::ui::BitmapGlyphProvider5x7& glyph_provider,
     Logger& logger,
     bool renderer_ready) {
     using namespace dream;
 
     const auto update = engine.update(delta_seconds, input_events);
+    dream::ui::UiEvent ui_event;
+    while (engine.ui().pop_event(ui_event)) {
+        if (ui_event.type == dream::ui::UiEventType::Clicked &&
+            ui_event.target == demo.action_button) {
+            if (engine.physics2d().apply_impulse(
+                    demo.player_2d, {0.0F, 5.0F})) {
+                logger.write(LogLevel::info, "demo.input",
+                             "Touch button applied a jump impulse to the 2D player");
+            } else {
+                logger.write(LogLevel::warning, "demo.input",
+                             "Touch button was pressed but the jump impulse was rejected");
+            }
+        }
+    }
     if (!update) {
         logger.write(LogLevel::error, "runtime.update",
             "Engine update reported failure; error=" +
@@ -321,7 +372,8 @@ void render_demo_frame(
         }
     }
 
-    const auto ui_result = engine.enqueue_ui_draws(camera_2d, viewport);
+    const auto ui_result = engine.enqueue_ui_draws(
+        camera_2d, viewport, &glyph_provider);
     if (ui_result != ui::UiRenderError::None) return;
     const auto rendered = engine.render_frame();
     if (!rendered) {
@@ -398,6 +450,7 @@ extern "C" void android_main(android_app* app) {
     dream::platform::Application* application = nullptr;
     DemoState demo;
     HostUiMetrics text_metrics;
+    dream::ui::BitmapGlyphProvider5x7 bitmap_font;
     std::vector<dream::platform::InputEvent> input_events;
     input_events.reserve(128U);
 
@@ -507,7 +560,7 @@ extern "C" void android_main(android_app* app) {
         if (runtime_initialized) {
             render_demo_frame(
                 engine, backend, window, demo, delta_seconds,
-                input_events, text_metrics, logger,
+                input_events, text_metrics, bitmap_font, logger,
                 renderer_ready && !application_suspended);
         }
         if (audio_started && !audio_output.running()) {
