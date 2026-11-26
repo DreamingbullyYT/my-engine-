@@ -271,16 +271,15 @@ public:
            length_squared(ray.direction)<=1.0e-12F)return std::nullopt;
         const Vec3 direction=normalized(ray.direction);
         std::optional<RaycastHit3D> closest;
-        for(const auto& [index,body]:bodies_) {
-            (void)index;
+        for(const Body* body:ray_candidates(ray.origin,direction,ray.maximum_distance)) {
             const auto hit=raycast_shape(ray.origin,direction,
-                ray.maximum_distance,world_shape(body));
+                ray.maximum_distance,world_shape(*body));
             if(!hit)continue;
             if(!closest||hit->distance<closest->distance||
                (hit->distance==closest->distance&&
-                body.handle.index()<closest->body.index())) {
+                body->handle.index()<closest->body.index())) {
                 closest=RaycastHit3D{
-                    body.handle,hit->distance,hit->point,hit->normal,body.sensor};
+                    body->handle,hit->distance,hit->point,hit->normal,body->sensor};
             }
         }
         return closest;
@@ -292,13 +291,13 @@ public:
            !std::isfinite(ray.maximum_distance)||ray.maximum_distance<0.0F||
            length_squared(ray.direction)<=1.0e-12F)return hits;
         const Vec3 direction=normalized(ray.direction);
-        hits.reserve(bodies_.size());
-        for(const auto& [index,body]:bodies_) {
-            (void)index;
+        const auto candidates=ray_candidates(ray.origin,direction,ray.maximum_distance);
+        hits.reserve(candidates.size());
+        for(const Body* body:candidates) {
             const auto hit=raycast_shape(ray.origin,direction,
-                ray.maximum_distance,world_shape(body));
+                ray.maximum_distance,world_shape(*body));
             if(hit)hits.push_back({
-                body.handle,hit->distance,hit->point,hit->normal,body.sensor});
+                body->handle,hit->distance,hit->point,hit->normal,body->sensor});
         }
         std::sort(hits.begin(),hits.end(),[](const auto& a,const auto& b) {
             if(a.distance!=b.distance)return a.distance<b.distance;
@@ -312,9 +311,8 @@ public:
         std::vector<BodyHandle3D> overlaps;
         if(!query.valid())return overlaps;
         const WorldShape shape=query;
-        for(const auto& [index,body]:bodies_) {
-            (void)index;
-            if(collide_shapes(shape,world_shape(body)))overlaps.push_back(body.handle);
+        for(const Body* body:bodies_in_bounds(query.bounds())) {
+            if(collide_shapes(shape,world_shape(*body)))overlaps.push_back(body->handle);
         }
         return overlaps;
     }
@@ -324,9 +322,8 @@ public:
         std::vector<BodyHandle3D> overlaps;
         if(!query.valid())return overlaps;
         const WorldShape shape=query;
-        for(const auto& [index,body]:bodies_) {
-            (void)index;
-            if(collide_shapes(shape,world_shape(body)))overlaps.push_back(body.handle);
+        for(const Body* body:bodies_in_bounds(query.bounds())) {
+            if(collide_shapes(shape,world_shape(*body)))overlaps.push_back(body->handle);
         }
         return overlaps;
     }
@@ -586,6 +583,36 @@ private:
     }
     [[nodiscard]] bool update_proxy(const Body& b) {
         return broadphase_.upsert(proxy_id(b.handle),world_bounds(b));
+    }
+
+    [[nodiscard]] std::vector<const Body*> bodies_in_bounds(
+        const Aabb3D& bounds) const {
+        std::vector<const Body*> result;
+        for(const auto id:broadphase_.query_aabb(bounds)) {
+            if(id==0U) continue;
+            const auto it=bodies_.find(static_cast<std::uint32_t>(id-1U));
+            if(it!=bodies_.end()) result.push_back(&it->second);
+        }
+        return result;
+    }
+
+    [[nodiscard]] std::vector<const Body*> ray_candidates(
+        Vec3 origin,Vec3 direction,float maximum_distance) const {
+        const Vec3 end=origin+direction*maximum_distance;
+        if(!finite(end)) {
+            std::vector<const Body*> result;
+            result.reserve(bodies_.size());
+            for(const auto& [index,body]:bodies_) {
+                (void)index;
+                result.push_back(&body);
+            }
+            return result;
+        }
+        const Aabb3D bounds{
+            {std::min(origin.x,end.x),std::min(origin.y,end.y),std::min(origin.z,end.z)},
+            {std::max(origin.x,end.x),std::max(origin.y,end.y),std::max(origin.z,end.z)}
+        };
+        return bodies_in_bounds(bounds);
     }
     void rebuild_broadphase() {
         broadphase_.clear();
