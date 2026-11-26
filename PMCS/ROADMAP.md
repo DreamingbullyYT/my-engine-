@@ -35,7 +35,7 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [ ] Transform hierarchy.
 - [ ] Serialization and save/load contracts.
 - [x] Initial typed ResourceStore key-to-handle layer with duplicate-key rejection and scoped access.
-- [ ] Asset loading pipeline: file I/O, decoding, async scheduling, dependency tracking, caching policy and renderer upload (built above ResourceStore).
+- [ ] Asset pipeline: initial async read/decode/register helper implemented; awaiting CI verification. Dependency tracking, cancellation, cache policy and renderer upload remain future stages.
 
 ## P3 — Rendering
 - [ ] Compare renderer candidates.
