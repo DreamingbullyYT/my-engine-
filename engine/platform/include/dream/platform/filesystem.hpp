@@ -18,7 +18,8 @@ enum class FileError : std::uint8_t {
     NotDirectory,
     IsDirectory,
     Io,
-    Unsupported
+    Unsupported,
+    TooLarge
 };
 
 struct FileInfo final {
@@ -35,6 +36,7 @@ struct DirectoryEntry final {
 // Paths are UTF-8 virtual paths relative to a backend-defined root.
 // They must use '/' separators and may not escape that root.
 // Implementations should leave output unchanged when a read/list operation fails.
+// read_file must check file size before allocating and reject files larger than max_bytes.
 [[nodiscard]] bool is_valid_virtual_path(std::string_view path) noexcept;
 
 class IFileSystem {
@@ -43,7 +45,7 @@ public:
 
     [[nodiscard]] virtual bool read_file(
         std::string_view path, std::vector<std::byte>& output,
-        FileError& error) const = 0;
+        std::size_t max_bytes, FileError& error) const = 0;
     [[nodiscard]] virtual bool write_file(
         std::string_view path, std::span<const std::byte> data,
         FileError& error) = 0;
