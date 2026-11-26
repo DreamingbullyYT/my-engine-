@@ -124,6 +124,13 @@ int main() {
             replaced.callbacks_invoked == 1 && replaced_value == 77,
             "replace hook can completely replace the original operation");
 
+    std::int32_t fallback_value = 2;
+    const auto fallback = manager.dispatch_hooks(
+        "invalid/hook-point", &fallback_value, &increment_value);
+    require(static_cast<bool>(fallback) && fallback.original_called &&
+            fallback.callbacks_invoked == 0 && fallback_value == 3,
+            "invalid hook IDs never prevent the original game operation");
+
     require(manager.update(0.25), "run update");
     require(counter == 110, "update callback");
     require(!manager.update(-1.0), "reject negative delta");

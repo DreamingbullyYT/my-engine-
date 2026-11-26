@@ -439,7 +439,12 @@ NativeHookDispatchResult NativeModManager::dispatch_hooks(
     }
 
     begin_callback();
-    const auto result = hook_registry_.dispatch(hook_point_id, user_data, original);
+    auto result = hook_registry_.dispatch(hook_point_id, user_data, original);
+    if (!result.success) {
+        // A broken/invalid hook registration must never suppress the game operation.
+        original(user_data);
+        result = {true, true, 0};
+    }
     end_callback();
     return result;
 }
