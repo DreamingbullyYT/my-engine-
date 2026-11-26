@@ -191,7 +191,7 @@ bool NativeFileSystem::list_directory(std::string_view path,
     if(!valid()){error=FileError::Io;return false;}
     Fd directory;
     if(path.empty()){
-        directory=Fd(::dup(root_fd_));
+        directory=Fd(::openat(root_fd_,".",O_RDONLY|O_DIRECTORY|O_CLOEXEC|O_NOFOLLOW));
         if(directory.value<0){error=from_errno(errno);return false;}
     }else{
         std::vector<std::string> parts;
