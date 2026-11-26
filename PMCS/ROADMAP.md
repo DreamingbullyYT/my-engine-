@@ -35,7 +35,9 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [ ] Transform hierarchy.
 - [ ] Serialization and save/load contracts.
 - [x] Initial typed ResourceStore key-to-handle layer with duplicate-key rejection and scoped access.
-- [ ] Asset pipeline: initial async read/decode/register helper implemented; awaiting CI verification. Dependency tracking, cancellation, cache policy and renderer upload remain future stages.
+- [x] Async asset read/decode/register helper with bounded reads; Linux GCC/Clang tests and Android ARM64 cross-compilation passed in run 45765620129.
+- [ ] Deterministic asset dependency planner with required/optional dependency handling and cycle detection; implementation added, CI verification pending.
+- [ ] Asset cancellation/lifetime policy, cache/eviction policy and renderer upload.
 
 ## P3 — Rendering
 - [ ] Compare renderer candidates.
