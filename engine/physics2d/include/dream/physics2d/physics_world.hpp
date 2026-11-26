@@ -153,12 +153,24 @@ struct PhysicsContact2D final {
     bool sensor{false};
 };
 
+enum class ContactEventType2D : std::uint8_t {
+    Begin,
+    Stay,
+    End
+};
+
+struct ContactEvent2D final {
+    ContactEventType2D type{ContactEventType2D::Begin};
+    PhysicsContact2D contact{};
+};
+
 struct PhysicsStepReport2D final {
     PhysicsStepError error{PhysicsStepError::None};
     std::size_t body_count{0};
     std::size_t broadphase_pair_count{0};
     std::size_t contact_count{0};
     std::vector<PhysicsContact2D> contacts;
+    std::vector<ContactEvent2D> events;
 
     [[nodiscard]] explicit operator bool() const noexcept {
         return error == PhysicsStepError::None;
@@ -498,15 +510,39 @@ public:
             }
         }
 
+        using ContactPairKey =
+            std::pair<ColliderProxyId, ColliderProxyId>;
+        std::map<ContactPairKey, PhysicsContact2D> current_contacts;
         report.contacts.reserve(contacts.size());
         for (const auto& contact : contacts) {
-            report.contacts.push_back({
+            PhysicsContact2D state{
                 contact.first, contact.second, contact.manifold,
                 contact.normal_impulse, contact.tangent_impulse,
                 contact.sensor
-            });
+            };
+            report.contacts.push_back(state);
+            const auto first_proxy = proxy_id(contact.first);
+            const auto second_proxy = proxy_id(contact.second);
+            current_contacts.emplace(
+                std::minmax(first_proxy, second_proxy), state);
         }
         report.contact_count = report.contacts.size();
+
+        report.events.reserve(current_contacts.size() + previous_contacts_.size());
+        for (const auto& [key, contact] : current_contacts) {
+            const auto previous = previous_contacts_.find(key);
+            report.events.push_back({
+                previous == previous_contacts_.end()
+                    ? ContactEventType2D::Begin
+                    : ContactEventType2D::Stay,
+                contact
+            });
+        }
+        for (const auto& [key, contact] : previous_contacts_) {
+            if (current_contacts.contains(key)) continue;
+            report.events.push_back({ContactEventType2D::End, contact});
+        }
+        previous_contacts_ = std::move(current_contacts);
         return report;
     }
 
@@ -977,6 +1013,8 @@ private:
     core::HandlePool<BodyTag> handles_;
     std::map<std::uint32_t, Body> bodies_;
     SweepAndPrune broadphase_;
+    std::map<std::pair<ColliderProxyId, ColliderProxyId>, PhysicsContact2D>
+        previous_contacts_;
 };
 
 } // namespace dream::physics2d
