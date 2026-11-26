@@ -128,8 +128,7 @@ std::size_t NativeHookRegistry::remove_owner(std::string_view owner) noexcept {
 std::uint8_t NativeHookRegistry::call_next(void* context) noexcept {
     if (context == nullptr) return 0;
     auto& next = *static_cast<NextState*>(context);
-    if (next.consumed || next.chain == nullptr) return 0;
-    next.consumed = true;
+    if (next.chain == nullptr) return 0;
     invoke_chain(*next.chain, next.next_index);
     return 1;
 }
@@ -145,7 +144,7 @@ void NativeHookRegistry::invoke_chain(ChainState& state, std::size_t index) noex
     }
 
     const auto& entry = (*state.entries)[index];
-    NextState next{&state, index + 1U, false};
+    NextState next{&state, index + 1U};
     NativeHookInvocationV1 invocation{
         state.user_data, &next, &NativeHookRegistry::call_next
     };

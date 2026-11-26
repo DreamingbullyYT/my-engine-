@@ -28,6 +28,11 @@ void multiply_value_by_two(void*, dream::dmod::NativeHookInvocationV1* invocatio
     if (invocation && invocation->user_data)
         *static_cast<std::int32_t*>(invocation->user_data) *= 2;
 }
+void call_next_twice(void*, dream::dmod::NativeHookInvocationV1* invocation) noexcept {
+    if (!invocation || !invocation->call_next) return;
+    (void)invocation->call_next(invocation->next_context);
+    (void)invocation->call_next(invocation->next_context);
+}
 }
 int main() {
     using namespace dream::dmod;
@@ -130,6 +135,17 @@ int main() {
     require(static_cast<bool>(fallback) && fallback.original_called &&
             fallback.callbacks_invoked == 0 && fallback_value == 3,
             "invalid hook IDs never prevent the original game operation");
+
+    const auto repeat_hook = manager.hook_registry().register_hook(
+        "test.native", "test.game.repeat", NativeHookStage::Around,
+        10, &call_next_twice, nullptr);
+    require(repeat_hook != 0, "register a repeating around hook");
+    std::int32_t repeated_value = 0;
+    const auto repeated = manager.dispatch_hooks(
+        "test.game.repeat", &repeated_value, &increment_value);
+    require(static_cast<bool>(repeated) && repeated.original_called &&
+            repeated.callbacks_invoked == 1 && repeated_value == 2,
+            "around hooks may deliberately call the remaining chain more than once");
 
     require(manager.update(0.25), "run update");
     require(counter == 110, "update callback");

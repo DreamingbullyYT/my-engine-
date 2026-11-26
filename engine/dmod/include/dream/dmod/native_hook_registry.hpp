@@ -21,7 +21,8 @@ using NativeHookRegistrationId = std::uint64_t;
 
 // Hook points define their own argument/result structures. user_data points to
 // that caller-owned structure for the duration of dispatch. call_next is valid
-// only while an Around/Replace callback is executing and may be called once.
+// only while an Around/Replace callback is executing; each call invokes the
+// remaining chain again, so the original operation may intentionally run many times.
 struct NativeHookInvocationV1 final {
     void* user_data{};
     void* next_context{};
@@ -84,7 +85,6 @@ private:
     struct NextState final {
         ChainState* chain{};
         std::size_t next_index{};
-        bool consumed{false};
     };
 
     [[nodiscard]] static bool valid_identifier(std::string_view value) noexcept;
