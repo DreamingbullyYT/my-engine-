@@ -109,6 +109,15 @@ inline constexpr char animation_update[] = "dream.engine.animation.update";
 inline constexpr char asset_import[] = "dream.engine.assets.import";
 inline constexpr char ui_draw[] = "dream.engine.ui.draw";
 inline constexpr char audio_mix[] = "dream.engine.audio.mix";
+inline constexpr char world_entity_create[] = "dream.engine.world.entity.create";
+inline constexpr char world_entity_destroy[] = "dream.engine.world.entity.destroy";
+inline constexpr char world_component_emplace[] = "dream.engine.world.component.emplace";
+inline constexpr char world_component_remove[] = "dream.engine.world.component.remove";
+inline constexpr char world_component_modify[] = "dream.engine.world.component.modify";
+inline constexpr char world_components_modify[] = "dream.engine.world.components.modify";
+inline constexpr char world_components_iterate_mut[] = "dream.engine.world.components.iterate_mut";
+inline constexpr char world_parent_set[] = "dream.engine.world.parent.set";
+inline constexpr char world_parent_clear[] = "dream.engine.world.parent.clear";
 } // namespace hook_points
 
 // These contexts live only for the duration of a hook dispatch. Mods may mutate
@@ -235,6 +244,7 @@ public:
         interfaces_valid = mod_host_.expose("dream.engine.render.device", 1, render_device_) && interfaces_valid;
         interfaces_valid = mod_host_.expose("dream.engine.mods.manager", 1, mod_manager_) && interfaces_valid;
         interfaces_valid = mod_host_.expose("dream.engine.mods.hooks", 1, mod_manager_.hook_registry()) && interfaces_valid;
+        scene_.world().set_mutation_dispatcher(this, &EngineRuntime::dispatch_world_mutation);
 
         scene_.systems().set_execution_dispatcher(
             this, &EngineRuntime::dispatch_scene_system);
@@ -593,6 +603,7 @@ public:
         if (state_ == RuntimeState::Stopped) return;
         log_message(core::LogLevel::info, "runtime.lifecycle",
                     "EngineRuntime shutdown started");
+        scene_.world().set_mutation_dispatcher(nullptr, nullptr);
         mod_manager_.shutdown();
         render_device_.shutdown();
         simulation_clock_.reset();
@@ -681,6 +692,18 @@ private:
         } catch (...) {
             // Diagnostics must never turn a recoverable engine error into a crash.
         }
+    }
+
+    static void dispatch_world_mutation(void* context, std::string_view hook_point,
+        world::WorldMutationContext* mutation, world::WorldMutationOriginalV1 original, void* original_context) noexcept {
+        if (!context || !mutation) { if (original) original(original_context); return; }
+        auto& runtime = *static_cast<EngineRuntime*>(context);
+        struct OriginalCall final { world::WorldMutationOriginalV1 function{}; void* context{}; };
+        OriginalCall call{original, original_context};
+        (void)runtime.mod_manager_.dispatch_hooks(hook_point, mutation, [](void* opaque) noexcept {
+            if (!opaque) return; auto& value = *static_cast<OriginalCall*>(opaque);
+            if (value.function) value.function(value.context);
+        });
     }
 
     static void dispatch_scene_system(

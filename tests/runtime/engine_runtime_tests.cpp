@@ -1,5 +1,6 @@
 #include <dream/runtime/engine_runtime.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdlib>
@@ -150,6 +151,7 @@ void render_frame_after(void* context, dmod::NativeHookInvocationV1*) noexcept {
 struct SceneSystemHookProbe final {
     std::size_t bypassed_calls{0};
 };
+struct WorldMutationProbe final { std::array<std::size_t, 9> calls{}; bool query_safe{true}; };
 struct ServiceHookProbe final {
     std::size_t animation_calls{0};
     std::size_t asset_calls{0};
@@ -157,6 +159,13 @@ struct ServiceHookProbe final {
     std::size_t audio_calls{0};
 };
 
+void world_mutation_after(void* context, dmod::NativeHookInvocationV1* invocation) noexcept {
+    if (!context || !invocation || !invocation->user_data) return;
+    auto& probe = *static_cast<WorldMutationProbe*>(context);
+    const auto& data = *static_cast<dream::world::WorldMutationContext*>(invocation->user_data);
+    const auto index = static_cast<std::size_t>(data.kind); if (index < probe.calls.size()) ++probe.calls[index];
+    if (!data.world) probe.query_safe = false; else (void)data.world->entity_count();
+}
 void animation_update_after(void* context,dmod::NativeHookInvocationV1* invocation) noexcept {
     if (!context || !invocation || !invocation->user_data) return;
     auto& probe=*static_cast<ServiceHookProbe*>(context);
@@ -287,12 +296,20 @@ int main() {
             "runtime scene accepts application systems");
     require(static_cast<bool>(runtime.physics_system()),
             "runtime registers its built-in PhysicsWorld2D system");
+    struct HookedComponent final { int value{0}; };
+    struct HookedVelocity final { float value{0.0F}; };
+    auto& w = runtime.scene().world(); const auto parent = w.create_entity(); const auto child = w.create_entity();
+    require(parent && child && w.set_parent(child,parent) && w.emplace_component<HookedComponent>(parent,4) && w.emplace_component<HookedVelocity>(parent,1.5F), "runtime World accepts instrumented entity/component mutations");
+    require(w.with_component_mut<HookedComponent>(parent,[](HookedComponent& c){++c.value;}) && w.with_components_mut<HookedComponent,HookedVelocity>(parent,[](Entity,HookedComponent& c,HookedVelocity& v){++c.value;v.value*=2.0F;}) && w.for_each_mut<HookedComponent>([](Entity,HookedComponent& c){++c.value;})==1U, "single, multi-component and iteration writes flow through native hooks");
+    require(w.remove_component<HookedVelocity>(parent) && w.clear_parent(child) && w.destroy_entity(child) && w.destroy_entity(parent), "instrumented World cleanup succeeds");
+    require(world_mutation_probe.query_safe && world_mutation_probe.calls[0]==2U && world_mutation_probe.calls[1]==2U && world_mutation_probe.calls[2]==2U && world_mutation_probe.calls[3]==1U && world_mutation_probe.calls[4]==1U && world_mutation_probe.calls[5]==1U && world_mutation_probe.calls[6]==1U && world_mutation_probe.calls[7]==1U && world_mutation_probe.calls[8]==1U, "native mods observe all ECS mutation families outside the World lock");
 
     UpdateHookProbe update_hook_probe{&runtime, 0};
     PhysicsHookProbe physics_hook_probe;
     RenderHookProbe render_hook_probe;
     SceneSystemHookProbe scene_system_hook_probe;
     ServiceHookProbe service_hook_probe;
+    WorldMutationProbe world_mutation_probe;
     auto& runtime_hooks = runtime.mods().hook_registry();
     const auto animation_after = runtime_hooks.register_hook(
         "test.runtime", hook_points::animation_update, dmod::NativeHookStage::After,
@@ -306,6 +323,16 @@ int main() {
     const auto audio_after = runtime_hooks.register_hook(
         "test.runtime", hook_points::audio_mix, dmod::NativeHookStage::After,
         0, &audio_mix_after, &service_hook_probe);
+    const std::array<std::string_view, 9> world_points{
+        hook_points::world_entity_create, hook_points::world_entity_destroy,
+        hook_points::world_component_emplace, hook_points::world_component_remove,
+        hook_points::world_component_modify, hook_points::world_components_modify,
+        hook_points::world_components_iterate_mut, hook_points::world_parent_set,
+        hook_points::world_parent_clear};
+    std::array<dmod::NativeHookRegistrationId, 9> world_regs{};
+    for (std::size_t i = 0; i < world_points.size(); ++i)
+        world_regs[i] = runtime_hooks.register_hook("test.world", world_points[i],
+            dmod::NativeHookStage::After, 0, &world_mutation_after, &world_mutation_probe);
     const auto update_before = runtime_hooks.register_hook(
         "test.runtime", hook_points::runtime_update, dmod::NativeHookStage::Before,
         0, &runtime_update_before, &update_hook_probe);
@@ -326,7 +353,7 @@ int main() {
         0, &replace_scene_system, &scene_system_hook_probe);
     require(update_before && update_after && physics_after && begin_before &&
             render_after && system_replace && animation_after && asset_after &&
-            ui_after && audio_after,
+            ui_after && audio_after && std::all_of(world_regs.begin(), world_regs.end(), [](auto id){return id!=0U;}),
             "game code can register native hooks at runtime extension points");
 
     InputEvent key_down;
@@ -459,6 +486,8 @@ int main() {
                                     animation_after, ui_after})
         require(runtime_hooks.remove_hook(registration),
                 "remove runtime test hook registration");
+    for (const auto registration : world_regs)
+        require(runtime_hooks.remove_hook(registration), "remove World mutation test hook");
     // Runtime-owned service integration: native clients use the same live
     // systems that the fixed-step scene scheduler advances.
     auto& animation_service = runtime.animations();
