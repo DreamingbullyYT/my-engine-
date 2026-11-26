@@ -4,6 +4,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <algorithm>
+#include <iterator>
+#include <vector>
 #include <functional>
 #include <map>
 #include <mutex>
@@ -69,7 +72,7 @@ public:
         }
 
         try {
-            entries_.emplace(std::move(key), Entry{handle, estimated_bytes, next_stamp()});
+            entries_.emplace(key, Entry{handle, estimated_bytes, next_stamp()});
         } catch (...) {
             resources_.erase(key);
             throw;
@@ -142,12 +145,19 @@ private:
     [[nodiscard]] std::uint64_t next_stamp() noexcept {
         // On wrap, renormalize the small metadata set while preserving LRU order.
         if (clock_ == UINT64_MAX) {
-            std::uint64_t stamp = 1;
+            std::vector<Entry*> ordered;
+            ordered.reserve(entries_.size());
             for (auto& [key, entry] : entries_) {
                 (void)key;
-                entry.last_used = stamp++;
+                ordered.push_back(&entry);
             }
-            clock_ = stamp;
+            std::stable_sort(ordered.begin(), ordered.end(),
+                [](const Entry* left, const Entry* right) {
+                    return left->last_used < right->last_used;
+                });
+            std::uint64_t stamp = 1;
+            for (auto* entry : ordered) entry->last_used = stamp++;
+            clock_ = stamp - 1;
         }
         return ++clock_;
     }
