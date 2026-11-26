@@ -158,6 +158,11 @@ struct ServiceHookProbe final {
     std::size_t ui_calls{0};
     std::size_t audio_calls{0};
 };
+struct AssetLoadHookProbe final {
+    std::array<std::size_t,3> calls{};
+    std::uint64_t last_sequence{0U};
+    bool sequence_ordered{true};
+};
 
 void world_mutation_after(void* context, dmod::NativeHookInvocationV1* invocation) noexcept {
     if (!context || !invocation || !invocation->user_data) return;
@@ -179,6 +184,23 @@ void asset_import_after(void* context,dmod::NativeHookInvocationV1* invocation) 
     const auto& call=*static_cast<RuntimeAssetImportHookDataV1*>(invocation->user_data);
     if(call.importer && call.registry_error==assets::AssetImporterRegistryError::None)
         ++probe.asset_calls;
+}
+void asset_load_event_after(
+    void* context,dmod::NativeHookInvocationV1* invocation) noexcept {
+    if(!context||!invocation||!invocation->user_data) return;
+    auto& probe=*static_cast<AssetLoadHookProbe*>(context);
+    const auto& call=*static_cast<RuntimeAssetLoadHookDataV1*>(invocation->user_data);
+    if(call.event.sequence<=probe.last_sequence) probe.sequence_ordered=false;
+    probe.last_sequence=call.event.sequence;
+    std::size_t index=2U;
+    switch(call.event.phase) {
+    case assets::AssetLoadPhaseV1::ReadBegin:
+    case assets::AssetLoadPhaseV1::ReadComplete: index=0U; break;
+    case assets::AssetLoadPhaseV1::DecodeBegin:
+    case assets::AssetLoadPhaseV1::DecodeComplete: index=1U; break;
+    default: index=2U; break;
+    }
+    ++probe.calls[index];
 }
 void ui_draw_after(void* context,dmod::NativeHookInvocationV1* invocation) noexcept {
     if (!context || !invocation || !invocation->user_data) return;
@@ -311,6 +333,16 @@ int main() {
     const auto asset_after = runtime_hooks.register_hook(
         "test.runtime", hook_points::asset_import, dmod::NativeHookStage::After,
         0, &asset_import_after, &service_hook_probe);
+    AssetLoadHookProbe asset_load_hook_probe;
+    const auto asset_read_after = runtime_hooks.register_hook(
+        "test.runtime", hook_points::asset_read, dmod::NativeHookStage::After,
+        0, &asset_load_event_after, &asset_load_hook_probe);
+    const auto asset_decode_after = runtime_hooks.register_hook(
+        "test.runtime", hook_points::asset_decode, dmod::NativeHookStage::After,
+        0, &asset_load_event_after, &asset_load_hook_probe);
+    const auto asset_register_after = runtime_hooks.register_hook(
+        "test.runtime", hook_points::asset_register, dmod::NativeHookStage::After,
+        0, &asset_load_event_after, &asset_load_hook_probe);
     const auto ui_after = runtime_hooks.register_hook(
         "test.runtime", hook_points::ui_draw, dmod::NativeHookStage::After,
         0, &ui_draw_after, &service_hook_probe);
@@ -347,6 +379,7 @@ int main() {
         0, &replace_scene_system, &scene_system_hook_probe);
     require(update_before && update_after && physics_after && begin_before &&
             render_after && system_replace && animation_after && asset_after &&
+            asset_read_after && asset_decode_after && asset_register_after &&
             ui_after && audio_after && std::all_of(world_regs.begin(), world_regs.end(), [](auto id){return id!=0U;}),
             "game code can register native hooks at runtime extension points");
 
@@ -388,6 +421,23 @@ int main() {
     key_down.key_code = 0x2CU;
     key_down.timestamp_ns = 100U;
     const std::array<InputEvent, 1> first_events{key_down};
+    auto asset_observer=runtime.asset_load_observer();
+    constexpr std::array asset_phases{
+        assets::AssetLoadPhaseV1::ReadBegin,
+        assets::AssetLoadPhaseV1::ReadComplete,
+        assets::AssetLoadPhaseV1::DecodeBegin,
+        assets::AssetLoadPhaseV1::DecodeComplete,
+        assets::AssetLoadPhaseV1::ResourceRegisterBegin,
+        assets::AssetLoadPhaseV1::ResourceRegisterComplete
+    };
+    for(const auto phase:asset_phases) {
+        assets::AssetLoadEventV1 event;
+        event.phase=phase;
+        event.key="runtime/test-asset";
+        event.virtual_path="assets/test.bin";
+        event.succeeded=true;
+        asset_observer.emit(event);
+    }
     const auto first_update = runtime.update(0.25, first_events);
     require(static_cast<bool>(first_update) &&
             first_update.fixed_step.steps_executed == 2U &&
@@ -396,6 +446,10 @@ int main() {
             scene_system_hook_probe.bypassed_calls == 2U &&
             suppressed_system_body_calls == 0U,
             "runtime, physics steps and per-system scene hooks execute in the fixed loop");
+    require(asset_load_hook_probe.calls==std::array<std::size_t,3>{2U,2U,2U} &&
+            asset_load_hook_probe.sequence_ordered &&
+            asset_load_hook_probe.last_sequence==asset_phases.size(),
+            "worker asset lifecycle events are queued and dispatched to native hooks on update thread");
     require(first_update.input_events_handled == 1U,
             "runtime forwards platform input into ActionMap");
     require(observed_jump_ticks == 2U,
@@ -575,6 +629,9 @@ int main() {
             service_hook_probe.asset_calls == 1U,
             "runtime invokes the built-in OBJ importer through the mod hook registry");
     require(runtime_hooks.remove_hook(asset_after) &&
+            runtime_hooks.remove_hook(asset_read_after) &&
+            runtime_hooks.remove_hook(asset_decode_after) &&
+            runtime_hooks.remove_hook(asset_register_after) &&
             runtime_hooks.remove_hook(audio_after),
             "asset and audio service hooks unregister after their tests");
 
