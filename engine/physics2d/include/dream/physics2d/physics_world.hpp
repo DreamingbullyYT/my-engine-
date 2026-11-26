@@ -61,6 +61,8 @@ struct BodyDescription2D final {
     ColliderShape2D collider{CircleCollider2D{}};
     CollisionFilter2D collision_filter{};
     bool sensor{false};
+    // Opt into continuous collision detection for fast circle projectiles.
+    bool bullet{false};
 };
 
 struct PhysicsSettings2D final {
@@ -182,9 +184,9 @@ struct PhysicsStepReport2D final {
 // and a sequential impulse normal/friction solver. Call with a fixed delta for
 // stable simulation (FixedStepClock is provided by Core).
 //
-// Current limitations are deliberate: no joints, CCD, sleeping, persistent
-// warm-start cache, multiple fixtures per body or continuous contact callbacks.
-// OBB-OBB manifolds currently contain one approximate contact point.
+// Optional bullet CCD is exact for circle-vs-static-circle impacts; all other
+// shape combinations use the discrete solver. Joints, sleeping, persistent
+// warm-start cache, multiple fixtures and multi-point OBB clipping remain open.
 class PhysicsWorld2D final {
 public:
     explicit PhysicsWorld2D(PhysicsSettings2D settings = {}) noexcept
@@ -434,7 +436,12 @@ public:
                     1.0F / (1.0F + next.angular_damping * delta);
                 next.velocity = next.velocity * linear_factor;
                 next.angular_velocity *= angular_factor;
-                next.position = next.position + next.velocity * delta;
+                if (next.bullet && next.type == BodyType::Dynamic) {
+                    const auto impact=sweep_bullet_circle(current,next.velocity,delta);
+                    next.position=impact?*impact:next.position+next.velocity*delta;
+                } else {
+                    next.position=next.position+next.velocity*delta;
+                }
                 next.rotation += next.angular_velocity * delta;
             }
 
@@ -574,6 +581,7 @@ private:
         ColliderShape2D collider{CircleCollider2D{}};
         CollisionFilter2D collision_filter{};
         bool sensor{false};
+        bool bullet{false};
     };
 
     using WorldShape = std::variant<Circle, OrientedBox>;
@@ -695,6 +703,7 @@ private:
         body.collider = std::move(description.collider);
         body.collision_filter = description.collision_filter;
         body.sensor = description.sensor;
+        body.bullet = description.bullet;
 
         const float inertia = std::visit([&](const auto& collider) {
             using Collider = std::decay_t<decltype(collider)>;
@@ -721,6 +730,46 @@ private:
     [[nodiscard]] static ColliderProxyId proxy_id(BodyHandle handle) noexcept {
         return (static_cast<std::uint64_t>(handle.index()) << 32U) |
                static_cast<std::uint64_t>(handle.generation());
+    }
+
+    [[nodiscard]] std::optional<Vec2> sweep_bullet_circle(
+        const Body& bullet,Vec2 velocity,float delta) const {
+        const auto* moving=std::get_if<CircleCollider2D>(&bullet.collider);
+        if(!moving||bullet.sensor||length_squared(moving->local_center)>1.0e-12F)
+            return std::nullopt;
+        const Vec2 start=bullet.position,end=start+velocity*delta;
+        const float radius=moving->radius;
+        const Aabb swept{
+            {std::min(start.x,end.x)-radius,std::min(start.y,end.y)-radius},
+            {std::max(start.x,end.x)+radius,std::max(start.y,end.y)+radius}};
+        const float speed_squared=length_squared(velocity);
+        if(speed_squared<=1.0e-12F)return std::nullopt;
+        float earliest=delta+1.0F;
+        std::optional<Vec2> impact_position;
+        for(const auto proxy:broadphase_.query_aabb(swept)) {
+            const Body* target=find_proxy(proxy);
+            if(!target||target->handle==bullet.handle||
+               target->type!=BodyType::Static||target->sensor||
+               !should_collide(bullet.collision_filter,target->collision_filter))continue;
+            const auto* fixed=std::get_if<CircleCollider2D>(&target->collider);
+            if(!fixed||length_squared(fixed->local_center)>1.0e-12F)continue;
+            const Vec2 relative=start-target->position;
+            const float combined=radius+fixed->radius;
+            const float c=length_squared(relative)-combined*combined;
+            if(c<=0.0F)continue;
+            const float b=2.0F*dot(relative,velocity);
+            const float discriminant=b*b-4.0F*speed_squared*c;
+            if(discriminant<0.0F)continue;
+            const float time=(-b-std::sqrt(discriminant))/(2.0F*speed_squared);
+            if(time<0.0F||time>delta||time>=earliest)continue;
+            const Vec2 center=start+velocity*time;
+            const Vec2 normal=normalized(center-target->position);
+            const float skin=std::min(
+                std::max(settings_.penetration_slop*0.25F,1.0e-4F),combined*0.05F);
+            earliest=time;
+            impact_position=target->position+normal*(combined-skin);
+        }
+        return impact_position;
     }
 
     [[nodiscard]] WorldShape world_shape(const Body& body) const noexcept {
