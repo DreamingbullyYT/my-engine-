@@ -56,6 +56,13 @@ public:
     }
 };
 
+class FakeUiMetrics final : public dream::ui::IUiTextMetrics {
+public:
+    dream::ui::UiVec2 measure(std::string_view text, float size) const noexcept override {
+        return {static_cast<float>(text.size()) * size * 0.5F, size};
+    }
+};
+
 class FakeRenderBackend final : public IRenderBackend {
 public:
     bool initialize_ok{true};
@@ -303,6 +310,17 @@ int main() {
             "runtime starts a render frame using the acquired framebuffer size");
     require(render_hook_probe.begin_calls == 1U,
             "begin-render hook can mutate the clear color before frame construction");
+    FakeUiMetrics ui_metrics;
+    dream::ui::UiNodeDescription render_panel;
+    render_panel.type = dream::ui::UiNodeType::Panel;
+    render_panel.style.width = dream::ui::UiSize::fixed(60.0F);
+    render_panel.style.height = dream::ui::UiSize::fixed(30.0F);
+    render_panel.style.background = {0.1F, 0.2F, 0.3F, 1.0F};
+    const auto render_panel_node = runtime.ui().create_node({}, render_panel);
+    require(static_cast<bool>(render_panel_node) &&
+            runtime.ui().layout({0, 0, 640, 480}, ui_metrics) ==
+                dream::ui::UiError::None,
+            "retained UI panel lays out in the logical window viewport");
     require(runtime.frame_builder().set_camera_2d(CameraMatrices2D{}) ==
                 FrameBuilderError::None,
             "runtime frame builder accepts a 2D camera");
@@ -311,9 +329,13 @@ int main() {
     sprite.tint = {1.0F, 0.5F, 0.25F, 1.0F};
     require(runtime.frame_builder().add_quad(sprite) == FrameBuilderError::None,
             "runtime frame builder accepts a sprite");
+    require(runtime.enqueue_ui_draws(
+                Camera2D{}, dream::ui::UiRect{0, 0, 640, 480}) ==
+                dream::ui::UiRenderError::None,
+            "EngineRuntime enqueues retained UI after frame begin");
     require(static_cast<bool>(runtime.render_frame()),
             "runtime finalizes and renders the frame");
-    require(backend.render_calls == 1 && backend.last_2d_draws == 1U &&
+    require(backend.render_calls == 1 && backend.last_2d_draws == 2U &&
             backend.last_clear_color.r == 0.2F &&
             backend.last_clear_color.g == 0.3F &&
             backend.last_clear_color.b == 0.4F &&
