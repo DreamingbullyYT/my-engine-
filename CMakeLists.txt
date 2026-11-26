@@ -373,6 +373,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     set_target_properties(dream_assets_dependency_graph_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.assets.dependency_graph COMMAND dream_assets_dependency_graph_tests)
 
+    add_executable(dream_ui_command_buffer_tests tests/ui/ui_command_buffer_tests.cpp)
+    target_link_libraries(dream_ui_command_buffer_tests PRIVATE DreamEngine::UI)
+    target_compile_features(dream_ui_command_buffer_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_ui_command_buffer_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.ui.command_buffer COMMAND dream_ui_command_buffer_tests)
+
     add_executable(dream_ui_runtime_tests tests/ui/ui_runtime_tests.cpp)
     target_link_libraries(dream_ui_runtime_tests PRIVATE DreamEngine::UI)
     target_compile_features(dream_ui_runtime_tests PRIVATE cxx_std_20)
