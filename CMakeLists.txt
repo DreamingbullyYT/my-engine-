@@ -391,6 +391,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     set_target_properties(dream_ui_runtime_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.ui.runtime COMMAND dream_ui_runtime_tests)
 
+    add_executable(dream_ui_render_adapter_tests tests/ui/ui_render_adapter_tests.cpp)
+    target_link_libraries(dream_ui_render_adapter_tests PRIVATE DreamEngine::UI DreamEngine::Render)
+    target_compile_features(dream_ui_render_adapter_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_ui_render_adapter_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.ui.render_adapter COMMAND dream_ui_render_adapter_tests)
+
     add_executable(dream_animation_runtime_tests tests/animation/animation_runtime_tests.cpp)
     target_link_libraries(dream_animation_runtime_tests PRIVATE DreamEngine::Animation)
     target_compile_features(dream_animation_runtime_tests PRIVATE cxx_std_20)
