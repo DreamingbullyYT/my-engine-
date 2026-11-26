@@ -97,6 +97,16 @@ add_library(dream_dmod STATIC
 )
 add_library(DreamEngine::DMod ALIAS dream_dmod)
 
+add_library(dream_render INTERFACE)
+add_library(DreamEngine::Render ALIAS dream_render)
+target_include_directories(dream_render INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/render/include>
+)
+target_compile_features(dream_render INTERFACE cxx_std_20)
+target_link_libraries(dream_render INTERFACE
+    DreamEngine::Core DreamEngine::Platform DreamEngine::World
+)
+
 add_library(dream_physics2d INTERFACE)
 add_library(DreamEngine::Physics2D ALIAS dream_physics2d)
 target_include_directories(dream_physics2d INTERFACE
@@ -225,6 +235,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_assets_dependency_graph_tests PRIVATE cxx_std_20)
     set_target_properties(dream_assets_dependency_graph_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.assets.dependency_graph COMMAND dream_assets_dependency_graph_tests)
+
+    add_executable(dream_render_contract_tests tests/render/render_contract_tests.cpp)
+    target_link_libraries(dream_render_contract_tests PRIVATE DreamEngine::Render)
+    target_compile_features(dream_render_contract_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_render_contract_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.render.contracts COMMAND dream_render_contract_tests)
 
     add_executable(dream_physics2d_world_tests tests/physics2d/physics_world_tests.cpp)
     target_link_libraries(dream_physics2d_world_tests PRIVATE DreamEngine::Physics2D)
