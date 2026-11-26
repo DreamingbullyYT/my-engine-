@@ -1,10 +1,14 @@
 #include <dream/core/resource_registry.hpp>
 
+#include <atomic>
+#include <condition_variable>
 #include <cstdlib>
 #include <iostream>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <stdexcept>
+#include <thread>
 #include <type_traits>
 
 namespace {
@@ -18,6 +22,7 @@ struct TextureTag;
 struct BufferTag;
 struct ThrowingTag;
 struct TrackedTag;
+struct BlockingTag;
 struct Resource final {
     explicit Resource(int initial) : value(initial) {}
     int value;
@@ -29,6 +34,11 @@ struct TrackedResource final {
     explicit TrackedResource(int& destructions) : destructions(destructions) {}
     ~TrackedResource() { ++destructions; }
     int& destructions;
+};
+struct BlockingResource final {
+    explicit BlockingResource(std::atomic<bool>& destroyed) : destroyed(destroyed) {}
+    ~BlockingResource() { destroyed.store(true, std::memory_order_release); }
+    std::atomic<bool>& destroyed;
 };
 }
 
@@ -84,6 +94,57 @@ int main() {
         require(destructions == 1, "destroy releases the object exactly once");
     }
     require(destructions == 1, "registry destruction does not double-destroy released objects");
+
+    // A destroy operation must wait until an active callback releases its
+    // shared lifetime lock; the object must remain alive throughout the callback.
+    std::atomic<bool> blocking_destroyed{false};
+    ResourceRegistry<BlockingResource, BlockingTag> blocking;
+    const auto blocking_handle = blocking.emplace(blocking_destroyed);
+    std::mutex gate_mutex;
+    std::condition_variable gate;
+    bool callback_entered = false;
+    bool allow_callback_exit = false;
+    bool destroy_attempted = false;
+    bool callback_result = false;
+    bool destroy_result = false;
+
+    std::thread accessor([&] {
+        callback_result = blocking.with_resource(blocking_handle, [&](BlockingResource&) {
+            std::unique_lock lock(gate_mutex);
+            callback_entered = true;
+            gate.notify_all();
+            gate.wait(lock, [&] { return allow_callback_exit; });
+        });
+    });
+
+    {
+        std::unique_lock lock(gate_mutex);
+        gate.wait(lock, [&] { return callback_entered; });
+    }
+
+    std::thread destroyer([&] {
+        {
+            std::lock_guard lock(gate_mutex);
+            destroy_attempted = true;
+        }
+        gate.notify_all();
+        destroy_result = blocking.destroy(blocking_handle);
+    });
+
+    {
+        std::unique_lock lock(gate_mutex);
+        gate.wait(lock, [&] { return destroy_attempted; });
+        require(!blocking_destroyed.load(std::memory_order_acquire),
+                "resource remains alive while callback is active");
+        allow_callback_exit = true;
+    }
+    gate.notify_all();
+    accessor.join();
+    destroyer.join();
+    require(callback_result, "concurrent callback completed successfully");
+    require(destroy_result, "destroy succeeds after callback releases its lock");
+    require(blocking_destroyed.load(std::memory_order_acquire),
+            "resource is destroyed after callback completion");
 
     ResourceRegistry<std::string, BufferTag> buffers;
     const auto text = buffers.emplace("mesh data");
