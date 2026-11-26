@@ -82,6 +82,8 @@ struct BodyDescription3D final {
     ColliderShape3D collider{SphereCollider3D{}};
     CollisionFilter3D collision_filter{};
     bool sensor{false};
+    // Opt into continuous collision detection for fast sphere projectiles.
+    bool bullet{false};
 };
 
 struct PhysicsSettings3D final {
@@ -160,11 +162,9 @@ struct RaycastHit3D final {
     bool sensor{false};
 };
 
-// A fixed-step, single-thread-owned 3D rigid-body world. It supports sphere and
-// oriented-box colliders, a deterministic 3D sweep-and-prune broadphase,
-// sequential normal/friction impulses and bounded positional correction.
-// One collider is attached to each body. Joints, CCD and sleeping are separate
-// extensions; the OBB contact point is a support-point approximation.
+// Opt-in bullet CCD is exact for sphere-vs-static-sphere impacts; all other
+// shape combinations use the discrete solver. Joints, sleeping, persistent
+// warm-starting, multi-fixture bodies and clipped OBB manifolds remain open.
 class PhysicsWorld3D final {
 public:
     explicit PhysicsWorld3D(PhysicsSettings3D settings={}) noexcept
@@ -353,7 +353,12 @@ public:
                         std::max(0.0F,1.0F-body.angular_damping*dt);
                 }
                 if(body.type!=BodyType3D::Static) {
-                    body.position=body.position+body.linear_velocity*dt;
+                    if(body.bullet&&body.type==BodyType3D::Dynamic) {
+                        const auto impact=sweep_bullet_sphere(body,body.linear_velocity,dt);
+                        body.position=impact?*impact:body.position+body.linear_velocity*dt;
+                    } else {
+                        body.position=body.position+body.linear_velocity*dt;
+                    }
                     body.rotation=integrate_rotation(body.rotation,body.angular_velocity,dt);
                 }
                 body.force={};body.torque={};
@@ -434,6 +439,7 @@ private:
         ColliderShape3D collider{};
         CollisionFilter3D collision_filter{};
         bool sensor{false};
+        bool bullet{false};
         Vec3 force{},torque{};
     };
     using PairKey=std::pair<BroadphaseProxyId3D,BroadphaseProxyId3D>;
@@ -518,7 +524,7 @@ private:
         b.linear_damping=d.linear_damping;b.angular_damping=d.angular_damping;
         b.friction=d.friction;b.restitution=d.restitution;
         b.collider=std::move(d.collider);b.collision_filter=d.collision_filter;
-        b.sensor=d.sensor;
+        b.sensor=d.sensor;b.bullet=d.bullet;
         if(b.type==BodyType3D::Dynamic) {
             Vec3 inertia{};
             if(const auto* sphere=std::get_if<SphereCollider3D>(&b.collider)) {
@@ -568,6 +574,51 @@ private:
         rotation.w+=0.5F*derivative.w*dt;
         return normalized(rotation);
     }
+    [[nodiscard]] std::optional<Vec3> sweep_bullet_sphere(
+        const Body& bullet,Vec3 velocity,float delta) const {
+        const auto* moving=std::get_if<SphereCollider3D>(&bullet.collider);
+        if(!moving||bullet.sensor||length_squared(moving->local_center)>1.0e-12F)
+            return std::nullopt;
+        const Vec3 start=bullet.position,end=start+velocity*delta;
+        const float radius=moving->radius;
+        const Aabb3D swept{
+            {std::min(start.x,end.x)-radius,std::min(start.y,end.y)-radius,
+             std::min(start.z,end.z)-radius},
+            {std::max(start.x,end.x)+radius,std::max(start.y,end.y)+radius,
+             std::max(start.z,end.z)+radius}};
+        const float speed_squared=length_squared(velocity);
+        if(speed_squared<=1.0e-12F)return std::nullopt;
+        float earliest=delta+1.0F;
+        std::optional<Vec3> impact_position;
+        for(const auto proxy:broadphase_.query_aabb(swept)) {
+            if(proxy==0U)continue;
+            const auto found=bodies_.find(static_cast<std::uint32_t>(proxy-1U));
+            if(found==bodies_.end())continue;
+            const Body& target=found->second;
+            if(target.handle==bullet.handle||target.type!=BodyType3D::Static||
+               target.sensor||
+               !should_collide(bullet.collision_filter,target.collision_filter))continue;
+            const auto* fixed=std::get_if<SphereCollider3D>(&target.collider);
+            if(!fixed||length_squared(fixed->local_center)>1.0e-12F)continue;
+            const Vec3 relative=start-target.position;
+            const float combined=radius+fixed->radius;
+            const float c=length_squared(relative)-combined*combined;
+            if(c<=0.0F)continue;
+            const float b=2.0F*dot(relative,velocity);
+            const float discriminant=b*b-4.0F*speed_squared*c;
+            if(discriminant<0.0F)continue;
+            const float time=(-b-std::sqrt(discriminant))/(2.0F*speed_squared);
+            if(time<0.0F||time>delta||time>=earliest)continue;
+            const Vec3 center=start+velocity*time;
+            const Vec3 normal=normalized(center-target.position);
+            const float skin=std::min(
+                std::max(settings_.penetration_slop*0.25F,1.0e-4F),combined*0.05F);
+            earliest=time;
+            impact_position=target.position+normal*(combined-skin);
+        }
+        return impact_position;
+    }
+
     [[nodiscard]] static WorldShape world_shape(const Body& b) noexcept {
         if(const auto* sphere=std::get_if<SphereCollider3D>(&b.collider)) {
             return Sphere3D{b.position+rotate(sphere->local_center,b.rotation),sphere->radius};
