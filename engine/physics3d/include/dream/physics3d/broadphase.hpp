@@ -3,6 +3,7 @@
 #include <dream/physics3d/geometry.hpp>
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <utility>
