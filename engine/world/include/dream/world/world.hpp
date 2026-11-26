@@ -72,6 +72,10 @@ private:
             return true;
         }
 
+        [[nodiscard]] bool contains(Entity entity) const noexcept override {
+            return find(entity) != nullptr;
+        }
+
         void erase(Entity entity) noexcept override {
             (void)remove(entity);
         }
@@ -268,6 +272,21 @@ public:
         std::shared_lock lock(mutex_);
         const auto* pool = find_pool_unlocked<Component>();
         return pool == nullptr ? 0 : pool->size();
+    }
+
+    // Runtime type tokens are for in-process reflection/registration only.
+    // Persistent formats must use explicit stable IDs, never typeid names.
+    [[nodiscard]] std::vector<std::type_index> component_types(Entity entity) const {
+        std::vector<std::type_index> result;
+        if (!entity) return result;
+        std::shared_lock lock(mutex_);
+        if (!is_alive_unlocked(entity)) return result;
+        result.reserve(pools_.size());
+        for (const auto& [type, pool] : pools_) {
+            if (pool->contains(entity)) result.push_back(type);
+        }
+        std::sort(result.begin(), result.end());
+        return result;
     }
 
     template <typename Component, typename Function>

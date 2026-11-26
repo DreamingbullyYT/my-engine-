@@ -111,7 +111,7 @@ target_include_directories(dream_world INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/world/include>
 )
 target_compile_features(dream_world INTERFACE cxx_std_20)
-target_link_libraries(dream_world INTERFACE DreamEngine::Core)
+target_link_libraries(dream_world INTERFACE DreamEngine::Core DreamEngine::Serialization)
 
 add_library(dream_assets INTERFACE)
 add_library(DreamEngine::Assets ALIAS dream_assets)
@@ -209,6 +209,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_assets_dependency_graph_tests PRIVATE cxx_std_20)
     set_target_properties(dream_assets_dependency_graph_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.assets.dependency_graph COMMAND dream_assets_dependency_graph_tests)
+
+    add_executable(dream_world_archive_tests tests/world/world_archive_tests.cpp)
+    target_link_libraries(dream_world_archive_tests PRIVATE DreamEngine::World)
+    target_compile_features(dream_world_archive_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_world_archive_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.world.archive COMMAND dream_world_archive_tests)
 
     add_executable(dream_serialization_tests tests/serialization/binary_archive_tests.cpp)
     target_link_libraries(dream_serialization_tests PRIVATE DreamEngine::Serialization)
