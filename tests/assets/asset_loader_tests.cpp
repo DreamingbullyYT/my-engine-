@@ -149,6 +149,40 @@ int main() {
     require(duplicate.status == assets::AssetLoadStatus::StoreRejected,
             "duplicate resource key is rejected");
 
+    using LoadResult = assets::AssetLoadResult<core::Handle<TextAssetTag>>;
+    assets::AssetRequestCoordinator<LoadResult> request_coordinator;
+    std::promise<void> dedup_decoder_entered;
+    std::promise<void> dedup_decoder_release;
+    auto dedup_release = dedup_decoder_release.get_future().share();
+    std::atomic<int> dedup_decoder_calls{0};
+    const auto reads_before_dedup = filesystem.read_count.load();
+
+    auto dedup_first = assets::load_async_coordinated(
+        request_coordinator, "text/deduplicated", jobs, filesystem, store,
+        "text/deduplicated", "assets/hello.txt",
+        [&](std::span<const std::byte> bytes) {
+            ++dedup_decoder_calls;
+            dedup_decoder_entered.set_value();
+            dedup_release.wait();
+            return decode_text(bytes);
+        });
+    dedup_decoder_entered.get_future().wait();
+
+    auto dedup_second = assets::load_async_coordinated(
+        request_coordinator, "text/deduplicated", jobs, filesystem, store,
+        "text/deduplicated", "assets/hello.txt", decode_text);
+    dedup_decoder_release.set_value();
+    const auto& dedup_first_result = dedup_first.get();
+    const auto& dedup_second_result = dedup_second.get();
+    require(dedup_first_result.loaded() && dedup_second_result.loaded(),
+            "coordinated callers both receive a successful result");
+    require(dedup_first_result.handle == dedup_second_result.handle,
+            "coordinated callers receive the same resource handle");
+    require(dedup_decoder_calls.load() == 1,
+            "coordinated callers execute only the first decoder");
+    require(filesystem.read_count.load() == reads_before_dedup + 1,
+            "coordinated callers perform only one filesystem read");
+
     assets::AssetCache<TextAsset, TextAssetTag> cache(16);
     const auto reads_before_cached_load = filesystem.read_count.load();
     auto cached = assets::load_async_cached(
