@@ -390,19 +390,26 @@ int main() {
     require(queries.overlap_point({100, 100}).empty(),
             "point outside every collider returns no results");
 
+    PhysicsWorld2D indexed_queries(PhysicsSettings2D{.gravity={0,0}});
+    BodyDescription2D indexed_target_description;
+    indexed_target_description.type=BodyType::Static;
+    indexed_target_description.position={0.0F,0.0F};
+    indexed_target_description.collider=CircleCollider2D{{},1.0F};
+    const auto indexed_target=indexed_queries.create_body(indexed_target_description);
+    require(static_cast<bool>(indexed_target),"isolated broadphase target creates");
     for(int i=0;i<96;++i) {
         BodyDescription2D distant;
         distant.type=BodyType::Static;
         distant.position={100.0F+static_cast<float>(i)*10.0F,0.0F};
         distant.collider=CircleCollider2D{{},0.5F};
-        require(static_cast<bool>(queries.create_body(distant)),
+        require(static_cast<bool>(indexed_queries.create_body(distant)),
                 "distant broadphase query body creates");
     }
-    const auto indexed_ray=queries.raycast_all(
-        Ray2D{{0.0F,0.0F},{1.0F,0.0F},10.0F});
-    const auto indexed_point=queries.overlap_point({0.0F,0.0F});
-    require(indexed_ray.size()==1U&&indexed_ray[0].body==near_circle.handle&&
-            indexed_point.size()==1U&&indexed_point[0]==near_circle.handle,
+    const auto indexed_ray=indexed_queries.raycast_all(
+        Ray2D{{-5.0F,0.0F},{1.0F,0.0F},10.0F});
+    const auto indexed_point=indexed_queries.overlap_point({0.0F,0.0F});
+    require(indexed_ray.size()==1U&&indexed_ray[0].body==indexed_target.handle&&
+            indexed_point.size()==1U&&indexed_point[0]==indexed_target.handle,
             "2D ray and point queries prune distant bodies through broadphase");
 
     PhysicsWorld2D invalid_bounds(PhysicsSettings2D{.gravity = {0, 0}});
