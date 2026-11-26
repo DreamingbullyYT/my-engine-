@@ -182,6 +182,28 @@ int main() {
             "resting contact removes downward velocity");
     require(total_contacts > 0U, "physics reports collision contacts");
 
+    PhysicsWorld2D continuous(PhysicsSettings2D{.gravity={0,0}});
+    BodyDescription2D continuous_target;
+    continuous_target.type=BodyType::Static;
+    continuous_target.collider=CircleCollider2D{{},1.0F};
+    const auto fixed_target=continuous.create_body(continuous_target);
+    BodyDescription2D projectile;
+    projectile.type=BodyType::Dynamic;
+    projectile.position={-10.0F,0.0F};
+    projectile.linear_velocity={100.0F,0.0F};
+    projectile.mass=1.0F;
+    projectile.bullet=true;
+    projectile.collider=CircleCollider2D{{},0.25F};
+    const auto bullet=continuous.create_body(projectile);
+    require(fixed_target&&bullet,"continuous circle projectile and target create");
+    const auto continuous_report=continuous.update(0.25);
+    const auto bullet_state=continuous.body_state(bullet.handle);
+    require(continuous_report&&continuous_report.contact_count>0U&&bullet_state&&
+            bullet_state->position.x<-1.0F&&bullet_state->position.x>-1.4F,
+            "circle bullet CCD prevents a fast projectile tunnelling through a static circle");
+    require(std::abs(bullet_state->linear_velocity.x)<0.1F,
+            "discrete contact solver resolves the swept circle impact");
+
     require(falling.set_velocity(ball.handle, {4.0F, 0.0F}, 0.0F),
             "resting body accepts horizontal velocity");
     const auto friction_step = falling.update(1.0 / 60.0);
