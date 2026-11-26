@@ -75,7 +75,9 @@ public:
     }
     [[nodiscard]] std::vector<UiDrawCommand> take_commands() noexcept {
         overflowed_=false;
-        return std::exchange(commands_,{});
+        std::vector<UiDrawCommand> result;
+        result.swap(commands_);
+        return result;
     }
     [[nodiscard]] bool overflowed() const noexcept { return overflowed_; }
     [[nodiscard]] std::size_t maximum_commands() const noexcept {
