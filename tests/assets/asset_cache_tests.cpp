@@ -8,7 +8,7 @@
 namespace {
 void require(bool condition, std::string_view message) {
     if (!condition) {
-        std::cerr << "FAILED: " << message << '\\n';
+        std::cerr << "FAILED: " << message << '\n';
         std::exit(EXIT_FAILURE);
     }
 }
@@ -63,6 +63,6 @@ int main() {
     require(cache.put("zero", 0, 9).inserted(), "zero-cost resource is permitted");
     require(cache.used_bytes() == 0, "zero-cost resource does not consume budget");
 
-    std::cout << "Dream Engine asset cache tests passed.\\n";
+    std::cout << "Dream Engine asset cache tests passed.\n";
     return EXIT_SUCCESS;
 }
