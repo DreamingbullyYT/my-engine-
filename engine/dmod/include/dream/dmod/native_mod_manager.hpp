@@ -76,10 +76,17 @@ public:
     [[nodiscard]] std::vector<NativeModStatus> statuses() const;
 private:
     struct LoadedMod;
+    void begin_callback() noexcept;
+    void end_callback() noexcept;
+    void process_deferred() noexcept;
+    void release(LoadedMod& mod) noexcept;
     [[nodiscard]] LoadedMod* find(std::string_view) noexcept;
     [[nodiscard]] const LoadedMod* find(std::string_view) const noexcept;
     NativeModHostApiV1 host_api_{};
     std::vector<std::unique_ptr<LoadedMod>> mods_;
+    std::size_t callback_depth_{0};
+    bool processing_deferred_{false};
+    bool shutdown_requested_{false};
     bool shutdown_{false};
 };
 } // namespace dream::dmod
