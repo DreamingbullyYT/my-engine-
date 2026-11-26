@@ -65,7 +65,7 @@ int main() {
     require(mixer.voice_state(left.first)->cursor_frames==2.0,
         "voice cursor advances by output frames");
     require(static_cast<bool>(mixer.set_settings(left.first,AudioVoiceSettings{
-        .volume=2.0F,.pitch=2.0F,.pan=1.0F,.looping=true})),
+        .volume=2.0F,.pitch=1.0F,.pan=1.0F,.looping=true})),
         "voice playback settings can be changed");
 
     std::vector<float> resampled(4U);

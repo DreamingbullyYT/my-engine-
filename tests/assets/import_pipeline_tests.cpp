@@ -92,7 +92,7 @@ int main() {
 
     AssetImportPipeline limited(files,registry,AssetImportLimits{
         .maximum_source_bytes=2U,.maximum_total_output_bytes=1024U});
-    require(limited.import("models/ship.test").status==AssetImportStatus::SourceTooLarge,
+    require(limited.import("models/ship.TEST").status==AssetImportStatus::SourceTooLarge,
         "source read limit is enforced before import");
 
     AssetImporterRegistry invalid_registry;
