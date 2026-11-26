@@ -134,7 +134,13 @@ public:
         }
         accumulator_seconds_ += accepted_delta;
 
-        while (accumulator_seconds_ >= config_.fixed_delta_seconds &&
+        const double step_tolerance =
+            std::numeric_limits<double>::epsilon() *
+            std::max({1.0, std::abs(accumulator_seconds_),
+                      std::abs(config_.fixed_delta_seconds)}) * 8.0;
+
+        while (accumulator_seconds_ + step_tolerance >=
+                   config_.fixed_delta_seconds &&
                result.steps_executed < config_.max_steps_per_frame) {
             if (tick_index_ == std::numeric_limits<std::uint64_t>::max()) {
                 result.error = FixedStepError::TickOverflow;
@@ -145,13 +151,15 @@ public:
             std::invoke(step_callback, config_.fixed_delta_seconds, next_tick);
 
             accumulator_seconds_ -= config_.fixed_delta_seconds;
-            if (accumulator_seconds_ < 0.0) accumulator_seconds_ = 0.0;
+            if (std::abs(accumulator_seconds_) <= step_tolerance)
+                accumulator_seconds_ = 0.0;
             tick_index_ = next_tick;
             ++result.steps_executed;
         }
 
         if (result.error == FixedStepError::None &&
-            accumulator_seconds_ >= config_.fixed_delta_seconds) {
+            accumulator_seconds_ + step_tolerance >=
+                config_.fixed_delta_seconds) {
             const double remainder = std::fmod(
                 accumulator_seconds_, config_.fixed_delta_seconds);
             result.dropped_seconds += accumulator_seconds_ - remainder;
