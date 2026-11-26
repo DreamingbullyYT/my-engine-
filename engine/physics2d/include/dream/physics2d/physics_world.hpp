@@ -223,13 +223,13 @@ public:
         if (!handle) return {{}, BodyCreateError::CapacityExhausted};
 
         Body body = make_body(handle, std::move(description));
-        if (body.type == BodyType::Dynamic &&
-            (!std::isfinite(body.inverse_mass) ||
-             !std::isfinite(body.inertia) ||
-             !std::isfinite(body.inverse_inertia) ||
-             body.inverse_mass <= 0.0F ||
-             body.inertia <= 1.0e-12F ||
-             body.inverse_inertia <= 0.0F)) {
+        if (!std::isfinite(body.inertia) ||
+            (body.type == BodyType::Dynamic &&
+             (!std::isfinite(body.inverse_mass) ||
+              !std::isfinite(body.inverse_inertia) ||
+              body.inverse_mass <= 0.0F ||
+              body.inertia <= 1.0e-12F ||
+              body.inverse_inertia <= 0.0F))) {
             (void)handles_.release(handle);
             return {{}, BodyCreateError::InvalidInertia};
         }
@@ -418,34 +418,43 @@ public:
         if (delta_seconds == 0.0) return report;
 
         const float delta = static_cast<float>(delta_seconds);
-        for (auto& [index, body] : bodies_) {
-            (void)index;
-            if (body.type == BodyType::Dynamic) {
-                body.velocity = body.velocity +
-                    (settings_.gravity + body.force * body.inverse_mass) * delta;
-                body.angular_velocity += body.torque * body.inverse_inertia * delta;
+        std::vector<std::pair<std::uint32_t, Body>> integrated_bodies;
+        integrated_bodies.reserve(bodies_.size());
+        for (const auto& [index, current] : bodies_) {
+            Body next = current;
+            if (next.type == BodyType::Dynamic) {
+                next.velocity = next.velocity +
+                    (settings_.gravity + next.force * next.inverse_mass) * delta;
+                next.angular_velocity +=
+                    next.torque * next.inverse_inertia * delta;
             }
 
-            if (body.type != BodyType::Static) {
+            if (next.type != BodyType::Static) {
                 const float linear_factor =
-                    1.0F / (1.0F + body.linear_damping * delta);
+                    1.0F / (1.0F + next.linear_damping * delta);
                 const float angular_factor =
-                    1.0F / (1.0F + body.angular_damping * delta);
-                body.velocity = body.velocity * linear_factor;
-                body.angular_velocity *= angular_factor;
-                body.position = body.position + body.velocity * delta;
-                body.rotation += body.angular_velocity * delta;
+                    1.0F / (1.0F + next.angular_damping * delta);
+                next.velocity = next.velocity * linear_factor;
+                next.angular_velocity *= angular_factor;
+                next.position = next.position + next.velocity * delta;
+                next.rotation += next.angular_velocity * delta;
             }
 
-            body.force = {};
-            body.torque = 0.0F;
-            if (!finite(body.position) || !finite(body.velocity) ||
-                !std::isfinite(body.rotation) ||
-                !std::isfinite(body.angular_velocity)) {
+            next.force = {};
+            next.torque = 0.0F;
+            if (!finite(next.position) || !finite(next.velocity) ||
+                !std::isfinite(next.rotation) ||
+                !std::isfinite(next.angular_velocity) ||
+                !world_bounds(next).valid()) {
                 report.error = PhysicsStepError::InvalidBodyState;
                 return report;
             }
+            integrated_bodies.emplace_back(index, std::move(next));
         }
+
+        // Do not partially integrate the world when one body overflows.
+        for (auto& [index, next] : integrated_bodies)
+            bodies_.at(index) = std::move(next);
 
         for (auto& [index, body] : bodies_) {
             (void)index;
@@ -646,14 +655,24 @@ private:
 
         const bool collider_valid = std::visit([](const auto& collider) {
             using Collider = std::decay_t<decltype(collider)>;
-            if (!finite(collider.local_center)) return false;
+            if (!finite(collider.local_center) ||
+                !std::isfinite(length_squared(collider.local_center))) return false;
             if constexpr (std::is_same_v<Collider, CircleCollider2D>) {
-                return std::isfinite(collider.radius) && collider.radius > 0.0F;
+                return std::isfinite(collider.radius) &&
+                       collider.radius > 0.0F &&
+                       std::isfinite(collider.radius * collider.radius);
             } else {
+                const float width = collider.half_extents.x * 2.0F;
+                const float height = collider.half_extents.y * 2.0F;
                 return finite(collider.half_extents) &&
                        collider.half_extents.x > 0.0F &&
                        collider.half_extents.y > 0.0F &&
-                       std::isfinite(collider.local_rotation_radians);
+                       std::isfinite(width) && std::isfinite(height) &&
+                       std::isfinite(width * width) &&
+                       std::isfinite(height * height) &&
+                       std::isfinite(collider.local_rotation_radians) &&
+                       std::isfinite(description.rotation_radians +
+                                     collider.local_rotation_radians);
             }
         }, description.collider);
 
