@@ -77,6 +77,9 @@ int main() {
     require(build_camera_matrices(camera3d, 1280U, 720U, matrices3d) ==
                 CameraBuildError::None,
             "valid perspective camera builds");
+    require(matrices3d.projection.at(3, 3) == 0.0F &&
+            matrices3d.projection.at(3, 2) == -1.0F,
+            "perspective homogeneous w is explicitly -view-z");
 
     const Vec3 view_origin = transform_point(matrices3d.view, camera3d.position);
     require(near(view_origin.x, 0.0F) && near(view_origin.y, 0.0F) &&

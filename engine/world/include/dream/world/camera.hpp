@@ -212,6 +212,7 @@ namespace detail {
             (camera.far_plane * camera.near_plane) /
             (camera.near_plane - camera.far_plane);
         result.projection.at(3, 2) = -1.0F;
+        result.projection.at(3, 3) = 0.0F;
     } else if (camera.projection == CameraProjection::Orthographic) {
         if (!std::isfinite(camera.orthographic_height) ||
             camera.orthographic_height <= 0.0F) {
