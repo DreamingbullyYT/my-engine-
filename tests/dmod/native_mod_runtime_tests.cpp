@@ -33,6 +33,32 @@ int main() {
             "expose native mod self-unload switch");
     require(manager.valid_host_api(), "host ABI valid");
 
+    struct InterfaceSnapshot final {
+        std::vector<std::pair<std::string, std::uint32_t>> entries;
+    } interface_snapshot;
+    const auto collect_interface = [](
+        void* context, const char* id, std::uint32_t version) noexcept -> std::uint8_t {
+        if (!context || !id) return 0;
+        auto& snapshot = *static_cast<InterfaceSnapshot*>(context);
+        try {
+            snapshot.entries.emplace_back(id, version);
+            return 1;
+        } catch (...) {
+            return 0;
+        }
+    };
+    const auto host_api = host.api();
+    require(host_api.enumerate_interfaces != nullptr, "native host exposes interface enumeration");
+    require(host_api.enumerate_interfaces(
+        host_api.host_context, collect_interface, &interface_snapshot) != 0,
+        "enumerate native host interfaces");
+    require(interface_snapshot.entries.size() == 3 &&
+            interface_snapshot.entries[0].first == "dream.test.counter" &&
+            interface_snapshot.entries[1].first == "dream.test.manager" &&
+            interface_snapshot.entries[2].first == "dream.test.unload_on_update" &&
+            interface_snapshot.entries[0].second == 1,
+            "interfaces are enumerated in deterministic ID order with versions");
+
     Manifest manifest;
     manifest.id = "test.native";
     manifest.name = "Native Test Mod";

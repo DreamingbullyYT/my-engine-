@@ -7,8 +7,10 @@
 #include <unordered_map>
 
 namespace dream::dmod {
-// Exposes raw engine object addresses to trusted native mods. The engine host
-// owns exposed objects and must keep them alive while mods can access them.
+// Exposes raw engine object addresses to in-process native mods. This is not a
+// sandbox or a security boundary: loaded code runs with the application's
+// process privileges. The engine host owns exposed objects and must keep them
+// alive while mods can access them.
 class NativeModHost final {
 public:
     using LogSink = void (*)(void*, NativeModLogLevelV1, const char*) noexcept;
@@ -26,7 +28,9 @@ public:
 private:
     struct Entry { std::uint32_t version{}; void* object{}; };
     static void* query(void*, const char*, std::uint32_t) noexcept;
-    static void log(void*, NativeModLogLevelV1, const char*) noexcept;
+    static void log(void*, std::uint32_t, const char*) noexcept;
+    static std::uint8_t enumerate(
+        void*, NativeModInterfaceVisitorV1, void*) noexcept;
     mutable std::shared_mutex mutex_;
     std::unordered_map<std::string, Entry> interfaces_;
     void* log_context_{};

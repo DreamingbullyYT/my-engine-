@@ -1,5 +1,10 @@
 #include <dream/dmod/native_mod_host.hpp>
+#include <algorithm>
 #include <mutex>
+#include <string>
+#include <utility>
+#include <vector>
+
 namespace dream::dmod {
 namespace {
 bool valid_id(std::string_view id) noexcept {
@@ -25,7 +30,8 @@ void NativeModHost::set_log_sink(void* context, LogSink sink) noexcept {
 }
 NativeModHostApiV1 NativeModHost::api() noexcept {
     return {static_cast<std::uint32_t>(sizeof(NativeModHostApiV1)), native_mod_abi_v1,
-            this, &NativeModHost::query, this, &NativeModHost::log};
+            this, &NativeModHost::query, this, &NativeModHost::log,
+            &NativeModHost::enumerate};
 }
 void* NativeModHost::query(void* context, const char* id, std::uint32_t minimum) noexcept {
     if (!context || !id || minimum == 0) return nullptr;
@@ -37,7 +43,7 @@ void* NativeModHost::query(void* context, const char* id, std::uint32_t minimum)
             ? it->second.object : nullptr;
     } catch (...) { return nullptr; }
 }
-void NativeModHost::log(void* context, NativeModLogLevelV1 level, const char* message) noexcept {
+void NativeModHost::log(void* context, std::uint32_t level, const char* message) noexcept {
     if (!context || !message) return;
     auto& host = *static_cast<NativeModHost*>(context);
     LogSink sink{}; void* sink_context{};
@@ -45,6 +51,30 @@ void NativeModHost::log(void* context, NativeModLogLevelV1 level, const char* me
         std::shared_lock lock(host.mutex_);
         sink = host.log_sink_; sink_context = host.log_context_;
     } catch (...) { return; }
-    if (sink) sink(sink_context, level, message);
+    if (sink) sink(sink_context, static_cast<NativeModLogLevelV1>(level), message);
+}
+std::uint8_t NativeModHost::enumerate(
+    void* context, NativeModInterfaceVisitorV1 visitor, void* visitor_context) noexcept {
+    if (!context || !visitor) return 0;
+    auto& host = *static_cast<NativeModHost*>(context);
+    std::vector<std::pair<std::string, std::uint32_t>> snapshot;
+    try {
+        {
+            std::shared_lock lock(host.mutex_);
+            snapshot.reserve(host.interfaces_.size());
+            for (const auto& [id, entry] : host.interfaces_)
+                snapshot.emplace_back(id, entry.version);
+        }
+        std::sort(snapshot.begin(), snapshot.end(),
+            [](const auto& left, const auto& right) { return left.first < right.first; });
+    } catch (...) {
+        return 0;
+    }
+
+    for (const auto& [id, version] : snapshot) {
+        if (visitor(visitor_context, id.c_str(), version) == 0)
+            return 0;
+    }
+    return 1;
 }
 } // namespace dream::dmod
