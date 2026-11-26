@@ -52,7 +52,7 @@
 
 ## Other engine work not yet implemented
 - Concrete desktop/Android platform backends and physical-device tests.
-- Renderer, ECS/world, physics, asset loading/decoding/dependency pipeline, audio, serialization, editor and profiling. ResourceStore is only a key-to-handle layer; it does not load or decode assets.
+- Renderer, ECS/world, physics, asset dependency graph/cache policy/GPU upload, audio, serialization, editor and profiling. Initial async asset read/decode/register helper is implemented but pending CI; ResourceStore itself remains only a key-to-handle layer.
 
 ## Immediate next actions
 1. Add deterministic callback-vs-destroy concurrency tests for ResourceRegistry/ResourceStore.
