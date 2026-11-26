@@ -399,14 +399,14 @@ extern "C" void android_main(android_app* app) {
     std::string log_path;
     std::string_view log_storage_scope = "unavailable";
     const char* log_directory = app->activity->externalDataPath;
-    if (log_directory != nullptr && log_directory[0] != '\\0') {
+    if (log_directory != nullptr && log_directory[0] != '\0') {
         log_storage_scope = "app-specific external files";
     } else {
         log_directory = app->activity->internalDataPath;
-        if (log_directory != nullptr && log_directory[0] != '\\0')
+        if (log_directory != nullptr && log_directory[0] != '\0')
             log_storage_scope = "private internal files (fallback)";
     }
-    if (log_directory != nullptr && log_directory[0] != '\\0') {
+    if (log_directory != nullptr && log_directory[0] != '\0') {
         log_path = std::string(log_directory) + "/logs/engine.log";
         sinks.emplace_back(dream::core::make_file_log_sink(
             log_path, dream::core::FileLogSinkOptions{8U * 1024U * 1024U, 3U, true}));
