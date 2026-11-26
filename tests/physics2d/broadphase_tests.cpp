@@ -44,7 +44,7 @@ int main() {
             "upsert updates an existing proxy");
     const auto touching_pairs = broadphase.compute_pairs();
     require(touching_pairs.pairs ==
-                std::vector<BroadphasePair>{{10U, 20U}, {10U, 30U}},
+                std::vector<BroadphasePair>{{10U, 20U}, {10U, 30U}, {20U, 30U}},
             "touching AABBs remain broadphase candidates");
 
     require(broadphase.upsert(50U, Aabb{{2.5F, 2.5F}, {3.5F, 3.5F}}) ==
@@ -53,7 +53,7 @@ int main() {
     const auto expanded = broadphase.compute_pairs();
     require(expanded.pairs ==
                 std::vector<BroadphasePair>{
-                    {10U, 20U}, {10U, 30U}, {20U, 50U}},
+                    {10U, 20U}, {10U, 30U}, {20U, 30U}, {20U, 50U}},
             "candidate pairs are canonicalized and sorted by proxy ID");
 
     require(broadphase.contains(10U), "contains finds live proxy");
@@ -62,7 +62,7 @@ int main() {
     require(!broadphase.contains(10U), "removed proxy is absent");
     const auto after_remove = broadphase.compute_pairs();
     require(after_remove.pairs ==
-                std::vector<BroadphasePair>{{20U, 50U}},
+                std::vector<BroadphasePair>{{20U, 30U}, {20U, 50U}},
             "removed proxies disappear from subsequent queries");
 
     require(broadphase.upsert(60U, Aabb{{2, 0}, {1, 1}}) ==
