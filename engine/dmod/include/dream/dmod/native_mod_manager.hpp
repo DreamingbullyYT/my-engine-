@@ -7,6 +7,7 @@
 #include <dream/dmod/native_hook_registry.hpp>
 #include <filesystem>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <span>
@@ -43,6 +44,8 @@ struct NativeModBatchResult final {
 // change engine/game state, memory and application data. Load only trusted mods.
 class NativeModManager final {
 public:
+    // Manager state operations are serialized. Native callbacks may re-enter on
+    // the calling thread; dispatches from separate threads run one at a time.
     explicit NativeModManager(NativeModHostApiV1 host_api) noexcept;
     ~NativeModManager();
     NativeModManager(const NativeModManager&) = delete;
@@ -87,6 +90,8 @@ private:
     void release(LoadedMod& mod) noexcept;
     [[nodiscard]] LoadedMod* find(std::string_view) noexcept;
     [[nodiscard]] const LoadedMod* find(std::string_view) const noexcept;
+    // Recursive to preserve same-thread callback -> manager API re-entrancy.
+    mutable std::recursive_mutex state_mutex_{};
     NativeModHostApiV1 host_api_{};
     NativeHookRegistry hook_registry_{};
     std::vector<std::unique_ptr<LoadedMod>> mods_;

@@ -422,3 +422,32 @@ jobs:
           ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: ctest --test-dir build-sanitized --output-on-failure
+
+  dmod-tsan:
+    name: DMod / ThreadSanitizer
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes cmake ninja-build gcc g++
+
+      - name: Configure focused ThreadSanitizer build
+        run: |
+          cmake -S . -B build-tsan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DDREAM_BUILD_TESTS=ON -DDREAM_BUILD_EXAMPLES=OFF \
+            -DCMAKE_CXX_FLAGS="-fsanitize=thread -fno-omit-frame-pointer -g" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=thread" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=thread"
+
+      - name: Build native DMod runtime test
+        run: cmake --build build-tsan --target dream_dmod_native_mod_runtime_tests --parallel 2
+
+      - name: Run DMod concurrency test under ThreadSanitizer
+        env:
+          TSAN_OPTIONS: halt_on_error=1:history_size=7
+        run: ctest --test-dir build-tsan --output-on-failure -R '^dream\\.dmod\\.native_runtime$'

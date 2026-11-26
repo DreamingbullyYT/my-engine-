@@ -153,3 +153,8 @@ This update is authoritative over older checklist/status text above where they c
 - **Android host:** GameActivity host, EngineRuntime, bgfx GLES 3 renderer, 2D/3D demo, retained touch UI, basic software-keyboard/IME bridge, AAudio output connection, pause/surface recreation handling and rotating logs are present. CI proves cross-compilation/package layout only, not physical-device rendering/audio/IME behavior.
 - **Sleeping:** not yet implemented; no public sleep/wake state is exposed. It remains open rather than being marked complete.
 - **Remaining production work:** general CCD for non-circular shapes and dynamic-vs-dynamic pairs; sleeping/waking; joints; multiple fixtures and robust contact manifolds; complete MTL texture handling and glTF/GLB/image/audio import; GPU asset residency/device-loss policy beyond renderer resource reinitialization; full IME composition/selection; full font shaping/atlas and UI clipping; animation blends/events/curves; native mod resource/job/thread ownership and hot reload; package signatures/trust; profiler/editor; two real-game integration tests; physical-device verification.
+
+
+## Concurrency status — 2026-11-26
+
+The native mod manager now serializes its public state and callback-lifetime operations, supports same-thread callback re-entry, and has a multithreaded dispatch regression test plus a targeted ThreadSanitizer CI job. The broader stability work remains open: test the full engine for cross-subsystem races, verify TSan in Actions, and validate mod-owned worker-thread shutdown/resource lifetime. A green Android cross-build does not replace execution on a physical phone.

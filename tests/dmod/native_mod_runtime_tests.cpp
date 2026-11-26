@@ -3,6 +3,8 @@
 #include <dream/dmod/package_reader.hpp>
 #include <miniz.h>
 #include <cstdint>
+#include <atomic>
+#include <thread>
 #include <array>
 #include <cstdlib>
 #include <iostream>
@@ -33,6 +35,25 @@ void call_next_twice(void*, dream::dmod::NativeHookInvocationV1* invocation) noe
     (void)invocation->call_next(invocation->next_context);
     (void)invocation->call_next(invocation->next_context);
 }
+}
+
+struct DispatchConcurrencyProbe final {
+    std::atomic<int> active{0};
+    std::atomic<int> max_active{0};
+    std::atomic<int> calls{0};
+};
+void observe_concurrent_dispatch(
+    void* context, dream::dmod::NativeHookInvocationV1*) noexcept {
+    if (context == nullptr) return;
+    auto& probe = *static_cast<DispatchConcurrencyProbe*>(context);
+    const int active = probe.active.fetch_add(1, std::memory_order_relaxed) + 1;
+    int observed = probe.max_active.load(std::memory_order_relaxed);
+    while (active > observed &&
+           !probe.max_active.compare_exchange_weak(
+               observed, active, std::memory_order_relaxed)) {}
+    for (int i = 0; i < 32; ++i) std::this_thread::yield();
+    probe.calls.fetch_add(1, std::memory_order_relaxed);
+    probe.active.fetch_sub(1, std::memory_order_relaxed);
 }
 int main() {
     using namespace dream::dmod;
@@ -71,6 +92,41 @@ int main() {
             interface_snapshot.entries[2].first == "dream.test.unload_on_update" &&
             interface_snapshot.entries[0].second == 1,
             "interfaces are enumerated in deterministic ID order with versions");
+
+
+    // Concurrent callers must not race manager lifecycle state or overlap
+    // native callbacks. Same-thread callback re-entry remains supported.
+    NativeModHost concurrent_host;
+    NativeModManager concurrent_manager(concurrent_host.api());
+    DispatchConcurrencyProbe dispatch_probe;
+    require(concurrent_manager.hook_registry().register_hook(
+        "test.concurrent", "test.concurrent.dispatch", NativeHookStage::Before,
+        0, &observe_concurrent_dispatch, &dispatch_probe) != 0,
+        "register concurrent dispatch probe hook");
+    constexpr std::size_t dispatch_thread_count = 8;
+    constexpr int dispatches_per_thread = 128;
+    std::array<std::thread, dispatch_thread_count> dispatch_threads;
+    std::atomic<int> dispatch_failures{0};
+    for (auto& worker : dispatch_threads) {
+        worker = std::thread([&] {
+            for (int i = 0; i < dispatches_per_thread; ++i) {
+                std::int32_t value = 0;
+                const auto dispatched = concurrent_manager.dispatch_hooks(
+                    "test.concurrent.dispatch", &value, &increment_value);
+                if (!dispatched || !dispatched.original_called || value != 1)
+                    dispatch_failures.fetch_add(1, std::memory_order_relaxed);
+            }
+        });
+    }
+    for (auto& worker : dispatch_threads) worker.join();
+    require(dispatch_failures.load() == 0,
+            "concurrent dispatch preserves every original operation");
+    require(dispatch_probe.calls.load() ==
+                static_cast<int>(dispatch_thread_count) * dispatches_per_thread,
+            "concurrent dispatch invokes every registered native callback");
+    require(dispatch_probe.max_active.load() == 1,
+            "manager serializes native callbacks across dispatch threads");
+    concurrent_manager.shutdown();
 
     Manifest manifest;
     manifest.id = "test.native";

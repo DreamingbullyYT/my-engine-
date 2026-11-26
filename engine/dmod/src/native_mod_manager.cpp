@@ -33,6 +33,7 @@ NativeModManager::NativeModManager(NativeModHostApiV1 api) noexcept : host_api_(
 NativeModManager::~NativeModManager() { shutdown(); }
 
 bool NativeModManager::valid_host_api() const noexcept {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     return host_api_.struct_size >= sizeof(NativeModHostApiV1) &&
         host_api_.abi_version == native_mod_abi_v1;
 }
@@ -118,6 +119,7 @@ void NativeModManager::process_deferred() noexcept {
 
 NativeModResult NativeModManager::load(
     const Manifest& manifest, const std::filesystem::path& path) {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     if (shutdown_ || shutdown_requested_)
         return {NativeModError::Shutdown, "Mod manager is shut down."};
     if (!valid_host_api())
@@ -193,6 +195,7 @@ NativeModResult NativeModManager::load(
 
 NativeModResult NativeModManager::install_and_load(
     const PackageReader& package, const std::filesystem::path& private_mod_root) {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     if (shutdown_ || shutdown_requested_)
         return {NativeModError::Shutdown, "Mod manager is shut down."};
     const auto installed = NativeModPackageInstaller::install(package, private_mod_root);
@@ -205,6 +208,7 @@ NativeModBatchResult NativeModManager::install_and_load_all(
     std::span<const PackageReader* const> packages,
     const std::filesystem::path& private_mod_root,
     core::Version engine_api_version) {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     NativeModBatchResult result;
     std::vector<NativeModPackage> installed_packages;
     installed_packages.reserve(packages.size());
@@ -232,6 +236,7 @@ NativeModBatchResult NativeModManager::install_and_load_all(
 
 NativeModBatchResult NativeModManager::load_all(
     std::span<const NativeModPackage> packages, core::Version engine_api_version) {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     NativeModBatchResult result;
     if (shutdown_ || shutdown_requested_) {
         result.error = NativeModError::Shutdown;
@@ -312,6 +317,7 @@ NativeModBatchResult NativeModManager::load_all(
 }
 
 NativeModBatchResult NativeModManager::enable_all() {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     NativeModBatchResult result;
     if (shutdown_ || shutdown_requested_) {
         result.error = NativeModError::Shutdown;
@@ -357,6 +363,7 @@ const NativeModManager::LoadedMod* NativeModManager::find(std::string_view id) c
 }
 
 NativeModResult NativeModManager::enable(std::string_view id) {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     if (shutdown_ || shutdown_requested_)
         return {NativeModError::Shutdown, "Mod manager is shut down."};
     auto* mod = find(id);
@@ -384,6 +391,7 @@ NativeModResult NativeModManager::enable(std::string_view id) {
 }
 
 NativeModResult NativeModManager::disable(std::string_view id) {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     if (shutdown_ || shutdown_requested_)
         return {NativeModError::Shutdown, "Mod manager is shut down."};
     auto* mod = find(id);
@@ -410,6 +418,7 @@ NativeModResult NativeModManager::disable(std::string_view id) {
 }
 
 NativeModResult NativeModManager::unload(std::string_view id) {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     if (shutdown_ || shutdown_requested_)
         return {NativeModError::Shutdown, "Mod manager is shut down."};
     const auto it = std::find_if(mods_.begin(), mods_.end(),
@@ -437,6 +446,7 @@ NativeHookDispatchResult NativeModManager::dispatch_hooks(
     std::string_view hook_point_id,
     void* user_data,
     NativeHookOriginalV1 original) noexcept {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     if (original == nullptr) return {};
     if (shutdown_ || shutdown_requested_) {
         original(user_data);
@@ -455,6 +465,7 @@ NativeHookDispatchResult NativeModManager::dispatch_hooks(
 }
 
 bool NativeModManager::update(double delta_seconds) noexcept {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     if (shutdown_ || shutdown_requested_ ||
         !std::isfinite(delta_seconds) || delta_seconds < 0.0) return false;
     begin_callback();
@@ -470,25 +481,30 @@ bool NativeModManager::update(double delta_seconds) noexcept {
 }
 
 void NativeModManager::shutdown() noexcept {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     if (shutdown_ || shutdown_requested_) return;
     shutdown_requested_ = true;
     process_deferred();
 }
 
 bool NativeModManager::is_loaded(std::string_view id) const noexcept {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     return find(id) != nullptr;
 }
 
 bool NativeModManager::is_enabled(std::string_view id) const noexcept {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     const auto* mod = find(id);
     return mod != nullptr && mod->enabled && !mod->unload_requested;
 }
 
 std::size_t NativeModManager::loaded_count() const noexcept {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     return mods_.size();
 }
 
 std::vector<NativeModStatus> NativeModManager::statuses() const {
+    std::lock_guard<std::recursive_mutex> state_lock(state_mutex_);
     std::vector<NativeModStatus> result;
     result.reserve(mods_.size());
     for (const auto& mod : mods_)

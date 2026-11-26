@@ -176,3 +176,13 @@ This update is authoritative over older checklist/status text above where they c
 - **Android host:** GameActivity host, EngineRuntime, bgfx GLES 3 renderer, 2D/3D demo, retained touch UI, basic software-keyboard/IME bridge, AAudio output connection, pause/surface recreation handling and rotating logs are present. CI proves cross-compilation/package layout only, not physical-device rendering/audio/IME behavior.
 - **Sleeping:** not yet implemented; no public sleep/wake state is exposed. It remains open rather than being marked complete.
 - **Remaining production work:** general CCD for non-circular shapes and dynamic-vs-dynamic pairs; sleeping/waking; joints; multiple fixtures and robust contact manifolds; complete MTL texture handling and glTF/GLB/image/audio import; GPU asset residency/device-loss policy beyond renderer resource reinitialization; full IME composition/selection; full font shaping/atlas and UI clipping; animation blends/events/curves; native mod resource/job/thread ownership and hot reload; package signatures/trust; profiler/editor; two real-game integration tests; physical-device verification.
+
+
+## Native mod-manager concurrency repair — 2026-11-26
+
+- `NativeModManager` now protects all public state-reading and state-mutating operations with a manager-level recursive mutex. This covers dispatch, update, load/enable/disable/unload/shutdown, status queries and the callback/deferred-lifecycle bookkeeping.
+- The recursive mutex preserves same-thread re-entry when a trusted native callback calls back into the manager. Calls arriving from other threads are serialized; in particular, two dispatches cannot race on callback depth or execute manager-owned native callbacks concurrently.
+- `NativeHookRegistry` retains its own shared mutex for registration snapshots and registry updates. The manager-level lock additionally protects module/context lifetime while a dispatch callback is executing.
+- Added a multithreaded regression test (8 threads × 128 dispatches) that checks every original operation is run, every hook is invoked, and callbacks do not overlap.
+- Added a focused Linux ThreadSanitizer workflow for the native DMod runtime test. Its result must be checked in Actions; adding the job is not itself proof of a clean TSan run.
+- This is not a claim that arbitrary mod-created threads are automatically safe. Trusted native mods must still stop/join their own threads before disable/destroy returns. Broader engine-wide race/soak testing and phone validation remain open.
