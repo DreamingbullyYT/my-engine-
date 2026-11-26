@@ -112,6 +112,17 @@ int main() {
 
     EngineRuntime runtime(surfaces, backend, config);
     require(runtime.configuration_valid(), "runtime configuration validates");
+    const auto mod_api = runtime.mod_host().api();
+    require(mod_api.query_interface(mod_api.host_context, "dream.engine.runtime", 1) == &runtime,
+            "native mods receive the actual EngineRuntime object");
+    require(mod_api.query_interface(mod_api.host_context, "dream.engine.world", 1) ==
+                &runtime.scene().world(),
+            "native mods receive the actual ECS World");
+    require(mod_api.query_interface(mod_api.host_context, "dream.engine.physics2d", 1) ==
+                &runtime.physics2d(),
+            "native mods receive the actual PhysicsWorld2D");
+    require(runtime.mods().loaded_count() == 0,
+            "runtime owns the native mod manager");
     require(runtime.state() == RuntimeState::Created,
             "runtime begins in Created state");
     require(static_cast<bool>(runtime.initialize({5U})),

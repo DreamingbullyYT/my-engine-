@@ -1,6 +1,8 @@
 #pragma once
 
 #include <dream/core/fixed_step_clock.hpp>
+#include <dream/dmod/native_mod_host.hpp>
+#include <dream/dmod/native_mod_manager.hpp>
 #include <dream/input/action_map.hpp>
 #include <dream/physics2d/physics_world.hpp>
 #include <dream/platform/surface.hpp>
@@ -110,8 +112,21 @@ public:
           physics_(config_.physics2d),
           simulation_clock_(config_.fixed_step),
           frame_builder_(config_.frame_builder),
-          render_device_(surfaces, render_backend) {
+          render_device_(surfaces, render_backend),
+          mod_host_(),
+          mod_manager_(mod_host_.api()) {
+        bool interfaces_valid = true;
+        interfaces_valid = mod_host_.expose("dream.engine.runtime", 1, *this) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.scene", 1, scene_) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.world", 1, scene_.world()) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.physics2d", 1, physics_) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.input.actions", 1, action_map_) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.clock.fixed", 1, simulation_clock_) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.render.frame_builder", 1, frame_builder_) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.render.device", 1, render_device_) && interfaces_valid;
+
         configuration_valid_ =
+            interfaces_valid &&
             simulation_clock_.valid() &&
             physics_.valid() &&
             config_.fixed_step.fixed_delta_seconds <=
@@ -199,6 +214,8 @@ public:
                     saturating_add(result.system_failures, report.failures.size());
                     if (report.error != world::SystemUpdateError::None)
                         saturating_add(result.system_failures, std::size_t{1});
+                    if (!mod_manager_.update(fixed_delta))
+                        saturating_add(result.system_failures, std::size_t{1});
                 });
         } catch (...) {
             result.error = RuntimeError::SimulationCallbackFailure;
@@ -266,12 +283,18 @@ public:
 
     void shutdown() noexcept {
         if (state_ == RuntimeState::Stopped) return;
+        mod_manager_.shutdown();
         render_device_.shutdown();
         simulation_clock_.reset();
         frame_builder_.reset();
         action_map_.reset_all();
         state_ = RuntimeState::Stopped;
     }
+
+    // Native mods can query these interfaces by ID from NativeModHostApiV1.
+    // They are direct pointers to live engine objects, not sandboxed proxies.
+    [[nodiscard]] dmod::NativeModHost& mod_host() noexcept { return mod_host_; }
+    [[nodiscard]] dmod::NativeModManager& mods() noexcept { return mod_manager_; }
 
     [[nodiscard]] world::Scene& scene() noexcept { return scene_; }
     [[nodiscard]] const world::Scene& scene() const noexcept { return scene_; }
@@ -329,6 +352,8 @@ private:
     input::ActionMap action_map_;
     render::RenderFrameBuilder frame_builder_;
     render::RenderDevice render_device_;
+    dmod::NativeModHost mod_host_;
+    dmod::NativeModManager mod_manager_;
     world::SystemHandle physics_system_{};
     bool configuration_valid_{false};
     RuntimeState state_{RuntimeState::Created};

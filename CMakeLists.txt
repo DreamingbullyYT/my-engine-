@@ -143,7 +143,7 @@ target_include_directories(dream_runtime INTERFACE
 target_compile_features(dream_runtime INTERFACE cxx_std_20)
 target_link_libraries(dream_runtime INTERFACE
     DreamEngine::Core DreamEngine::Platform DreamEngine::World
-    DreamEngine::Input DreamEngine::Physics2D DreamEngine::Render
+    DreamEngine::Input DreamEngine::Physics2D DreamEngine::Render DreamEngine::DMod
 )
 
 add_library(dream_physics2d INTERFACE)

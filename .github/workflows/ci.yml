@@ -131,7 +131,7 @@ jobs:
       - name: Cross-compile runtime integration tests for Android ARM64
         run: |
           "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
-            -std=c++20 -Iengine/core/include -Iengine/platform/include -Iengine/world/include -Iengine/serialization/include -Iengine/input/include -Iengine/physics2d/include -Iengine/render/include -Iengine/runtime/include \
+            -std=c++20 -Iengine/core/include -Iengine/platform/include -Iengine/world/include -Iengine/serialization/include -Iengine/input/include -Iengine/physics2d/include -Iengine/render/include -Iengine/runtime/include -Iengine/dmod/include \
             -c tests/runtime/engine_runtime_tests.cpp \
             -o /tmp/runtime-integration-tests-android.o
 
