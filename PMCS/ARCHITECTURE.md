@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Core services, application lifecycle, backend-neutral platform contracts, initial DMod package pipeline, typed generational handles, owning ResourceRegistry and keyed ResourceStore are CI-verified.
+**Status:** Core services, application lifecycle, backend-neutral platform contracts, initial DMod package pipeline, typed generational handles, owning ResourceRegistry and keyed ResourceStore are CI-verified. ResourceRegistry callback-vs-destroy synchronization test passed in run 45758612936. Initial async asset loader is implemented and awaiting CI.
 
 ## High-level modules
 - Platform: desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
