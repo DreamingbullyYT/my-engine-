@@ -16,7 +16,8 @@
 - TOML manifest parser with format-version check, strict MAJOR.MINOR.PATCH parsing, dependency/capability parsing and a 64 KiB input cap.
 - Read-only in-memory ZIP package reader. It does not extract package paths to disk, validates all local ZIP headers against the central directory, validates UTF-8 paths and case-collisions, rejects links/encryption/unsupported methods, enforces archive/per-entry/total-size and compression-ratio limits, reads the root manifest and checks the declared entry script exists.
 - Pinned build dependencies: miniz 3.1.2 and toml++ 3.5.1, each fetched from an immutable upstream commit.
-- GitHub Actions for Linux GCC/Clang, Android ARM64 cross-build and ChaiScript AST proof.
+- GitHub Actions for Linux GCC/Clang, Android ARM64 cross-build, ChaiScript AST proof and Android cross-compilation of selected header-only tests.
+- Initial header-only dream_assets module: asynchronous virtual-file read, caller-provided decoder, and ResourceStore registration. Implementation and tests are pending CI; it has no cache/dependency graph/GPU upload.
 
 ## Verified CI
 - Run [45758612936](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45758612936) completed successfully for all four jobs. It includes deterministic ResourceRegistry callback-vs-destroy synchronization coverage.
