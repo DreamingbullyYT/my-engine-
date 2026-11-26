@@ -22,7 +22,7 @@ AudioClip mono(std::initializer_list<float> samples,std::uint32_t rate=48000) {
 int main() {
     AudioMixer mixer;
     const auto invalid=mixer.add_clip(AudioClip{.sample_rate=0});
-    require(!invalid.second&&invalid.second==AudioError::InvalidClip,
+    require(!static_cast<bool>(invalid.first)&&invalid.second==AudioError::InvalidClip,
         "invalid sample rate is rejected");
 
     const auto added=mixer.add_clip(mono({0.25F,0.5F,-0.5F,-0.25F}));
