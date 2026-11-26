@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Core services, application lifecycle, backend-neutral platform contracts, initial DMod package pipeline, typed generational handles, owning ResourceRegistry, keyed ResourceStore, asset dependency planning, bounded async loading and optional AssetCache integration are CI-verified.
+**Status:** Core services, application lifecycle, backend-neutral platform contracts, initial DMod package pipeline, typed generational handles, owning ResourceRegistry, keyed ResourceStore, asset dependency planning, bounded async loading, cooperative cancellation, AssetCache integration and in-flight request deduplication are CI-verified.
 
 ## High-level modules
 - Platform: desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
@@ -25,6 +25,7 @@
 - ResourceStore<T, Tag> adds a case-sensitive string-key mapping over ResourceRegistry, with insert/find/erase and scoped access by key or handle. It is intentionally not a loader: file I/O, decoding, async scheduling, dependency tracking and GPU upload belong to higher-level asset systems. Store callbacks must not re-enter the same store.
 - ResourceStore Linux GCC/Clang tests and Android ARM64 test cross-compilation passed in [run 45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493). Android is compile-only, not physical-device execution.
 - `dream_assets::load_async` composes JobSystem, bounded IFileSystem reads, a caller-provided decoder and ResourceStore. `load_async_cached` is an optional sibling path targeting AssetCache; it checks for an existing key before file I/O and takes a caller-provided decoded-size estimator. Both accept an optional `AssetCancellationToken`; cancellation is cooperative and checked before I/O/cache hits, after reads, after decoding and, for cached loads, after size estimation. It cannot interrupt an in-progress backend read or decoder call. Cancellation observed before registration/insertion prevents that operation. AssetCache is a CPU-side byte-budgeted LRU; it does not measure allocations or manage GPU residency. Borrowed services must outlive the task and callbacks run on a worker thread. All four CI jobs passed in [run 45769042275](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45769042275).
+- `AssetRequestCoordinator<Result>` shares a `std::shared_future<Result>` among callers using the same request ID while the request is pending. `load_async_coordinated` and `load_async_cached_coordinated` are convenience wrappers over the existing loaders. Completed entries are pruned on the next request or explicit `prune_completed()` call; this is not a result cache. Request IDs are caller-defined and must include any type/source/version identity needed to distinguish requests. The first caller owns the decoder and cancellation token; followers receive the shared result and cannot independently cancel the underlying operation. Concurrent duplicate requests therefore perform one read/decode. Verified across Linux GCC, Linux Clang, DMod proof and Android ARM64 cross-compilation in [run 45770215802](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45770215802).
 - ResourceRegistry callback-vs-destroy synchronization test passed with all four CI jobs in [run 45758612936](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45758612936).
 
 ## Platform contracts
@@ -42,6 +43,13 @@
 - Cancellation is cooperative, not preemptive: an active filesystem backend read or decoder/estimator callback must return before the next checkpoint can observe the request. Callers must still keep borrowed services alive until the future completes.
 - The loader reports `AssetLoadStatus::Cancelled` when cancellation is observed at a checkpoint and avoids subsequent cache/store registration or insertion.
 - Cancellation behavior passed Linux GCC, Linux Clang, DMod AST proof and Android ARM64 cross-compilation in [run 45769042275](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45769042275). Android is compile-only, not physical-device execution.
+
+## Asset request coordination
+- The coordinator deduplicates only pending requests. Once a future is ready, its entry is removed lazily on the next request or by calling `prune_completed()`; callers already holding a shared future can still read its result.
+- Request IDs are supplied by the caller. Include asset type, source path/identity, version or other relevant dimensions so unrelated loads do not accidentally share work.
+- The first caller's factory, decoder and cancellation token own the underlying operation. Later callers with the same pending ID share the result; their factories and cancellation tokens are ignored. Independent per-subscriber cancellation is not implemented.
+- The coordinator does not own JobSystem, filesystem, store or cache lifetimes. Those borrowed services must still outlive the underlying task.
+- Concurrent same-ID uncached requests were tested to perform one file read and one decode and return the same handle. All four CI jobs passed in [run 45770215802](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45770215802).
 
 ## Asset dependency planning
 - `resolve_dependencies` accepts an in-memory set of asset definitions and returns deterministic dependency-first order using lexical tie-breaking.
