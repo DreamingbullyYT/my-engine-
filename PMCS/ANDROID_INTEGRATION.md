@@ -144,3 +144,13 @@ Interpretation:
 - Surface marker, but no EngineRuntime success marker: inspect renderer initialization and surface lifecycle.
 
 The original launch log is not enough to conclude that GameActivity failed to call `android_main`; only the new direct markers can establish which stage ran.
+
+
+### Clean diagnostic APK verification — 2026-11-26
+
+- The exact APK from run `45899971300` was downloaded and inspected. Its DEX lacked the `DreamEngineBoot` Java strings and `MainActivity.onCreate` diagnostic override, despite those being present in source commit `e3371a3`. Its native library did contain the expected GameActivity and `android_main` exports. This explained why the previous device log could not locate the startup boundary.
+- The Android workflow now performs `:app:clean :app:assembleDebug` with `--no-build-cache` and verifies the diagnostic strings in the packaged DEX and native library before artifact upload.
+- Clean build [run 45901326780](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45901326780) passed, including the packaging assertions, on commit `7d7c56574edc7eb55af1e4b96dc4bae30b76c9d2`.
+- Artifact: `dream-engine-android-arm64-debug`, ID `15156625840`, ZIP size 5,275,148 bytes, SHA-256 `e7252d11782dd4ad25083cc617243248573075fc6c76ede2fe6576b01861e734`, expires 2026-12-10.
+- The downloaded APK was independently inspected: Java `DreamEngineBoot` and `MainActivity.onCreate` markers are present in DEX; native `android_main entered` and surface/loop markers are present in `libdream_engine_android_host.so`. APK SHA-256: `87f68498633494cffb26e0046f5abab9f1d09946f385438f2f2852f6cc056717`.
+- This confirms correct packaging of diagnostics, **not** that the app now renders correctly on the phone. Physical-device retest is still required. Engine CI run `45901326785` was still running when this note was written.
