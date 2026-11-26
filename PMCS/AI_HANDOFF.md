@@ -25,8 +25,9 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 
 ## Current implementation
 - ResourceRegistry<T, Tag> owns resources through unique_ptr, provides callback-scoped access and rejects stale handles; tests passed in [run 45715803430](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715803430).
-- Initial ResourceStore<T, Tag> maps case-sensitive string keys to typed handles, supports find/erase and scoped access; implementation/tests are awaiting CI. It intentionally does not load or decode assets.
-- dream_core: version API, logging, diagnostics, event dispatcher, worker job system, typed generational handle pool and owning ResourceRegistry (verified in run 45715295194).
+- ResourceStore<T, Tag> maps case-sensitive string keys (non-empty, maximum 4096 bytes) to typed generational handles. Duplicate/invalid keys are rejected; find/erase and callback-scoped access by key or handle are supported. Linux tests and Android ARM64 cross-compilation passed in [run 45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493).
+- ResourceStore is not an asset loader: it does not do filesystem I/O, decode, schedule asynchronous loads, track dependencies or upload GPU resources.
+- dream_core: version API, logging, diagnostics, event dispatcher, worker job system, typed generational handle pool, ResourceRegistry and ResourceStore.
 - dream_platform: application lifecycle, window/surface/input contracts and virtual filesystem path validation.
 - dream_dmod: manifest model, validation, dependency resolver, TOML parser and read-only in-memory ZIP package reader with local-header validation.
 - Pinned dependencies: miniz 3.1.2 at 77d0dce8627735138c51770d1799a1ef48f2117d; toml++ 3.5.1 at efd80e03356af65c7d4e61c56ffb326b34f8d0f4.
@@ -36,7 +37,7 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - C++20 remains a provisional implementation baseline.
 
 ## Next work
-1. Verify ResourceStore and expand resource lifetime/concurrency tests.
+1. Add deterministic callback-vs-destroy synchronization tests for resource lifetime/thread-safety.
 2. Design a separate asset loading pipeline for file I/O, decoding, async scheduling and dependency tracking.
 3. Research renderer candidates and define engine-owned 2D/3D rendering interfaces before selecting a backend.
 4. Continue DMod package trust/versioning and interpreter security audit.
