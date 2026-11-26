@@ -19,7 +19,8 @@
 - GitHub Actions for Linux GCC/Clang, Android ARM64 cross-build and ChaiScript AST proof.
 
 ## Verified CI
-- Run [45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493) completed successfully for all four jobs: Linux GCC, Linux Clang, DMod AST proof and Android ARM64 cross-build. This run includes ResourceStore unit tests on Linux and a dedicated Android ARM64 cross-compilation of the ResourceStore tests.
+- Run [45758612936](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45758612936) completed successfully for all four jobs. It includes deterministic ResourceRegistry callback-vs-destroy synchronization coverage.
+- Run [45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493) completed successfully for all four jobs and verifies ResourceStore Linux tests plus Android ARM64 test cross-compilation.
 - Run [45715803430](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715803430) completed successfully for ResourceRegistry and all four CI jobs.
 - Run [45714411879](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45714411879) completed successfully for typed handles and all four CI jobs.
 - Run [45710274229](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45710274229) completed successfully for window/surface/input/filesystem contracts and all four CI jobs.
