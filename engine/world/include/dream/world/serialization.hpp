@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dream/serialization/binary_archive.hpp>
+#include <dream/world/scene.hpp>
 #include <dream/world/transform.hpp>
 #include <dream/world/world.hpp>
 
@@ -50,7 +51,10 @@ enum class WorldArchiveError : std::uint8_t {
     ComponentDecodeFailed,
     ComponentPayloadTrailingData,
     TrailingData,
-    EntityCapacityExceeded
+    EntityCapacityExceeded,
+    InvalidSceneName,
+    InvalidSceneMarker,
+    WorldArchiveFailure
 };
 
 struct WorldArchiveOptions final {
@@ -600,5 +604,158 @@ inline ComponentCodecRegistrationError register_transform_components(
             return value;
         });
 }
+
+} // namespace dream::world
+
+
+namespace dream::world {
+
+struct SceneArchiveWriteResult final {
+    WorldArchiveError error{WorldArchiveError::None};
+    serialization::ArchiveError archive_error{serialization::ArchiveError::None};
+    WorldArchiveError world_error{WorldArchiveError::None};
+    std::vector<std::byte> bytes;
+
+    [[nodiscard]] explicit operator bool() const noexcept {
+        return error == WorldArchiveError::None;
+    }
+};
+
+struct SceneArchiveReadResult final {
+    WorldArchiveError error{WorldArchiveError::None};
+    serialization::ArchiveError archive_error{serialization::ArchiveError::None};
+    WorldArchiveError world_error{WorldArchiveError::None};
+    std::unique_ptr<Scene> scene;
+
+    [[nodiscard]] explicit operator bool() const noexcept {
+        return error == WorldArchiveError::None && static_cast<bool>(scene);
+    }
+};
+
+// Scene archives store the scene name and its World. System callbacks are code,
+// not persistent data: the game must register its systems again after loading.
+class SceneSerializer final {
+public:
+    SceneSerializer() = delete;
+
+    [[nodiscard]] static SceneArchiveWriteResult save(
+        const Scene& scene, const ComponentCodecRegistry& registry,
+        WorldArchiveOptions options = {}) {
+        SceneArchiveWriteResult result;
+        if (scene.name().empty() || scene.name().size() > 256U ||
+            !serialization::is_valid_utf8(scene.name())) {
+            result.error = WorldArchiveError::InvalidSceneName;
+            return result;
+        }
+
+        auto world_result = WorldSerializer::save(scene.world(), registry, options);
+        if (!world_result) {
+            result.error = WorldArchiveError::WorldArchiveFailure;
+            result.world_error = world_result.error;
+            result.archive_error = world_result.archive_error;
+            return result;
+        }
+        if (world_result.bytes.size() > std::numeric_limits<std::uint32_t>::max()) {
+            result.error = WorldArchiveError::ArchiveFailure;
+            result.archive_error = serialization::ArchiveError::TooLarge;
+            return result;
+        }
+
+        serialization::BinaryWriter writer{options.archive};
+        constexpr std::uint32_t scene_marker = 0x454E4353U; // "SCNE" in little-endian
+        if (!writer.write_header({1, 0}) ||
+            !writer.write_u32(scene_marker) ||
+            !writer.write_string(scene.name()) ||
+            !writer.write_u32(static_cast<std::uint32_t>(world_result.bytes.size())) ||
+            !writer.write_bytes(std::span<const std::byte>{world_result.bytes})) {
+            result.error = WorldArchiveError::ArchiveFailure;
+            result.archive_error = writer.error();
+            return result;
+        }
+
+        result.bytes = std::move(writer).take();
+        return result;
+    }
+
+    [[nodiscard]] static SceneArchiveReadResult load(
+        std::span<const std::byte> bytes, const ComponentCodecRegistry& registry,
+        WorldArchiveOptions options = {}) {
+        SceneArchiveReadResult result;
+        serialization::BinaryReader reader{bytes, options.archive};
+        if (!reader.good()) {
+            result.error = WorldArchiveError::ArchiveFailure;
+            result.archive_error = reader.error();
+            return result;
+        }
+        if (!reader.read_header({1, 0})) {
+            result.error = WorldArchiveError::ArchiveFailure;
+            result.archive_error = reader.error();
+            return result;
+        }
+
+        std::uint32_t marker = 0;
+        if (!reader.read_u32(marker)) {
+            result.error = WorldArchiveError::ArchiveFailure;
+            result.archive_error = reader.error();
+            return result;
+        }
+        if (marker != 0x454E4353U) {
+            result.error = WorldArchiveError::InvalidSceneMarker;
+            return result;
+        }
+
+        std::string scene_name;
+        if (!reader.read_string(scene_name)) {
+            result.error = WorldArchiveError::ArchiveFailure;
+            result.archive_error = reader.error();
+            return result;
+        }
+        if (scene_name.empty() || scene_name.size() > 256U) {
+            result.error = WorldArchiveError::InvalidSceneName;
+            return result;
+        }
+
+        std::uint32_t world_size = 0;
+        if (!reader.read_u32(world_size)) {
+            result.error = WorldArchiveError::ArchiveFailure;
+            result.archive_error = reader.error();
+            return result;
+        }
+        if (world_size > options.archive.maximum_bytes) {
+            result.error = WorldArchiveError::ArchiveFailure;
+            result.archive_error = serialization::ArchiveError::TooLarge;
+            return result;
+        }
+
+        std::vector<std::byte> world_bytes(world_size);
+        if (!reader.read_bytes(std::span<std::byte>{world_bytes})) {
+            result.error = WorldArchiveError::ArchiveFailure;
+            result.archive_error = reader.error();
+            return result;
+        }
+        if (reader.remaining() != 0U) {
+            result.error = WorldArchiveError::TrailingData;
+            return result;
+        }
+
+        auto world_result = WorldSerializer::load(
+            std::span<const std::byte>{world_bytes}, registry, options);
+        if (!world_result) {
+            result.error = WorldArchiveError::WorldArchiveFailure;
+            result.world_error = world_result.error;
+            result.archive_error = world_result.archive_error;
+            return result;
+        }
+
+        try {
+            result.scene = std::make_unique<Scene>(
+                std::move(scene_name), std::move(world_result.world));
+        } catch (...) {
+            result.error = WorldArchiveError::InvalidSceneName;
+            return result;
+        }
+        return result;
+    }
+};
 
 } // namespace dream::world
