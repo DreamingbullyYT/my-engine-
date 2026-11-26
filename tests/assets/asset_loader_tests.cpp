@@ -179,6 +179,40 @@ int main() {
     require(cache_too_large.message.find("byte budget") != std::string::npos,
             "cache rejection explains the byte budget");
 
+
+    assets::AssetCancellationSource cancelled_before_start;
+    cancelled_before_start.cancel();
+    const auto reads_before_cancel = filesystem.read_count.load();
+    auto cancelled = assets::load_async(
+        jobs, filesystem, store, "cancelled", "assets/hello.txt", decode_text,
+        64u * 1024u * 1024u, cancelled_before_start.token()).get();
+    require(cancelled.status == assets::AssetLoadStatus::Cancelled,
+            "pre-cancelled uncached request is cancelled");
+    require(filesystem.read_count.load() == reads_before_cancel,
+            "pre-cancelled request performs no filesystem read");
+
+    assets::AssetCancellationSource cancelled_during_decode;
+    auto cancelled_after_decode = assets::load_async(
+        jobs, filesystem, store, "cancelled-after-decode", "assets/hello.txt",
+        [&cancelled_during_decode](std::span<const std::byte> bytes) {
+            auto result = decode_text(bytes);
+            cancelled_during_decode.cancel();
+            return result;
+        }, 64u * 1024u * 1024u, cancelled_during_decode.token()).get();
+    require(cancelled_after_decode.status == assets::AssetLoadStatus::Cancelled,
+            "cancellation after decode prevents resource registration");
+    require(!store.find("cancelled-after-decode"),
+            "cancelled decoded resource is not inserted into ResourceStore");
+
+    assets::AssetCancellationSource cancelled_cache_hit;
+    cancelled_cache_hit.cancel();
+    auto cancelled_cached = assets::load_async_cached(
+        jobs, filesystem, cache, "text/cached", "assets/hello.txt", decode_text,
+        [](const TextAsset& asset) { return asset.value.size(); },
+        64u * 1024u * 1024u, cancelled_cache_hit.token()).get();
+    require(cancelled_cached.status == assets::AssetLoadStatus::Cancelled,
+            "cancelled cached request does not return a cache hit");
+
     jobs.shutdown();
     std::cout << "Dream Engine asset loader tests passed.\n";
     return EXIT_SUCCESS;
