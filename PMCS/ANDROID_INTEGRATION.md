@@ -114,3 +114,29 @@ This update is authoritative over older checklist/status text above where they c
 - **Android host:** GameActivity host, EngineRuntime, bgfx GLES 3 renderer, 2D/3D demo, retained touch UI, basic software-keyboard/IME bridge, AAudio output connection, pause/surface recreation handling and rotating logs are present. CI proves cross-compilation/package layout only, not physical-device rendering/audio/IME behavior.
 - **Sleeping:** not yet implemented; no public sleep/wake state is exposed. It remains open rather than being marked complete.
 - **Remaining production work:** general CCD for non-circular shapes and dynamic-vs-dynamic pairs; sleeping/waking; joints; multiple fixtures and robust contact manifolds; complete MTL texture handling and glTF/GLB/image/audio import; GPU asset residency/device-loss policy beyond renderer resource reinitialization; full IME composition/selection; full font shaping/atlas and UI clipping; animation blends/events/curves; native mod resource/job/thread ownership and hot reload; package signatures/trust; profiler/editor; two real-game integration tests; physical-device verification.
+
+
+
+## Native startup diagnostics — 2026-11-26
+
+The first physical-device launch opened the Activity and created a 1080×2412 SurfaceView, but the captured Logcat did not contain the native logger's initial `Dream Engine Android host entry` message. The APK binary was inspected separately: `libdream_engine_android_host.so` exports `android_main`, `GameActivity_onCreate` and the GameActivity JNI initialization symbol. This confirms symbol presence, not successful runtime invocation.
+
+To avoid relying on the engine logger while diagnosing the startup boundary, the host now emits direct Logcat markers under tag `DreamEngineBoot`:
+- Java class initialization before and after `System.loadLibrary`.
+- `MainActivity.onCreate` before and after `GameActivity.onCreate`.
+- Native `android_main` entry and `android_app/activity` validity.
+- APK shader asset load, application initialization, native surface creation and EngineRuntime/render initialization.
+
+These are diagnostic markers only; they do not prove physical-device startup. For the next device capture, clear Logcat, launch the app and leave it in the foreground, then collect:
+```sh
+su -c 'logcat -c'
+# Launch Dream Engine and keep it open for about 10 seconds.
+su -c 'logcat -d -v threadtime -s DreamEngineBoot:I DreamEngine:I AndroidRuntime:E' > /sdcard/Download/dream-engine-boot.txt
+```
+Interpretation:
+- No `DreamEngineBoot` markers: inspect Activity installation/launch and Java class loading.
+- Java markers, but no `android_main entered`: inspect GameActivity's native glue startup/entry callback.
+- Native entry marker, but no asset marker: inspect early native initialization and APK assets.
+- Surface marker, but no EngineRuntime success marker: inspect renderer initialization and surface lifecycle.
+
+The original launch log is not enough to conclude that GameActivity failed to call `android_main`; only the new direct markers can establish which stage ran.
