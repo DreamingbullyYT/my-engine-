@@ -4,12 +4,14 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <charconv>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <map>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -170,7 +172,7 @@ inline void append_float(std::vector<std::byte>& bytes,float value) {
         }
 
         std::size_t cursor=0U;
-        const auto next_token=[&]() mutable -> std::string_view {
+        auto next_token=[&]() -> std::string_view {
             while(cursor<line.size()&&(line[cursor]==' '||line[cursor]=='\t'))++cursor;
             const auto start=cursor;
             while(cursor<line.size()&&line[cursor]!=' '&&line[cursor]!='\t'&&

@@ -77,7 +77,8 @@ struct RuntimeUpdateResult final {
     [[nodiscard]] explicit operator bool() const noexcept {
         return error == RuntimeError::None &&
                static_cast<bool>(fixed_step) &&
-               physics_error == physics2d::PhysicsStepError::None;
+               physics_error == physics2d::PhysicsStepError::None &&
+               physics3d_error == physics3d::PhysicsStepError3D::None;
     }
 };
 
@@ -184,6 +185,11 @@ public:
         interfaces_valid = mod_host_.expose("dream.engine.scene", 1, scene_) && interfaces_valid;
         interfaces_valid = mod_host_.expose("dream.engine.world", 1, scene_.world()) && interfaces_valid;
         interfaces_valid = mod_host_.expose("dream.engine.physics2d", 1, physics_) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.physics3d", 1, physics3d_) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.animation", 1, animation_runtime_) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.audio", 1, audio_mixer_) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.ui", 1, ui_runtime_) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.assets.importers", 1, asset_importers_) && interfaces_valid;
         interfaces_valid = mod_host_.expose("dream.engine.input.actions", 1, action_map_) && interfaces_valid;
         interfaces_valid = mod_host_.expose("dream.engine.clock.fixed", 1, simulation_clock_) && interfaces_valid;
         interfaces_valid = mod_host_.expose("dream.engine.render.frame_builder", 1, frame_builder_) && interfaces_valid;
@@ -201,6 +207,8 @@ public:
             physics3d_.valid() &&
             config_.fixed_step.fixed_delta_seconds <=
                 static_cast<double>(config_.physics2d.maximum_delta_seconds) &&
+            config_.fixed_step.fixed_delta_seconds <=
+                static_cast<double>(config_.physics3d.maximum_delta_seconds) &&
             config_.frame_builder.maximum_quads_2d <=
                 std::numeric_limits<std::uint32_t>::max() / 4U &&
             config_.frame_builder.maximum_quads_2d <=
@@ -449,6 +457,12 @@ public:
     [[nodiscard]] world::SystemHandle physics_system() const noexcept {
         return physics_system_;
     }
+    [[nodiscard]] world::SystemHandle physics3d_system() const noexcept {
+        return physics3d_system_;
+    }
+    [[nodiscard]] world::SystemHandle animation_system() const noexcept {
+        return animation_system_;
+    }
 
 private:
     static void dispatch_scene_system(
@@ -609,6 +623,8 @@ private:
     dmod::NativeModHost mod_host_;
     dmod::NativeModManager mod_manager_;
     world::SystemHandle physics_system_{};
+    world::SystemHandle physics3d_system_{};
+    world::SystemHandle animation_system_{};
     bool configuration_valid_{false};
     RuntimeState state_{RuntimeState::Created};
     double last_frame_delta_seconds_{0.0};
