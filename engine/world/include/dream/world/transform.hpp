@@ -72,14 +72,6 @@ struct Matrix4x4 final {
     }
 };
 
-struct Parent final {
-    Entity entity{};
-
-    [[nodiscard]] constexpr bool has_parent() const noexcept {
-        return static_cast<bool>(entity);
-    }
-};
-
 [[nodiscard]] inline Matrix3x3 transform_matrix(const Transform2D& transform) noexcept {
     const float cosine = std::cos(transform.rotation_radians);
     const float sine = std::sin(transform.rotation_radians);

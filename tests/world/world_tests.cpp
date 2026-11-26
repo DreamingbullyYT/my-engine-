@@ -64,6 +64,20 @@ int main() {
     const auto third = world.create_entity();
     require(first && second && third, "entities are created");
     require(world.entity_count() == 3, "entity count tracks creation");
+    require(world.set_parent(second, first), "entity can be attached to a parent");
+    require(world.set_parent(third, second), "nested entity parenting succeeds");
+    require(world.parent_of(second) == first && world.parent_of(third) == second,
+            "parent lookup returns exact generational entities");
+    require(world.is_ancestor(first, third) && world.is_ancestor(second, third),
+            "ancestor queries walk the complete hierarchy");
+    require(!world.is_ancestor(third, first), "reverse ancestry is false");
+    const auto first_children = world.children_of(first);
+    require(first_children.size() == 1 && first_children[0] == second,
+            "children query returns direct children in stable order");
+    require(!world.set_parent(first, third), "parent assignment rejects cycles");
+    require(!world.set_parent(first, first), "parent assignment rejects self-parenting");
+    require(!world.set_parent(first, dream::world::Entity{}),
+            "parent assignment rejects invalid handles");
 
     require(world.emplace_component<Position>(first, 1.0F, 2.0F),
             "first position insertion succeeds");
@@ -121,6 +135,9 @@ int main() {
     require(!world.has_component<Position>(first), "destroyed entity loses components");
     require(!world.destroy_entity(first), "double entity destruction is rejected");
     require(world.entity_count() == 2, "entity count updates after destruction");
+    require(!world.parent_of(second), "destroying a parent detaches its direct children");
+    require(!world.is_ancestor(first, third),
+            "destroying a parent removes its hierarchy relationships");
 
     const auto reused = world.create_entity();
     require(reused.index() == first.index() &&
@@ -133,6 +150,9 @@ int main() {
             "2D transform can be stored as a component");
     require(world.emplace_component<Transform3D>(second),
             "3D transform can be stored as a component");
+    require(world.set_parent(third, second), "detached child can be attached again");
+    require(world.clear_parent(third), "parent link can be cleared");
+    require(!world.clear_parent(third), "clearing an absent parent link fails");
 
     std::cout << "Dream Engine world tests passed.\n";
     return EXIT_SUCCESS;
