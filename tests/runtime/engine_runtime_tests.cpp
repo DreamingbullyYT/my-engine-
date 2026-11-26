@@ -176,6 +176,21 @@ int main() {
     require(mod_api.query_interface(mod_api.host_context, "dream.engine.physics2d", 1) ==
                 &runtime.physics2d(),
             "native mods receive the actual PhysicsWorld2D");
+    require(mod_api.query_interface(mod_api.host_context, "dream.engine.physics3d", 1) ==
+                &runtime.physics3d(),
+            "native mods receive the actual PhysicsWorld3D");
+    require(mod_api.query_interface(mod_api.host_context, "dream.engine.animation", 1) ==
+                &runtime.animations(),
+            "native mods receive the actual animation runtime");
+    require(mod_api.query_interface(mod_api.host_context, "dream.engine.audio", 1) ==
+                &runtime.audio(),
+            "native mods receive the actual audio mixer");
+    require(mod_api.query_interface(mod_api.host_context, "dream.engine.ui", 1) ==
+                &runtime.ui(),
+            "native mods receive the actual retained UI runtime");
+    require(mod_api.query_interface(mod_api.host_context, "dream.engine.assets.importers", 1) ==
+                &runtime.asset_importers(),
+            "native mods receive the actual asset importer registry");
     require(runtime.mods().loaded_count() == 0,
             "runtime owns the native mod manager");
     require(runtime.state() == RuntimeState::Created,

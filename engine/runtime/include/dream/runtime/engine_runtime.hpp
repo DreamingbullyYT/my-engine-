@@ -631,8 +631,12 @@ private:
     std::uint64_t render_frame_index_{0};
     std::size_t frame_physics_contacts_{0};
     std::size_t frame_physics_events_{0};
+    std::size_t frame_physics3d_contacts_{0};
+    std::size_t frame_physics3d_events_{0};
     physics2d::PhysicsStepError last_physics_error_{
         physics2d::PhysicsStepError::None};
+    physics3d::PhysicsStepError3D last_physics3d_error_{
+        physics3d::PhysicsStepError3D::None};
 };
 
 } // namespace dream::runtime

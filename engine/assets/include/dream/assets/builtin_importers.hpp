@@ -13,6 +13,8 @@
 #include <map>
 #include <optional>
 #include <span>
+#include <sstream>
+#include <locale>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -57,11 +59,15 @@ struct VertexKey final {
     }
 };
 
-[[nodiscard]] inline bool parse_float(std::string_view token,float& output) noexcept {
-    if(token.empty())return false;
-    const auto parsed=std::from_chars(token.data(),token.data()+token.size(),output);
-    return parsed.ec==std::errc{}&&parsed.ptr==token.data()+token.size()&&
-        std::isfinite(output);
+[[nodiscard]] inline bool parse_float(std::string_view token,float& output) {
+    if(token.empty()||token.size()>128U)return false;
+    std::istringstream input{std::string(token)};
+    input.imbue(std::locale::classic());
+    float parsed{};
+    if(!(input>>parsed)||input.peek()!=std::char_traits<char>::eof()||
+       !std::isfinite(parsed))return false;
+    output=parsed;
+    return true;
 }
 
 [[nodiscard]] inline bool parse_integer(
@@ -357,11 +363,11 @@ inline void append_float(std::vector<std::byte>& bytes,float value) {
         return false;
     }
     constexpr std::size_t header=16U,vertex_size=32U,index_size=4U;
-    if(vertex_count>(std::numeric_limits<std::size_t>::max()-header)/vertex_size) {
+    const std::size_t vertex_bytes=static_cast<std::size_t>(vertex_count)*vertex_size;
+    if(vertex_bytes/vertex_size!=vertex_count) {
         error="Mesh vertex payload size overflows";
         return false;
     }
-    const std::size_t vertex_bytes=static_cast<std::size_t>(vertex_count)*vertex_size;
     if(index_count>(std::numeric_limits<std::size_t>::max()-header-vertex_bytes)/index_size) {
         error="Mesh index payload size overflows";
         return false;

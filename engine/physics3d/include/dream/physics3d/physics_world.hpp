@@ -307,7 +307,18 @@ public:
             }
 
             solve_contacts(current_contacts,dt);
+            for(auto& [index,body]:bodies_) {
+                (void)index;
+                if(!update_proxy(body)) {
+                    bodies_=rollback;
+                    rebuild_broadphase();
+                    report.error=PhysicsStepError3D::InvalidBodyState;
+                    return report;
+                }
+            }
+
             report.contacts.reserve(current_contacts.size());
+            report.events.reserve(current_contacts.size()+active_contacts_.size());
             for(auto& [key,contact]:current_contacts) {
                 const auto previous=active_contacts_.find(key);
                 report.events.push_back({previous==active_contacts_.end()
@@ -318,17 +329,8 @@ public:
                 if(!current_contacts.contains(key))
                     report.events.push_back({ContactEventType3D::End,contact});
             }
-            active_contacts_=std::move(current_contacts);
-            for(auto& [index,body]:bodies_) {
-                (void)index;
-                if(!update_proxy(body)) {
-                    bodies_=rollback;
-                    rebuild_broadphase();
-                    report.error=PhysicsStepError3D::InvalidBodyState;
-                    return report;
-                }
-            }
             report.contact_count=report.contacts.size();
+            active_contacts_=std::move(current_contacts);
             report.body_count=bodies_.size();
             return report;
         } catch(...) {
