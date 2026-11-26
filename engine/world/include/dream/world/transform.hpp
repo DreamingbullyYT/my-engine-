@@ -3,6 +3,8 @@
 #include <dream/world/world.hpp>
 
 #include <array>
+#include <cmath>
+#include <cstddef>
 
 namespace dream::world {
 
