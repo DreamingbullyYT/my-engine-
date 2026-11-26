@@ -221,7 +221,7 @@ public:
                 };
                 execution_dispatcher(
                     execution_dispatch_context, info, invocation.world,
-                    invocation.context, &invoke_system, &invocation);
+                    invocation.context, invoke_system, &invocation);
             } else {
                 invoke_system(&invocation);
             }
