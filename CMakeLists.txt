@@ -101,6 +101,7 @@ if(DREAM_BUILD_ANDROID_GAME_ACTIVITY_BACKEND)
     find_package(game-activity REQUIRED CONFIG)
     add_library(dream_platform_android_game_activity STATIC
         engine/platform/android/src/game_activity_backend.cpp
+        engine/platform/android/src/android_asset_filesystem.cpp
     )
     add_library(DreamEngine::PlatformAndroidGameActivity ALIAS dream_platform_android_game_activity)
     target_include_directories(dream_platform_android_game_activity PUBLIC

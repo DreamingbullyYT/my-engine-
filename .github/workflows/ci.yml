@@ -118,6 +118,14 @@ jobs:
             -c engine/platform/android/src/game_activity_backend.cpp \
             -o /tmp/game-activity-backend-android.o
 
+      - name: Cross-compile Android APK asset filesystem for ARM64
+        run: |
+          "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
+            -std=c++20 -Wall -Wextra -Wpedantic \
+            -Iengine/platform/include -Iengine/platform/android/include \
+            -c engine/platform/android/src/android_asset_filesystem.cpp \
+            -o /tmp/android-asset-filesystem-android.o
+
       - name: Cross-compile resource store tests for Android ARM64
         run: |
           "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
