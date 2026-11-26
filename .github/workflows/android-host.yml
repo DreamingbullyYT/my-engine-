@@ -24,11 +24,81 @@ concurrency:
 
 jobs:
   assemble-arm64-apk:
-    name: Assemble GameActivity host / arm64-v8a
+    name: Assemble playable GameActivity host / arm64-v8a
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install host shader compiler dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes cmake ninja-build git g++ pkg-config \
+            libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+            libxext-dev libgl1-mesa-dev
+
+      - name: Checkout pinned bgfx sources
+        run: |
+          git clone --filter=blob:none https://github.com/bkaradzic/bgfx.cmake.git /tmp/bgfx.cmake
+          git -C /tmp/bgfx.cmake fetch --depth 1 origin c07b70ddc18d84538a460d6b022b6bb22d0e0950
+          git -C /tmp/bgfx.cmake checkout --detach FETCH_HEAD
+
+          git clone --filter=blob:none https://github.com/bkaradzic/bgfx.git /tmp/bgfx
+          git -C /tmp/bgfx fetch --depth 1 origin 3fe177f616c712a84a39e597a404ac5fdc04a3f7
+          git -C /tmp/bgfx checkout --detach FETCH_HEAD
+
+          git clone --filter=blob:none https://github.com/bkaradzic/bx.git /tmp/bx
+          git -C /tmp/bx fetch --depth 1 origin b8ee10a606ae41db9fdd1dbb2bb4d1e565f9a7b7
+          git -C /tmp/bx checkout --detach FETCH_HEAD
+
+          git clone --filter=blob:none https://github.com/bkaradzic/bimg.git /tmp/bimg
+          git -C /tmp/bimg fetch --depth 1 origin 38ceda5c7778228f976f75900623fb5923b49107
+          git -C /tmp/bimg checkout --detach FETCH_HEAD
+
+          echo "BGFX_CMAKE_SOURCE_DIR=/tmp/bgfx.cmake" >> "$GITHUB_ENV"
+          echo "BGFX_DIR=/tmp/bgfx" >> "$GITHUB_ENV"
+          echo "BX_DIR=/tmp/bx" >> "$GITHUB_ENV"
+          echo "BIMG_DIR=/tmp/bimg" >> "$GITHUB_ENV"
+
+      - name: Build pinned host shader compiler
+        run: |
+          cmake -S tests/render/bgfx_backend_proof -B build-bgfx-host \
+            -G Ninja \
+            -DDREAM_BGFX_BUILD_SHADER_TOOLS=ON \
+            -DBGFX_CMAKE_SOURCE_DIR=/tmp/bgfx.cmake \
+            -DBGFX_DIR=/tmp/bgfx -DBX_DIR=/tmp/bx -DBIMG_DIR=/tmp/bimg \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-bgfx-host --target shaderc --parallel 2
+
+      - name: Compile OpenGL ES 3 sprite and mesh shaders
+        run: |
+          SHADERC="$(find build-bgfx-host -type f -name shaderc -executable -print -quit)"
+          test -n "$SHADERC"
+          ASSET_DIR="android-host/app/src/main/assets/shaders"
+          mkdir -p "$ASSET_DIR"
+          VARYINGS="$GITHUB_WORKSPACE/engine/render/bgfx/shaders/varying.def.sc"
+          VS="$GITHUB_WORKSPACE/engine/render/bgfx/shaders/vs_sprite.sc"
+          FS="$GITHUB_WORKSPACE/engine/render/bgfx/shaders/fs_sprite.sc"
+          "$SHADERC" -f "$VS" -o "$ASSET_DIR/vs_sprite_essl300.bin" \
+            --platform android --profile 300_es --type vertex \
+            --varyingdef "$VARYINGS" -i /tmp/bgfx/src
+          "$SHADERC" -f "$FS" -o "$ASSET_DIR/fs_sprite_essl300.bin" \
+            --platform android --profile 300_es --type fragment \
+            --varyingdef "$VARYINGS" -i /tmp/bgfx/src
+
+          VARYINGS_3D="$GITHUB_WORKSPACE/engine/render/bgfx/shaders/varying_mesh.def.sc"
+          VS3="$GITHUB_WORKSPACE/engine/render/bgfx/shaders/vs_mesh.sc"
+          FS3="$GITHUB_WORKSPACE/engine/render/bgfx/shaders/fs_mesh.sc"
+          "$SHADERC" -f "$VS3" -o "$ASSET_DIR/vs_mesh_essl300.bin" \
+            --platform android --profile 300_es --type vertex \
+            --varyingdef "$VARYINGS_3D" -i /tmp/bgfx/src
+          "$SHADERC" -f "$FS3" -o "$ASSET_DIR/fs_mesh_essl300.bin" \
+            --platform android --profile 300_es --type fragment \
+            --varyingdef "$VARYINGS_3D" -i /tmp/bgfx/src
+          test -s "$ASSET_DIR/vs_sprite_essl300.bin"
+          test -s "$ASSET_DIR/fs_sprite_essl300.bin"
+          test -s "$ASSET_DIR/vs_mesh_essl300.bin"
+          test -s "$ASSET_DIR/fs_mesh_essl300.bin"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -51,21 +121,22 @@ jobs:
         with:
           gradle-version: "9.6.0"
 
-      - name: Assemble debug APK
+      - name: Assemble debug APK with EngineRuntime and bgfx
         working-directory: android-host
         run: gradle --no-daemon --stacktrace :app:assembleDebug
 
-      - name: Verify APK contains ARM64 native host
+      - name: Verify APK contains ARM64 engine, renderer and runtime shaders
         run: |
           APK="android-host/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libdream_engine_android_host.so"
+          unzip -l "$APK" | grep -q "assets/shaders/vs_sprite_essl300.bin"
+          unzip -l "$APK" | grep -q "assets/shaders/vs_mesh_essl300.bin"
 
       - name: Upload installable debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: dream-engine-android-host-arm64-debug
+          name: dream-engine-android-arm64-debug
           path: android-host/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
-
