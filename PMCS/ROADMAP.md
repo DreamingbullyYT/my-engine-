@@ -26,6 +26,7 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [ ] Concrete desktop/Android backend implementations.
 - [x] Typed generational handle pool and owning ResourceRegistry; verified in run 45715803430.
 - [x] Initial typed ResourceStore key-to-handle layer; Linux tests and Android ARM64 cross-compilation verified in run 45716324493.
+- [x] Add deterministic ResourceRegistry callback-vs-destroy synchronization test; all four CI jobs passed in run 45758612936.
 - [ ] Expand event/job/resource concurrency, lifetime and shutdown stress tests.
 
 ## P2 — World and core runtime
