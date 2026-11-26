@@ -2,6 +2,8 @@
 
 #include <dream/core/handle.hpp>
 
+#include <algorithm>
+
 #include <cstddef>
 #include <cstdint>
 #include <functional>
