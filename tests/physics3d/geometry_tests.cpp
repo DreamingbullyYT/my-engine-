@@ -19,7 +19,7 @@ int main(){
         "AABB collision reports minimum-axis penetration and A-to-B normal");
     require(!collide(a,Aabb3D::from_center_half_extents({3,0,0},{1,1,1})),
         "separated AABBs do not collide");
-    require(intersects(a,b),"AABB broad overlap test detects touching extents");
+    require(intersects(a,b),"AABB broad overlap test detects overlapping extents");
 
     const Sphere3D s1{{0,0,0},1.0F},s2{{1.5F,0,0},1.0F};
     const auto ss=collide(s1,s2);
