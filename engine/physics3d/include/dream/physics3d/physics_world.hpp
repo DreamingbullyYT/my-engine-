@@ -375,6 +375,9 @@ private:
         return std::isfinite(q.x)&&std::isfinite(q.y)&&
             std::isfinite(q.z)&&std::isfinite(q.w);
     }
+    [[nodiscard]] static bool finite(Vec3 value) noexcept {
+        return physics3d::finite(value);
+    }
     [[nodiscard]] static bool valid_quaternion(Quaternion3D q) noexcept {
         if(!finite(q)) return false;
         const float n2=q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w;
