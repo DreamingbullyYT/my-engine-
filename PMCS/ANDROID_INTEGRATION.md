@@ -81,3 +81,21 @@ The APK is presently a native host/window/lifecycle smoke application. It does *
 3. Initialize bgfx against the current native surface; handle orientation/density/resize and surface loss.
 4. Render the 2D/3D sample on device, connect AudioMixer to AAudio output, and rebuild/upload APK.
 5. User performs installation/launch/resume/pause/rotation test on their phone; record exact model/API results. CI cross-compilation alone never marks this complete.
+
+
+## Current integrated Android GameActivity host — 2026-11-26
+
+This section supersedes the older note that the engine repository did not contain an APK/Gradle project and the older statement that its APK was only a platform shell.
+
+- The Gradle application lives in `android-host/`, extends AndroidX GameActivity 4.4.2, and targets package `dev.dreamengine.host`; minSdk 26, compile/target SDK 36, NDK 28.2.13676358, Gradle 9.6, CMake 3.31.6, ABI `arm64-v8a`.
+- The Java Activity only loads `dream_engine_android_host`; the native `android_main` owns the native loop and creates the platform backend, `EngineRuntime`, bgfx backend, APK AssetManager filesystem, AAudio output and demo scene.
+- The APK contains four generated ESSL 300 shader binaries (sprite vertex/fragment and mesh vertex/fragment). The workflow compiles them from pinned bgfx sources before Gradle assembly and verifies the native ARM64 library plus shader assets inside the APK.
+- The demo submits 2D sprites and a 3D mesh/material, advances Physics2D and Physics3D, and includes a retained touch button that applies an impulse to the 2D player.
+- App pause stops AAudio and prevents simulation/UI updates; resume restarts audio when the renderer is ready. Surface loss shuts down the render device; a recreated surface reinitializes bgfx and uploads GPU resources again.
+- UI layout uses GameActivity logical pixels; renderer camera projections use physical framebuffer pixels.
+- Logs use Android Logcat tag `DreamEngine` plus `logs/engine.log` under GameActivity `externalDataPath`, falling back to `internalDataPath`. File logs rotate at 8 MiB and retain three backups.
+
+### Latest verification
+- Engine CI [45885498968](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45885498968) passed 5/5 jobs on commit `96dc09d43a8b4f244088a9469458d77c3e5bb483`; GCC, Clang and ASan/UBSan passed 47/47 tests each, Android ARM64 and DMod AST proof passed.
+- Fresh Android APK build [45885499085](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45885499085) is building that same commit. The artifact is not available until the final upload step succeeds.
+- Physical phone testing is reserved for the user. Cross-compilation and APK packaging do not prove that the GLES renderer, touch mapping, AAudio output or lifecycle work on the target device.

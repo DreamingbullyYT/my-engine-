@@ -134,3 +134,30 @@ This section supersedes earlier status statements in this file wherever they con
 - Built-in asset import currently covers OBJ only. MTL, glTF/GLB, texture/image and audio importers are not present.
 - Audio mixing and the Android AAudio output backend compile, but playback, latency, route changes and lifecycle recovery have not been tested on hardware.
 - Native mods are intentionally unrestricted in-process native code. They can crash/corrupt the engine or access host resources. There is no sandbox or security isolation; ABI compatibility remains the host/mod developer's responsibility.
+
+
+## Authoritative current state — 2026-11-26 (supersedes all earlier status notes)
+
+**Main:** `96dc09d43a8b4f244088a9469458d77c3e5bb483`  
+**Verified CI:** [Dream Engine CI 45885498968](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45885498968) — 5/5 jobs passed; 47/47 CTest cases passed in each Linux configuration (GCC, Clang, Clang ASan/UBSan); Android ARM64 cross-build and DMod AST proof passed.
+
+### Android host: current implementation
+The old note above that Android only had a shell host is superseded. `android-host/` now contains an AndroidX GameActivity 4.4.2 application with application ID `dev.dreamengine.host`, minSdk 26 and `arm64-v8a` only. The native `android_main`:
+- Creates `AndroidGameActivityBackend`, `EngineRuntime`, the bgfx renderer and an Android APK AssetManager filesystem.
+- Loads GLES 3.0 sprite and mesh shader binaries from APK assets before renderer initialization.
+- Creates a demo 2D dynamic player/ground and a 3D dynamic ball/floor, uploads a mesh and material, and submits both render paths.
+- Builds a retained panel/button labelled `TAP TO JUMP`; Android pointer input reaches the UI and applies a 2D impulse.
+- Connects the engine AudioMixer to Android AAudio output. Audio is stopped on suspend and restarted after resume.
+- Handles native surface creation/destruction/recreation, recreates GPU resources after renderer reinitialization, and stops advancing simulation/UI while suspended or while the render surface is unavailable.
+- Uses logical pixels for retained UI layout and physical pixels for framebuffer camera projection.
+- Logs to Logcat (`DreamEngine`) and a rotating file at `logs/engine.log` under GameActivity `externalDataPath`, with `internalDataPath` fallback. Rotation is 8 MiB with three backups.
+
+The Android APK workflow is [run 45885499085](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45885499085), building from this commit. It compiles the pinned bgfx shader compiler, generates ESSL 300 sprite/mesh binaries, assembles the Gradle debug APK, verifies `lib/arm64-v8a/libdream_engine_android_host.so` and shader assets, and uploads the installable artifact. At the time of this update the run is still in progress; no download artifact is claimed until it reports success.
+
+### Newly verified asset and mod runtime work
+- Asset request subscriptions have independent cancellation while preserving a shared pending request for other subscribers; deferred `shared_future` results are handled.
+- World/ECS mutations now route through named native hook points for entity create/destroy, component emplace/remove/modify, multiple-component modify, mutable iteration and parent set/clear. Callbacks run outside the World lock. The integration test queries World from inside a hook and the sanitizer matrix passes.
+- EngineRuntime exposes live service objects to trusted in-process native modules, including physics 2D/3D, animation, audio, retained UI, importer registry, ActionMap, fixed clock, render objects and hook registry. Native DMods intentionally remain unrestricted and unsandboxed by user decision.
+
+### Remaining limitations
+This is a first integrated Android demo host, not a feature-complete production engine. Physical GPU correctness is not proven until the user's phone run. Advanced Physics2D/3D features (CCD, joints, sleeping, multi-fixtures and robust contact manifolds), expanded import formats (MTL/glTF/GLB/images/audio), built-in font shaping/atlas and rounded UI masks, animation blend/event/curve systems, GPU asset residency/device-loss policy, explicit file-read/decode/register hooks, safe mod-owned job/resource/thread lifecycle and hot reload, publisher signatures/trust, full profiler/editor and real-game validation remain open. The user will perform the first phone test after the APK artifact is available.

@@ -257,3 +257,39 @@ Verified against main `54f6e8c39f599be919c669e6316b807cdf220654` and [CI run 458
 ### Verification pointers
 - Engine: [45859870368](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45859870368).
 - Android host APK: [45859471974](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45859471974), artifact ID `15138770221`; the host's Android sources are unchanged since that successful build, but rebuild after EngineRuntime integration.
+
+
+## Current implementation audit — 2026-11-26
+
+This update supersedes earlier statements in this file and in older PMCS status sections when they disagree. Source: main commit `96dc09d43a8b4f244088a9469458d77c3e5bb483`; all CI evidence below is from [run 45885498968](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45885498968).
+
+### CI evidence
+- Linux/GCC: success, 47/47 CTest.
+- Linux/Clang: success, 47/47 CTest.
+- Linux/Clang ASan+UBSan: success, 47/47 CTest.
+- Android arm64-v8a (ARMv8-A): cross-build success.
+- DMod/ChaiScript direct AST proof: success.
+- Android host APK [run 45885499085](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45885499085) is building from this same commit; shader compiler build was still in progress at the time this note was written.
+
+### Correctness findings resolved
+- **Asset subscription cancellation:** subscriber-level cancellation no longer cancels the shared pending factory/result for other subscribers; deferred futures are detected explicitly so `wait_for` cannot spin forever on `std::launch::deferred`.
+- **World/ECS native hooks:** mutation contexts carry the original operation continuation and its stack-lifetime context. EngineRuntime's trampoline passes the real `WorldMutationContext` through NativeHookRegistry and invokes the original operation through the context. The original implementation treated the context pointer as a different stack struct, which produced a wild function-pointer jump; the correction is covered by the sanitizer run.
+- **Android touch scaling:** retained UI layout uses logical pixel dimensions, matching GameActivity's pointer event coordinates; camera projection still uses physical framebuffer dimensions.
+- **Android suspended/lost-surface updates:** the native host skips EngineRuntime updates while the renderer is unavailable or the app is suspended.
+- **Android log access:** prefer GameActivity `externalDataPath`, fall back to `internalDataPath`; file sink creates parent directories and rotates the log at 8 MiB with three backups. Logcat tag: `DreamEngine`.
+
+### Android render-host path now present
+The GameActivity native loop constructs EngineRuntime, initializes/reinitializes bgfx on the supplied Android native surface, reads the four offline ESSL 300 shader binaries from APK assets, creates a combined 2D/3D physics demo, uploads a mesh/material, sends retained UI draws and routes touch input to the UI. AAudio is connected to AudioMixer, with output stopped on pause and restarted after resume when the renderer is ready. This is implemented in source; pixel correctness, audio playback and full lifecycle stability still require the user's physical-device test.
+
+### Remaining technical risks
+- Physics2D: no joints, CCD, sleeping, persistent warm-start cache or multiple fixtures; OBB/OBB manifold is approximate.
+- Physics3D: no joints, CCD, sleeping/wake policy or multiple fixtures; OBB contact point is approximate; ray/overlap query APIs currently scan registered bodies rather than pruning through broadphase.
+- Renderer/GPU: Android uses packaged GLES 3.0 shader binaries; device-specific depth/culling, filtering/samplers, device loss and GPU-resource ownership need physical validation and further tests. GPU asset residency integration is not complete.
+- Assets: built-in model importer is OBJ only and uses fan triangulation for n-gons; no MTL/glTF/GLB/image/audio importers.
+- UI/animation/audio: UI glyphs require a provider (the Android host uses a simple 5x7 bitmap provider); no shaping/font atlas or rounded-corner mask. Animation blending/events/curves remain limited. AAudio compile and wiring are not proof of actual speaker playback, route change or latency.
+- Native mods: fully trusted in-process code, no sandbox, memory/crash isolation or stable cross-version ABI promise. Module-owned resource/job/thread accounting and safe hot reload remain unfinished. The new World hooks cover entity/component/hierarchy mutation; separate file-read/decode/register lifecycle hooks are still open.
+- Platform: full IME composition and soft-keyboard state/control remain open. Android CI is cross-compilation only.
+
+### Verification pointers
+- Engine CI: [45885498968](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45885498968).
+- Current APK build: [45885499085](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45885499085), pending artifact upload.

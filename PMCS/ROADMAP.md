@@ -9,7 +9,7 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [x] Linux GCC/Clang build and CTest baseline.
 - [x] Android NDK core cross-build for arm64-v8a.
 - [x] ChaiScript direct-AST proof with identity optimizer; this does not select a production script runtime.
-- [ ] Final C++ standard/compiler-support policy.
+- [x] C++20 is the engine-wide language baseline (CMake `cxx_std_20`, Android NDK and Linux CI); the oldest supported compiler-version matrix remains open.
 
 ## P1 — Foundation
 - [x] Core library, version, logging, diagnostics, events and JobSystem.
@@ -18,7 +18,7 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [x] Window/surface/input/filesystem contracts and virtual-path validation.
 - [x] Rooted POSIX NativeFileSystem for Linux/Android with openat/O_NOFOLLOW traversal, bounded reads, atomic writes and root directory listing (CI run 45816961428).
 - [x] AndroidX GameActivity 4.4.2 lifecycle/window/surface/key/pointer/gamepad adapter cross-compiled for ARM64 ([run 45820002663](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45820002663)).
-- [ ] Android host APK/Gradle/manifest integration and physical-device validation.
+- [x] Android GameActivity Gradle/manifest host and ARM64 APK workflow are integrated; [ ] physical-device validation is reserved for the user.
 - [x] Android APK AssetManager read-only filesystem (cross-compiled in run 45820002663).
 - [ ] Full IME/soft-keyboard text-input support.
 - [ ] Expanded concurrency, lifetime and shutdown stress tests.
@@ -31,16 +31,16 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [x] Bounded async asset read/decode/register.
 - [x] Asset dependency planner, CPU LRU cache, cooperative cancellation and in-flight request coordination.
 - [x] Explicit async task lifetime scope, cooperative cancellation and shutdown wait for borrowed-service safety (run 45818494612).
-- [ ] Independent cancellation for individual subscribers of a deduplicated shared asset request.
+- [x] Independent cancellation for individual subscribers of a deduplicated shared asset request, without cancelling shared work for other subscribers.
 - [ ] GPU asset upload/residency integration.
 
 ## P3 — Rendering
 - [x] Engine-owned backend-neutral rendering contract and RenderDevice.
 - [x] Frame packet validation and deterministic 2D sprite frame builder.
 - [x] bgfx Linux/Android backend compile proof and ESSL 300 / GLSL 330 shader compile proof ([run 45790590738](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45790590738)).
-- [ ] Runtime shader asset packaging/loading for Android and Linux.
-- [ ] Complete operational 2D renderer and physical-device validation.
-- [ ] 3D renderer, mesh buffers, materials, lighting and camera path.
+- [x] Android ESSL 300 sprite/mesh shader compile, APK packaging and runtime loading path is implemented; fresh APK workflow verification is running.
+- [x] Android 2D sprite/UI render submission path is implemented through bgfx and EngineRuntime; [ ] visual correctness on a physical GPU remains unverified.
+- [x] bgfx 3D mesh/material buffers, mesh shaders, camera and draw submission path are implemented; [ ] physical GPU validation remains open.
 - [ ] Shared GPU asset/resource lifetime and device-loss handling.
 - [ ] Final renderer dependency decision after device testing.
 
@@ -49,7 +49,7 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [x] Deterministic sweep-and-prune broadphase.
 - [ ] Physics2D solver hardening: joints, CCD, sleeping, warm starting, multiple fixtures and more stable contact manifolds.
 - [x] Physics3D collision geometry: sphere, AABB, OBB and OBB SAT queries ([run 45828037777](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45828037777)).
-- [ ] Physics3D body world, broadphase, integration and contact solver.
+- [x] Physics3D body world, deterministic broadphase, integration, angular/linear contact solving, filters/sensors, contact events and ray/overlap queries.
 - [ ] Animation and navigation integration.
 
 ## P5 — DMod and unrestricted native mods
@@ -63,12 +63,12 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [x] EngineRuntime raw interface exposure for runtime, scene, world, Physics2D, input actions, fixed clock and render objects.
 - [x] Deterministic host interface enumeration with ID/version reporting ([run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851)).
 - [x] Explicit user decision: native mods run in-process with no sandbox and no capability enforcement.
-- [ ] Expand raw host exposure as additional engine systems are implemented.
+- [x] EngineRuntime raw host exposure includes World/Scene, Physics2D/3D, animation, audio, UI, asset importer registry, input/action map, clock, render device/builder, mod manager and hook registry.
 - [x] NativeHookRegistry with Before/Around/Replace/After stages, deterministic priority/registration order and repeatable call_next ([run 45810170873](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45810170873)).
 - [x] Manager-owned callback enable/disable/removal and deferred self-unload until hook dispatch exits.
 - [x] EngineRuntime hook points for runtime update, each PhysicsWorld2D step, begin-render-frame and render-frame, with mutable typed contexts ([run 45811326053](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45811326053)).
 - [x] Integrate per-system hooks in the Scene scheduler (dream.engine.scene.system; run 45811326053).
-- [ ] Integrate World/ECS mutation hooks and asset lifecycle hooks.
+- [x] World/ECS entity, component, iteration and hierarchy mutation hooks are integrated into EngineRuntime; importer invocation has a typed hook. [ ] Separate file-read/decode/register lifecycle hooks remain open.
 - [ ] Track module-owned resources/jobs/threads and make unload/hot reload safe; hook registrations are currently tracked and removed automatically.
 - [ ] Native package signature/publisher trust policy; signatures verify origin/integrity, not runtime isolation.
 - [ ] Native .dmod load/unload test on a real Android ARM64 device.
@@ -76,16 +76,16 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 
 ## P6 — Runtime services and content
 - [x] Initial device-independent keyboard/mouse/gamepad ActionMap.
-- [ ] Audio backend and mixer.
-- [ ] Animation runtime.
-- [ ] Runtime UI integration.
-- [ ] Asset import pipeline.
+- [x] Software AudioMixer and Android AAudio output backend are implemented and cross-compiled; hardware playback/latency/route behavior still needs device validation.
+- [x] Animation runtime is implemented and scheduled by EngineRuntime; blending, event and curve extensions remain open.
+- [x] Retained UI, pointer/focus activation, UI-to-render adapter and Android touch demo integration are implemented; text shaping/font atlas and rounded-corner masking remain open.
+- [x] Bounded asset import pipeline and OBJ-to-DMES importer are implemented; MTL, glTF/GLB, image/texture and audio importers remain open.
 - [ ] Networking/localization where justified.
 
 ## P7 — Tools
-- [ ] Runtime diagnostics/profiler integration.
+- [x] Structured logs, Android Logcat/file sinks and periodic runtime metrics are integrated; full CPU/GPU profiler remains open.
 - [ ] Editor/tooling architecture.
-- [ ] Touch-friendly Android workflows.
+- [x] Android demo includes a retained touch button and touch-to-physics interaction; broader game/editor tooling remains open.
 
 ## P8 — Validation games
 - [ ] Validate with the planned planet/colony game.
@@ -124,3 +124,17 @@ This live status supersedes older checkboxes above where they conflict. Evidence
 8. **Stability/performance:** concurrency stress/race tests, allocator and memory-budget tests, deterministic replay, CPU/GPU profiling, soak tests, Android lifecycle recovery and two sample games on a real backend.
 
 Physical-device validation remains a user action and is explicitly not part of CI completion.
+
+
+## Authoritative execution status — 2026-11-26 (supersedes older status sections)
+
+- **Main commit:** `96dc09d43a8b4f244088a9469458d77c3e5bb483`.
+- **Verified engine CI:** [run 45885498968](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45885498968) passed 5/5 jobs: Linux GCC, Linux Clang, Linux Clang ASan+UBSan, Android arm64-v8a (ARMv8-A), and DMod/ChaiScript AST proof. The Linux jobs each passed **47/47 CTest cases**.
+- **APK build:** [run 45885499085](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45885499085) is building the fresh ARM64 APK from this same commit. Do not treat an artifact as available until the workflow has completed and uploaded it.
+- **Android host implementation:** the GameActivity native loop now owns an EngineRuntime, loads four GLES 3.0 shader binaries from APK assets, initializes/recreates bgfx on the native surface, updates a combined 2D/3D physics demo, routes touch/UI input, and connects AudioMixer to AAudio. The APK workflow compiles and packages the shader binaries and checks the ARM64 .so plus shader assets.
+- **Android lifecycle fixes:** simulation and UI input are not advanced while the app is suspended or the render surface is unavailable; UI layout uses logical pixels to match the GameActivity pointer coordinate convention; GPU resources are uploaded again after surface recreation.
+- **Logs:** Android Logcat tag is `DreamEngine`. The app writes `logs/engine.log` under GameActivity `externalDataPath`, falling back to `internalDataPath`; the file sink creates the directory and rotates at 8 MiB with three backups. Runtime metrics are periodically recorded.
+- **New asset coordination:** each subscriber can cancel its own wait/result without cancelling a shared in-flight request for other subscribers. Deferred futures are handled without an infinite wait loop.
+- **New native mod hooks:** World entity create/destroy, component emplace/remove/modify, multi-component modify, mutable iteration, and parent set/clear operations dispatch typed native hooks outside the World lock. EngineRuntime passes the actual WorldMutationContext through the continuation trampoline; CI exercises this under ASan/UBSan.
+- **Still open before production completeness:** full IME/soft-keyboard composition; complete GPU asset residency/device-loss policy; advanced Physics2D joints/CCD/sleeping/multi-fixture and stable manifolds; Physics3D CCD/joints/sleeping/multi-fixture/robust clipping and accelerated queries; extended MTL/glTF/GLB/image/audio import; full font shaping/atlas and rounded-corner masks; animation blends/events/curves; asset read/decode/register hooks; safe ownership tracking for mod resources/jobs/threads and hot reload; publisher trust/signatures; a full profiler/editor; and real game/device validation. These are not being marked complete merely because the APK host builds.
+- **Device testing:** physical-device execution, rendered-pixel validation, AAudio playback verification and native .dmod load/unload on a real phone remain user-run steps. Android CI is cross-compilation/package verification only.

@@ -88,3 +88,32 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android arm64-v8
 - Use GitHub Actions for builds/tests (user has no PC).
 - Record run IDs, commit hashes, and exact limitations. Cross-compilation is never physical-device validation.
 - Native mods have no sandbox by explicit user choice; don't add sandbox/capability restrictions.
+
+
+## Latest handoff — 2026-11-26, main `96dc09d43a8b4f244088a9469458d77c3e5bb483`
+
+This section supersedes the older implementation snapshot and task order above.
+
+### Verified
+- [Dream Engine CI 45885498968](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45885498968) passed all five jobs: GCC, Clang, ASan/UBSan, Android arm64-v8a (ARMv8-A) and DMod AST proof. All three Linux configurations passed 47/47 CTest cases.
+- Asset request subscribers can cancel their own wait without stopping the shared in-flight result for other subscribers. Deferred futures do not spin forever.
+- World ECS operations expose native hooks for entity creation/destruction, component emplace/remove/modify, multi-component mutation, mutable iteration and hierarchy changes. Hooks run outside the World lock. A continuation trampoline bug was fixed and is covered by ASan/UBSan.
+- Android native host source creates EngineRuntime, loads APK GLES 3.0 sprite/mesh shader assets, initializes bgfx on GameActivity's surface, submits 2D/3D physics demo draws, routes retained UI touch input, and connects AudioMixer to AAudio.
+- Android UI dimensions now use logical pixels; camera/framebuffer projection uses physical pixels. Simulation is paused when Android is suspended or the native surface is unavailable.
+- Structured Android logs go to Logcat tag `DreamEngine` and to a rotating file under GameActivity external app files, with internal app files as fallback.
+
+### APK status
+[Android host APK workflow 45885499085](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45885499085) is building from this same commit. The job must reach the artifact upload step and report success before providing a download link. APK settings: package `dev.dreamengine.host`, minSdk 26, ABI `arm64-v8a`. Do not reuse the older shell-only APK artifact.
+
+### Remaining tasks (do not mark complete)
+- Full IME/soft-keyboard composition and state.
+- Advanced Physics2D/3D: CCD, joints, sleeping/waking, multi-fixture bodies, robust multi-point contact manifolds; accelerate 3D ray/overlap queries.
+- GPU asset residency/device-loss/resource-lifetime policy and device-level renderer validation.
+- MTL, glTF/GLB, image/texture and audio importers beyond the bounded OBJ importer.
+- Full font shaping/atlas, rounded-corner UI masks, animation blending/events/curves and audio device telemetry.
+- Separate asset file-read/decode/register hook points.
+- Safe mod-owned resource/job/thread tracking and hot reload; publisher signatures/trust policy. Preserve the user's explicit no-sandbox/no-capability-enforcement decision.
+- Full profiler, editor/tooling and two real games on a real backend.
+
+### Immediate next action
+Wait for [APK workflow 45885499085](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45885499085) to finish. If successful, provide that ARM64 debug APK for the user's first phone test. The user, not CI, performs the physical-device validation. After that test, resume the remaining production engine work above; do not imply the complete PMCS backlog is finished.
