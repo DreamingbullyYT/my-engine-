@@ -76,7 +76,8 @@ public:
         }
         cosine_ = std::cos(camera_.rotation_radians);
         sine_ = std::sin(camera_.rotation_radians);
-        if (!valid_) error_ = UiRenderError::InvalidViewport;
+        if (!valid_ && error_ == UiRenderError::None)
+            error_ = UiRenderError::InvalidViewport;
     }
 
     [[nodiscard]] UiRenderError error() const noexcept { return error_; }
