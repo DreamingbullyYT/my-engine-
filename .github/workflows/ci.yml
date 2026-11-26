@@ -177,9 +177,9 @@ jobs:
 
       - name: Cross-compile 3D physics geometry tests for Android ARM64
         run: |
-          "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \\
-            -std=c++20 -Iengine/physics3d/include \\
-            -c tests/physics3d/geometry_tests.cpp \\
+          "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
+            -std=c++20 -Iengine/physics3d/include \
+            -c tests/physics3d/geometry_tests.cpp \
             -o /tmp/physics3d-geometry-tests-android.o
 
       - name: Cross-compile 2D physics world tests for Android ARM64
