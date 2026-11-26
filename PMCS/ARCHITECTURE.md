@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Core services, application lifecycle, backend-neutral platform contracts, initial DMod package pipeline, typed generational handles, owning ResourceRegistry and keyed ResourceStore are CI-verified. ResourceRegistry callback-vs-destroy synchronization test passed in run 45758612936. Initial async asset loader is implemented and awaiting CI.
+**Status:** Core services, application lifecycle, backend-neutral platform contracts, initial DMod package pipeline, typed generational handles, owning ResourceRegistry, keyed ResourceStore and bounded async asset loader are CI-verified. Asset dependency planning is implemented and awaiting CI.
 
 ## High-level modules
 - Platform: desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
@@ -24,6 +24,7 @@
 - ResourceRegistry<T, Tag> owns resources with unique_ptr, provides scoped callback access under a shared lock, rejects stale handles and safely invalidates identities before destruction. Callbacks must not re-enter the same registry; do not retain resource references outside the callback.
 - ResourceStore<T, Tag> adds a case-sensitive string-key mapping over ResourceRegistry, with insert/find/erase and scoped access by key or handle. It is intentionally not a loader: file I/O, decoding, async scheduling, dependency tracking and GPU upload belong to higher-level asset systems. Store callbacks must not re-enter the same store.
 - ResourceStore Linux GCC/Clang tests and Android ARM64 test cross-compilation passed in [run 45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493). Android is compile-only, not physical-device execution.
+- `dream_assets::load_async` composes JobSystem, bounded IFileSystem reads, a caller-provided decoder and ResourceStore. Default maximum file size is 64 MiB; backends must enforce the limit before allocating. Filesystem, store and JobSystem are borrowed and must outlive the task; decoder runs on a worker thread. Linux GCC/Clang tests and Android ARM64 cross-compilation passed in [run 45765620129](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45765620129).
 - ResourceRegistry callback-vs-destroy synchronization test passed with all four CI jobs in [run 45758612936](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45758612936).
 
 ## Platform contracts
@@ -35,6 +36,11 @@
 - These are interfaces only; no concrete SDL, Win32, X11, Wayland, Android or Apple backend has been selected or implemented.
 - Window/surface/input/filesystem contracts and virtual-path tests passed Linux GCC, Linux Clang, DMod AST proof and Android ARM64 cross-build in [run 45710274229](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45710274229). Android is cross-compiled, not device-tested.
 - The typed handle pool and owning ResourceRegistry are verified in [run 45715295194](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715295194). Android is cross-compiled, not device-tested.
+
+## Asset dependency planning
+- `resolve_dependencies` accepts an in-memory set of asset definitions and returns deterministic dependency-first order using lexical tie-breaking.
+- Required missing dependencies fail the plan; missing optional dependencies are reported but do not block it. Invalid/duplicate asset keys and duplicate dependency declarations are rejected; cycles return blocked asset keys and no partial load order.
+- This is a pure planning layer: it does not load, own, cache, cancel or unload assets. CI verification is pending.
 
 ## DMod contracts implemented and verified
 - Manifest model includes package ID/name/version, engine API range, relative entry script, dependencies and requested capabilities.
