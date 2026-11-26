@@ -1,9 +1,11 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <future>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <string>
@@ -13,6 +15,56 @@
 
 namespace dream::assets {
 
+// A cancellable view of a shared request. Cancelling this subscription changes
+// only its result; other subscribers continue waiting for the same operation.
+// The shared operation is intentionally not cancelled when one subscriber leaves.
+template <typename Result>
+class AssetRequestSubscription final {
+public:
+    AssetRequestSubscription() = default;
+
+    void cancel() noexcept {
+        if (cancelled_) cancelled_->store(true, std::memory_order_release);
+    }
+
+    [[nodiscard]] bool is_cancelled() const noexcept {
+        return cancelled_ && cancelled_->load(std::memory_order_acquire);
+    }
+
+    [[nodiscard]] bool valid() const noexcept {
+        return future_.valid() && static_cast<bool>(cancelled_) &&
+            static_cast<bool>(cancelled_result_);
+    }
+
+    // Poll in short bounded intervals so cancellation is observed even while
+    // another subscriber keeps the shared operation pending.
+    [[nodiscard]] Result get() const {
+        if (!valid()) throw std::future_error(std::future_errc::no_state);
+        while (!is_cancelled()) {
+            if (future_.wait_for(std::chrono::milliseconds(5)) ==
+                std::future_status::ready) {
+                break;
+            }
+        }
+        if (is_cancelled()) return cancelled_result_();
+        return future_.get();
+    }
+
+private:
+    template <typename> friend class AssetRequestCoordinator;
+
+    AssetRequestSubscription(
+        std::shared_future<Result> future,
+        std::function<Result()> cancelled_result)
+        : future_(std::move(future)),
+          cancelled_(std::make_shared<std::atomic_bool>(false)),
+          cancelled_result_(std::move(cancelled_result)) {}
+
+    std::shared_future<Result> future_;
+    std::shared_ptr<std::atomic_bool> cancelled_;
+    std::function<Result()> cancelled_result_;
+};
+
 // Shares only currently-running requests. Completed entries are lazily pruned
 // on the next request, so this registry does not become a completed-result cache.
 // The caller chooses the key namespace (for example, include asset type and
@@ -21,6 +73,7 @@ template <typename Result>
 class AssetRequestCoordinator final {
 public:
     using SharedResult = std::shared_future<Result>;
+    using Subscription = AssetRequestSubscription<Result>;
 
     AssetRequestCoordinator() = default;
     AssetRequestCoordinator(const AssetRequestCoordinator&) = delete;
@@ -54,6 +107,20 @@ public:
         auto shared = pending.share();
         requests_.emplace(std::move(key), shared);
         return shared;
+    }
+
+    // Creates a per-caller cancellable subscription to the shared result.
+    // The cancellation factory must return the result representing a cancelled
+    // subscriber. It is not invoked until this subscription's get() is called.
+    template <typename Factory, typename CancelledResultFactory>
+    [[nodiscard]] Subscription request_subscribed(
+        std::string key, Factory&& factory,
+        CancelledResultFactory&& cancelled_result_factory) {
+        auto shared = request(std::move(key), std::forward<Factory>(factory));
+        return Subscription(
+            std::move(shared),
+            std::function<Result()>(
+                std::forward<CancelledResultFactory>(cancelled_result_factory)));
     }
 
     // Removes completed requests without waiting. Existing callers retain

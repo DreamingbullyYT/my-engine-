@@ -51,6 +51,33 @@ int main() {
     require(coordinator.in_flight_count() == 0,
             "completed request is removed from the in-flight registry");
 
+    Coordinator independent;
+    std::promise<void> shared_entered;
+    std::promise<void> shared_release;
+    const auto shared_release_signal = shared_release.get_future().share();
+    auto departing = independent.request_subscribed("mesh/scene", [&] {
+        return std::async(std::launch::async, [&] {
+            shared_entered.set_value();
+            shared_release_signal.wait();
+            return 84;
+        });
+    }, [] { return -1; });
+    shared_entered.get_future().wait();
+    auto remaining = independent.request_subscribed("mesh/scene", [] {
+        return std::async(std::launch::async, [] { return 100; });
+    }, [] { return -2; });
+    departing.cancel();
+    require(departing.is_cancelled() && departing.get() == -1,
+            "one subscriber can cancel independently while the shared request remains pending");
+    require(independent.in_flight_count() == 1,
+            "cancelling one subscriber does not cancel or unregister shared work");
+    shared_release.set_value();
+    require(remaining.get() == 84,
+            "remaining subscriber still receives the shared operation result");
+    independent.prune_completed();
+    require(independent.in_flight_count() == 0,
+            "completed subscribed request is pruned normally");
+
     auto next = coordinator.request("texture/player", [&] {
         ++factory_calls;
         return std::async(std::launch::async, [] { return 7; });

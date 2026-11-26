@@ -367,9 +367,11 @@ template <typename T, typename Tag, typename Decoder, typename SizeEstimator>
  * first operation is still pending. request_id is a caller-defined identity;
  * include source/type/version information when it distinguishes requests.
  *
- * The first caller owns the operation's cancellation token and decoder. Later
- * callers with the same pending request_id receive its shared result; their
- * factory arguments and cancellation tokens are not used.
+ * The legacy shared_future overloads below retain their original semantics.
+ * The subscribed overloads add independent caller cancellation: cancelling one
+ * subscription returns Cancelled to that caller but does not stop the shared
+ * load used by other subscribers. The supplied AssetCancellationToken remains
+ * an operation/scope token owned by the shared load, not by an individual caller.
  */
 template <typename T, typename Tag, typename Decoder>
 [[nodiscard]] auto load_async_coordinated(
@@ -389,6 +391,67 @@ template <typename T, typename Tag, typename Decoder>
             jobs, filesystem, store, std::move(key), std::move(virtual_path),
             std::forward<Decoder>(decoder), max_file_bytes, std::move(cancellation));
     });
+}
+
+template <typename T, typename Tag, typename Decoder>
+[[nodiscard]] auto load_async_coordinated_subscribed(
+    AssetRequestCoordinator<AssetLoadResult<core::Handle<Tag>>>& coordinator,
+    std::string request_id,
+    core::JobSystem& jobs,
+    const platform::IFileSystem& filesystem,
+    core::ResourceStore<T, Tag>& store,
+    std::string key,
+    std::string virtual_path,
+    Decoder&& decoder,
+    std::size_t max_file_bytes = 64u * 1024u * 1024u,
+    AssetCancellationToken shared_operation_cancellation = {})
+    -> AssetRequestSubscription<AssetLoadResult<core::Handle<Tag>>> {
+    using Handle = core::Handle<Tag>;
+    using Result = AssetLoadResult<Handle>;
+    return coordinator.request_subscribed(
+        std::move(request_id),
+        [&]() mutable {
+            return load_async<T, Tag>(
+                jobs, filesystem, store, std::move(key), std::move(virtual_path),
+                std::forward<Decoder>(decoder), max_file_bytes,
+                std::move(shared_operation_cancellation));
+        },
+        [] {
+            return Result{
+                AssetLoadStatus::Cancelled, {}, platform::FileError::None,
+                "This asset request subscription was cancelled"};
+        });
+}
+
+template <typename T, typename Tag, typename Decoder, typename SizeEstimator>
+[[nodiscard]] auto load_async_cached_coordinated_subscribed(
+    AssetRequestCoordinator<AssetLoadResult<core::Handle<Tag>>>& coordinator,
+    std::string request_id,
+    core::JobSystem& jobs,
+    const platform::IFileSystem& filesystem,
+    AssetCache<T, Tag>& cache,
+    std::string key,
+    std::string virtual_path,
+    Decoder&& decoder,
+    SizeEstimator&& estimate_bytes,
+    std::size_t max_file_bytes = 64u * 1024u * 1024u,
+    AssetCancellationToken shared_operation_cancellation = {})
+    -> AssetRequestSubscription<AssetLoadResult<core::Handle<Tag>>> {
+    using Handle = core::Handle<Tag>;
+    using Result = AssetLoadResult<Handle>;
+    return coordinator.request_subscribed(
+        std::move(request_id),
+        [&]() mutable {
+            return load_async_cached<T, Tag>(
+                jobs, filesystem, cache, std::move(key), std::move(virtual_path),
+                std::forward<Decoder>(decoder), std::forward<SizeEstimator>(estimate_bytes),
+                max_file_bytes, std::move(shared_operation_cancellation));
+        },
+        [] {
+            return Result{
+                AssetLoadStatus::Cancelled, {}, platform::FileError::None,
+                "This asset request subscription was cancelled"};
+        });
 }
 
 template <typename T, typename Tag, typename Decoder, typename SizeEstimator>
