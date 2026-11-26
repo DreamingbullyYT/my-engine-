@@ -1,6 +1,7 @@
 #include <dream/dmod/native_mod_host.hpp>
 #include <dream/dmod/native_mod_manager.hpp>
 #include <cstdint>
+#include <array>
 #include <cstdlib>
 #include <iostream>
 #include <string_view>
@@ -29,11 +30,34 @@ int main() {
     manifest.native_library = "lib/android-arm64-v8a/libtest.so";
     require(validate_manifest(manifest).valid(), "native manifest validates");
 
-    require(static_cast<bool>(manager.load(manifest, DREAM_TEST_NATIVE_MOD_PATH)),
-            "load native shared library");
+    Manifest dependent = manifest;
+    dependent.id = "test.native.dependent";
+    dependent.name = "Dependent Native Test Mod";
+    dependent.dependencies.push_back({"test.native", {{1, 0, 0}, std::nullopt}, false});
+    const std::array<NativeModPackage, 2> invalid_batch{{
+        {manifest, DREAM_TEST_NATIVE_MOD_PATH},
+        {dependent, "/definitely/missing/dream-test-native.so"}
+    }};
+    const auto rolled_back = manager.load_all(invalid_batch, {0, 1, 0});
+    require(!rolled_back && manager.loaded_count() == 0,
+            "failed batch unloads all modules loaded earlier in dependency order");
+    require(counter == 10001, "failed batch destroys the already-created dependency");
+
+    counter = 0;
+    const std::array<NativeModPackage, 1> valid_batch{{
+        {manifest, DREAM_TEST_NATIVE_MOD_PATH}
+    }};
+    const auto batch = manager.load_all(valid_batch, {0, 1, 0});
+    require(static_cast<bool>(batch) && batch.load_order.size() == 1 &&
+            batch.load_order.front() == "test.native",
+            "batch load returns deterministic dependency order");
+    require(manager.is_loaded("test.native") && manager.loaded_count() == 1,
+            "track loaded native mod");
     require(manager.is_loaded("test.native") && manager.loaded_count() == 1, "track loaded mod");
     require(counter == 1, "mod receives a raw host interface");
-    require(static_cast<bool>(manager.enable("test.native")), "enable mod");
+    const auto enabled_batch = manager.enable_all();
+    require(static_cast<bool>(enabled_batch) && manager.is_enabled("test.native"),
+            "enable all runs modules in dependency order");
     require(counter == 10 && manager.is_enabled("test.native"), "enable callback");
     require(manager.update(0.25), "run update");
     require(counter == 110, "update callback");

@@ -1,4 +1,5 @@
 #include <dream/dmod/native_mod_manager.hpp>
+#include <dream/dmod/resolver.hpp>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -85,6 +86,105 @@ NativeModResult NativeModManager::load(
     mods_.push_back(std::move(mod));
     return {};
 }
+NativeModBatchResult NativeModManager::load_all(
+    std::span<const NativeModPackage> packages, core::Version engine_api_version) {
+    NativeModBatchResult result;
+    if (shutdown_) {
+        result.error = NativeModError::Shutdown;
+        result.message = "Mod manager is shut down.";
+        return result;
+    }
+    if (!valid_host_api()) {
+        result.error = NativeModError::InvalidHostApi;
+        result.message = "Host API size or ABI is invalid.";
+        return result;
+    }
+
+    std::vector<Manifest> manifests;
+    manifests.reserve(packages.size());
+    for (const auto& package : packages) {
+        if (package.manifest.runtime_kind != ModRuntimeKind::Native) {
+            result.error = NativeModError::WrongRuntime;
+            result.message = "Every package in a native load batch must use the native runtime.";
+            return result;
+        }
+        if (package.installed_library_path.empty() ||
+            !package.installed_library_path.is_absolute()) {
+            result.error = NativeModError::InvalidLibraryPath;
+            result.message = "Every installed native library path must be absolute.";
+            return result;
+        }
+        if (find(package.manifest.id) != nullptr) {
+            result.error = NativeModError::DuplicateMod;
+            result.message = "Mod is already loaded: " + package.manifest.id;
+            return result;
+        }
+        manifests.push_back(package.manifest);
+    }
+
+    const auto resolution = resolve_load_order(manifests, engine_api_version);
+    if (!resolution.success()) {
+        result.error = NativeModError::InvalidManifest;
+        result.message = resolution.errors.empty()
+            ? "Native package dependency resolution failed."
+            : resolution.errors.front();
+        return result;
+    }
+
+    result.load_order = resolution.load_order;
+    std::vector<std::string> loaded;
+    loaded.reserve(packages.size());
+    for (const auto& id : resolution.load_order) {
+        const auto package = std::find_if(packages.begin(), packages.end(),
+            [&id](const NativeModPackage& item) { return item.manifest.id == id; });
+        if (package == packages.end()) {
+            result.error = NativeModError::InvalidManifest;
+            result.message = "Resolved package is missing from the load batch: " + id;
+            break;
+        }
+        const auto loaded_result = load(package->manifest, package->installed_library_path);
+        if (!loaded_result) {
+            result.error = loaded_result.error;
+            result.message = id + ": " + loaded_result.message;
+            break;
+        }
+        loaded.push_back(id);
+    }
+
+    if (result.error != NativeModError::None) {
+        for (auto it = loaded.rbegin(); it != loaded.rend(); ++it) {
+            (void)unload(*it);
+        }
+        result.load_order.clear();
+    }
+    return result;
+}
+
+NativeModBatchResult NativeModManager::enable_all() {
+    NativeModBatchResult result;
+    if (shutdown_) {
+        result.error = NativeModError::Shutdown;
+        result.message = "Mod manager is shut down.";
+        return result;
+    }
+    std::vector<std::string> enabled;
+    enabled.reserve(mods_.size());
+    for (const auto& mod : mods_) {
+        const auto enabled_result = enable(mod->manifest.id);
+        if (!enabled_result) {
+            result.error = enabled_result.error;
+            result.message = mod->manifest.id + ": " + enabled_result.message;
+            for (auto it = enabled.rbegin(); it != enabled.rend(); ++it) {
+                (void)disable(*it);
+            }
+            return result;
+        }
+        enabled.push_back(mod->manifest.id);
+        result.load_order.push_back(mod->manifest.id);
+    }
+    return result;
+}
+
 NativeModManager::LoadedMod* NativeModManager::find(std::string_view id) noexcept {
     const auto it = std::find_if(mods_.begin(), mods_.end(),
         [id](const auto& mod) { return mod->manifest.id == id; });

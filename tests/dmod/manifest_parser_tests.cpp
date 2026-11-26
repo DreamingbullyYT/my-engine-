@@ -42,6 +42,21 @@ optional = false
     require(parsed.manifest->dependencies.size() == 1, "dependency parsed");
     require(parsed.manifest->capabilities.size() == 2, "capabilities parsed");
 
+    const auto native = dream::dmod::parse_manifest(R"toml(
+format_version = 1
+runtime = "native"
+id = "sample.native"
+name = "Sample Native"
+version = "1.0.0"
+engine_api_min = "0.1.0"
+native_library = "lib/android-arm64-v8a/libsample.so"
+)toml");
+    require(native.valid(), "native manifest parses without an interpreted entry script");
+    require(native.manifest->runtime_kind == dream::dmod::ModRuntimeKind::Native,
+            "native runtime kind parsed");
+    require(native.manifest->native_library == "lib/android-arm64-v8a/libsample.so",
+            "native library path parsed");
+
     const auto bad_version = dream::dmod::parse_manifest(R"toml(
 format_version = 1
 id = "sample.core"

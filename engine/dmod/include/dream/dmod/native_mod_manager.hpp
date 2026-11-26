@@ -1,11 +1,13 @@
 #pragma once
 #include <dream/dmod/manifest.hpp>
 #include <dream/dmod/native_library.hpp>
+#include <dream/core/version.hpp>
 #include <dream/dmod/native_mod_api.hpp>
 #include <filesystem>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <span>
 #include <vector>
 
 namespace dream::dmod {
@@ -21,6 +23,20 @@ struct NativeModResult final {
 };
 struct NativeModStatus final { std::string id; bool enabled{false}; };
 
+struct NativeModPackage final {
+    Manifest manifest;
+    std::filesystem::path installed_library_path;
+};
+
+struct NativeModBatchResult final {
+    NativeModError error{NativeModError::None};
+    std::string message;
+    std::vector<std::string> load_order;
+    [[nodiscard]] explicit operator bool() const noexcept {
+        return error == NativeModError::None;
+    }
+};
+
 // Native modules execute in-process without an engine sandbox. A module can
 // change engine/game state, memory and application data. Load only trusted mods.
 class NativeModManager final {
@@ -31,6 +47,12 @@ public:
     NativeModManager& operator=(const NativeModManager&) = delete;
 
     [[nodiscard]] NativeModResult load(const Manifest&, const std::filesystem::path& installed_library_path);
+    // Resolves dependencies, loads in deterministic dependency-first order,
+    // and unloads every module added by this call if any load fails.
+    [[nodiscard]] NativeModBatchResult load_all(
+        std::span<const NativeModPackage> packages, core::Version engine_api_version);
+    // Enables in load order; disables modules enabled by this call on failure.
+    [[nodiscard]] NativeModBatchResult enable_all();
     [[nodiscard]] NativeModResult enable(std::string_view id);
     [[nodiscard]] NativeModResult disable(std::string_view id);
     [[nodiscard]] NativeModResult unload(std::string_view id);
