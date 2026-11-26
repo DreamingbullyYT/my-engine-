@@ -293,6 +293,21 @@ int main() {
     require(sensor_after && sensor_before &&
             sensor_after->linear_velocity.x == sensor_before->linear_velocity.x,
             "sensor contact applies no collision impulse");
+    require(sensor_report.events.size() == 1U &&
+            sensor_report.events[0].type == ContactEventType2D::Begin,
+            "new sensor overlap emits Begin event");
+
+    const auto sensor_stay = sensors.update(1.0 / 60.0);
+    require(sensor_stay.events.size() == 1U &&
+            sensor_stay.events[0].type == ContactEventType2D::Stay,
+            "persistent sensor overlap emits Stay event");
+    require(sensors.set_transform(sensor_body.handle, {10, 0}, 0),
+            "moving trigger body out of overlap succeeds");
+    const auto sensor_end = sensors.update(1.0 / 60.0);
+    require(sensor_end.contact_count == 0U &&
+            sensor_end.events.size() == 1U &&
+            sensor_end.events[0].type == ContactEventType2D::End,
+            "separated sensor pair emits End event");
 
     PhysicsWorld2D static_sensors(PhysicsSettings2D{.gravity = {0, 0}});
     const auto static_sensor_a = static_sensors.create_body(BodyDescription2D{
@@ -310,8 +325,10 @@ int main() {
             "static sensor pair can be created");
     const auto static_sensor_report = static_sensors.update(1.0 / 60.0);
     require(static_sensor_report.contact_count == 1U &&
-            static_sensor_report.contacts[0].sensor,
-            "static sensor overlaps are reported");
+            static_sensor_report.contacts[0].sensor &&
+            static_sensor_report.events.size() == 1U &&
+            static_sensor_report.events[0].type == ContactEventType2D::Begin,
+            "static sensor overlaps are reported as contact events");
 
     PhysicsWorld2D queries(PhysicsSettings2D{.gravity = {0, 0}});
     const auto near_circle = queries.create_body(BodyDescription2D{
