@@ -9,6 +9,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstddef>
+#include <cstdint>
 #include <future>
 #include <functional>
 #include <mutex>
