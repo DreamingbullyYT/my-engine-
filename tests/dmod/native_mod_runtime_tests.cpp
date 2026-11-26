@@ -106,10 +106,22 @@ int main() {
             "track loaded native mod");
     require(manager.is_loaded("test.native") && manager.loaded_count() == 1, "track loaded mod");
     require(counter == 1, "mod receives a raw host interface");
+    std::int32_t before_enable_value = 10;
+    const auto before_enable = manager.dispatch_hooks(
+        "test.game.create", &before_enable_value, &increment_value);
+    require(static_cast<bool>(before_enable) && before_enable.original_called &&
+            before_enable.callbacks_invoked == 0 && before_enable_value == 11,
+            "hooks registered during create remain inactive until the mod is enabled");
     const auto enabled_batch = manager.enable_all();
     require(static_cast<bool>(enabled_batch) && manager.is_enabled("test.native"),
             "enable all runs modules in dependency order");
     require(counter == 10 && manager.is_enabled("test.native"), "enable callback");
+    std::int32_t after_enable_value = 10;
+    const auto after_enable = manager.dispatch_hooks(
+        "test.game.create", &after_enable_value, &increment_value);
+    require(static_cast<bool>(after_enable) && after_enable.original_called &&
+            after_enable.callbacks_invoked == 1 && after_enable_value == 16,
+            "create-time hook becomes active immediately after successful enable");
 
     const auto priority_hook = manager.hook_registry().register_hook(
         "test.native", "test.game.adjust", NativeHookStage::Before,

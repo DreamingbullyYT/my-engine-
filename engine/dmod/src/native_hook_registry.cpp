@@ -97,8 +97,7 @@ bool NativeHookRegistry::set_owner_enabled(
             it->second = enabled;
             return true;
         }
-        if (!enabled) return true;
-        owner_enabled_.emplace(std::move(key), true);
+        owner_enabled_.emplace(std::move(key), enabled);
         return true;
     } catch (...) {
         return false;

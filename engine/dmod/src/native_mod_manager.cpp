@@ -167,14 +167,14 @@ NativeModResult NativeModManager::load(
         mod->manifest.version.major, mod->manifest.version.minor, mod->manifest.version.patch
     };
 
+    // Reserve before plugin code runs: storing the module after create() must
+    // not allocate or throw while the module is already executing.
+    mods_.reserve(mods_.size() + 1);
+
     // Native modules may register hooks during create(), but those hooks
     // remain dormant until enable() succeeds.
     if (!hook_registry_.set_owner_enabled(loaded_id, false))
         return {NativeModError::CreationFailed, "Cannot track native hook ownership."};
-
-    // Reserve before plugin code runs: storing the module after create() must
-    // not allocate or throw while the module is already executing.
-    mods_.reserve(mods_.size() + 1);
     mod->exports = exports;
     begin_callback();
     mod->context = exports->create(&host_api_, &info);

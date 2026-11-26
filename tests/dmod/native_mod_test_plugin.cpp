@@ -9,6 +9,7 @@ struct State {
     bool* unload_on_update{};
     dream::dmod::NativeModManager* manager{};
     std::array<dream::dmod::NativeHookRegistrationId, 4> hooks{};
+    dream::dmod::NativeHookRegistrationId create_hook{};
 };
 
 void hook_before(void*, dream::dmod::NativeHookInvocationV1* invocation) noexcept {
@@ -42,7 +43,16 @@ void* create_mod(const dream::dmod::NativeModHostApiV1* host,
         host->query_interface(host->host_context, "dream.test.manager", 1));
     if (!counter || !unload_on_update || !manager) return nullptr;
     ++(*counter);
-    return new (std::nothrow) State{counter, unload_on_update, manager};
+    auto* state = new (std::nothrow) State{counter, unload_on_update, manager};
+    if (!state) return nullptr;
+    state->create_hook = manager->hook_registry().register_hook(
+        "test.native", "test.game.create", dream::dmod::NativeHookStage::Before,
+        5, &hook_before, state);
+    if (state->create_hook == 0) {
+        delete state;
+        return nullptr;
+    }
+    return state;
 }
 std::uint8_t enable_mod(void* p) noexcept {
     if (!p) return 0;
