@@ -226,6 +226,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     set_target_properties(dream_assets_dependency_graph_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.assets.dependency_graph COMMAND dream_assets_dependency_graph_tests)
 
+    add_executable(dream_physics2d_broadphase_tests tests/physics2d/broadphase_tests.cpp)
+    target_link_libraries(dream_physics2d_broadphase_tests PRIVATE DreamEngine::Physics2D)
+    target_compile_features(dream_physics2d_broadphase_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_physics2d_broadphase_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.physics2d.broadphase COMMAND dream_physics2d_broadphase_tests)
+
     add_executable(dream_physics2d_geometry_tests tests/physics2d/geometry_tests.cpp)
     target_link_libraries(dream_physics2d_geometry_tests PRIVATE DreamEngine::Physics2D)
     target_compile_features(dream_physics2d_geometry_tests PRIVATE cxx_std_20)
