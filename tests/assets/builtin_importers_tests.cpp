@@ -1,6 +1,7 @@
 #include <dream/assets/builtin_importers.hpp>
 
 #include <array>
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <string_view>
@@ -53,6 +54,65 @@ int main() {
             "quad is deduplicated and fan-triangulated");
     require(decoded.indices==std::vector<std::uint32_t>{0U,1U,2U,0U,2U,3U},
             "triangulation preserves the face winding");
+
+    constexpr std::string_view concave_source=
+        "v 0 0 0\n"
+        "v 2 0 0\n"
+        "v 2 2 0\n"
+        "v 1 1 0\n"
+        "v 0 2 0\n"
+        "f 1 2 3 4 5\n";
+    const auto concave_bytes=std::as_bytes(
+        std::span{concave_source.data(),concave_source.size()});
+    const auto concave=importer("models/concave.obj",concave_bytes,{});
+    require(concave.error.empty()&&concave.artifacts.size()==1U,
+            "simple concave OBJ polygon is accepted");
+    BuiltinMeshDataV1 concave_mesh;
+    require(decode_builtin_mesh_v1(
+                concave.artifacts.front().payload,concave_mesh,error),
+            "concave OBJ output decodes");
+    require(concave_mesh.vertices.size()==5U&&
+            concave_mesh.indices.size()==9U,
+            "concave pentagon produces exactly three triangles");
+    double triangulated_area=0.0;
+    for(std::size_t i=0U;i<concave_mesh.indices.size();i+=3U) {
+        const auto& a=concave_mesh.vertices[concave_mesh.indices[i]].position;
+        const auto& b=concave_mesh.vertices[concave_mesh.indices[i+1U]].position;
+        const auto& c=concave_mesh.vertices[concave_mesh.indices[i+2U]].position;
+        triangulated_area+=0.5*(
+            (static_cast<double>(b[0])-a[0])*(c[1]-a[1])-
+            (static_cast<double>(b[1])-a[1])*(c[0]-a[0]));
+    }
+    require(std::abs(triangulated_area-3.0)<1.0e-6,
+            "ear clipping preserves the concave polygon's exact signed area");
+
+    constexpr std::string_view reversed_concave_source=
+        "v 0 0 0\n"
+        "v 0 2 0\n"
+        "v 1 1 0\n"
+        "v 2 2 0\n"
+        "v 2 0 0\n"
+        "f 1 2 3 4 5\n";
+    const auto reversed_bytes=std::as_bytes(std::span{
+        reversed_concave_source.data(),reversed_concave_source.size()});
+    const auto reversed=importer("models/concave-reversed.obj",reversed_bytes,{});
+    require(reversed.error.empty()&&reversed.artifacts.size()==1U,
+            "reversed concave OBJ polygon is accepted");
+    BuiltinMeshDataV1 reversed_mesh;
+    require(decode_builtin_mesh_v1(
+                reversed.artifacts.front().payload,reversed_mesh,error),
+            "reversed concave OBJ output decodes");
+    double reversed_area=0.0;
+    for(std::size_t i=0U;i<reversed_mesh.indices.size();i+=3U) {
+        const auto& a=reversed_mesh.vertices[reversed_mesh.indices[i]].position;
+        const auto& b=reversed_mesh.vertices[reversed_mesh.indices[i+1U]].position;
+        const auto& c=reversed_mesh.vertices[reversed_mesh.indices[i+2U]].position;
+        reversed_area+=0.5*(
+            (static_cast<double>(b[0])-a[0])*(c[1]-a[1])-
+            (static_cast<double>(b[1])-a[1])*(c[0]-a[0]));
+    }
+    require(std::abs(reversed_area+3.0)<1.0e-6,
+            "ear clipping preserves reversed winding for concave polygons");
     for(const auto& vertex:decoded.vertices)
         require(vertex.normal[2]>0.99F,
                 "missing OBJ normals are generated from the face winding");
