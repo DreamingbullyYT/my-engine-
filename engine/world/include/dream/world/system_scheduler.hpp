@@ -16,6 +16,7 @@
 #include <string>
 #include <string_view>
 #include <exception>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 

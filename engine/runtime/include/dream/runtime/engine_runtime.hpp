@@ -115,6 +115,8 @@ struct RuntimeSystemHookDataV1 final {
     // while this native hook dispatch is executing.
     world::World** world{};
     world::SystemContext* context{};
+    world::SystemExecutionThunk original{};
+    void* original_context{};
 };
 
 struct RuntimeBeginRenderFrameHookDataV1 final {
@@ -379,26 +381,17 @@ private:
             return;
         }
         auto& runtime = *static_cast<EngineRuntime*>(context);
-        struct SystemHookDispatchData final {
-            RuntimeSystemHookDataV1 public_data{};
-            world::SystemExecutionThunk original{};
-            void* original_context{};
-        } dispatch_data{
-            RuntimeSystemHookDataV1{&runtime, system, &world, &system_context},
-            original, original_context
+        RuntimeSystemHookDataV1 hook_data{
+            &runtime, system, &world, &system_context, original, original_context
         };
-
         (void)runtime.mod_manager_.dispatch_hooks(
             hook_points::scene_system,
-            &dispatch_data.public_data,
+            &hook_data,
             [](void* opaque) noexcept {
-                // The bridge is immediately following the public context in
-                // SystemHookDispatchData; recover it by pointer arithmetic
-                // through a stable aggregate layout.
-                auto* public_data = static_cast<RuntimeSystemHookDataV1*>(opaque);
-                auto* call = reinterpret_cast<SystemHookDispatchData*>(public_data);
-                if (call->original != nullptr)
-                    call->original(call->original_context);
+                if (opaque == nullptr) return;
+                auto& call = *static_cast<RuntimeSystemHookDataV1*>(opaque);
+                if (call.original != nullptr)
+                    call.original(call.original_context);
             });
     }
 
