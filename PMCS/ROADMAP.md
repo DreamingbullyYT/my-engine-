@@ -16,7 +16,8 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [x] Generational handles, ResourceRegistry and ResourceStore.
 - [x] Application lifecycle contract.
 - [x] Window/surface/input/filesystem contracts and virtual-path validation.
-- [ ] Concrete Android platform lifecycle/window/surface/filesystem backend.
+- [x] Rooted POSIX NativeFileSystem for Linux/Android with openat/O_NOFOLLOW traversal, bounded reads, atomic writes and root directory listing (CI run 45816961428).
+- [ ] Concrete Android lifecycle/window/surface/input backend.
 - [ ] Expanded concurrency, lifetime and shutdown stress tests.
 
 ## P2 — World and core runtime

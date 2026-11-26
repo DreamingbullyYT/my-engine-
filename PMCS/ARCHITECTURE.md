@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Core/runtime foundations, World/ECS, serialization, gameplay input, async assets, Physics2D, backend-neutral rendering, EngineRuntime and native in-process DMod loading are implemented and CI-verified. Android platform integration, production 3D rendering/physics and several runtime services remain incomplete.
+**Status:** Core/runtime foundations, World/ECS, serialization, gameplay input, async assets, Physics2D, backend-neutral rendering, EngineRuntime and native in-process DMod loading are implemented and CI-verified. A rooted POSIX filesystem adapter now builds for Linux/Android; Android lifecycle/window/surface/input integration, production 3D rendering/physics and several runtime services remain incomplete.
 
 ## High-level modules
 - **Core:** time, jobs, events, logging, diagnostics, handles, resource ownership and serialization primitives.
@@ -26,8 +26,8 @@
 - Window contract uses opaque IDs, logical/pixel dimensions, DPI scale, focus/minimized state and lifecycle events.
 - Surface contract separates a window from its native render surface. Native display/window pointers are borrowed and valid only until the surface is released or destroyed.
 - Input contract separates physical keyboard usage IDs, Unicode text, mouse/touch/pen pointer identity, scrolling and normalized gamepad axes.
-- Filesystem uses UTF-8 relative virtual paths and rejects traversal/absolute/unsafe paths.
-- These are interfaces only. No concrete SDL, Android NativeActivity/GameActivity, Win32, X11, Wayland or Apple backend has been completed.
+- Filesystem uses UTF-8 relative virtual paths and rejects traversal/absolute/unsafe paths. NativeFileSystem implements the contract on POSIX/Linux/Android using a pinned root directory descriptor, openat/O_NOFOLLOW traversal, bounded reads, temp-file + atomic-rename writes, sorted directory listings and empty-path root enumeration.
+- NativeFileSystem is a concrete filesystem adapter only. No concrete SDL, Android NativeActivity/GameActivity, Win32, X11, Wayland or Apple window/lifecycle/input backend has been completed.
 
 ## World, ECS and simulation
 - World owns generational Entity handles and typed component pools. Structural operations use exclusive locking; scoped read/write callbacks use shared/exclusive access. Callbacks must not re-enter the same World or retain references after return.
@@ -91,6 +91,7 @@
 - Core must not depend on a particular game, platform windowing library or graphics backend.
 
 ## Verification policy
+- Rooted NativeFileSystem tests and Android ARM64 compilation passed in [run 45816961428](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45816961428).
 - Linux GCC/Clang builds run CTest.
 - Android CI cross-compiles for arm64-v8a (ARMv8-A); it does not execute native modules on a real phone.
 - Current native interface enumeration is verified in [run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851).

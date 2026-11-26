@@ -3,7 +3,7 @@
 **Last checked:** 2026-11-26  
 **Repository:** DreamingbullyYT/my-engine-  
 **Default branch:** main  
-**Latest verified implementation commit:** e65ee68289c874297b5267599a997d1bb06f5901
+**Latest verified implementation commit:** db4560523914556196a243a16642c7c3de9fbeed
 
 ## Implemented
 
@@ -12,7 +12,9 @@
 - Core version API, logger, diagnostics, typed event dispatcher, worker JobSystem, fixed-step clock, generational handles, owning ResourceRegistry and keyed ResourceStore.
 - Application lifecycle callbacks, frame-delta clamping, stop requests and failure cleanup.
 - Backend-neutral window, native render-surface, input and virtual-filesystem contracts. Input covers USB HID keyboard/keypad, Unicode text, mouse/touch/pen and gamepad controls. Virtual paths reject traversal, absolute paths and unsafe/nonportable segments.
-- These are contracts, not concrete Android window/lifecycle/filesystem implementations.
+- NativeFileSystem is now a concrete rooted POSIX IFileSystem implementation for Linux and Android. Concrete Android lifecycle/window/surface/input integration is still missing.
+- NativeFileSystem anchors access to an opened root directory descriptor, traverses path components with openat/O_NOFOLLOW, rejects traversal and symlinks, checks read limits before allocation, and writes through same-directory temporary files plus fsync/atomic rename.
+- Directory listing is deterministic, filters symlink/special-file entries, and accepts an empty path to list the backend root. Read/list outputs remain unchanged on failure.
 
 ### World, serialization and input
 - World/ECS with generational entities, typed component pools, scoped access, multi-component queries, parent/child hierarchy with cycle rejection, Transform2D and Transform3D matrices.
@@ -56,6 +58,7 @@
 - The script interpreter is not a production runtime yet. ChaiScript direct-AST evaluation remains a proof-only candidate; do not describe script mods as implemented.
 
 ## Verified CI
+- [Run 45816961428](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45816961428) passed all four jobs for commit db4560523914556196a243a16642c7c3de9fbeed: Linux GCC/Clang, Android arm64-v8a (ARMv8-A), and DMod AST proof. It builds NativeFileSystem and runs its Linux security/behavior tests.
 - [Run 45811326053](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45811326053) completed successfully for all four jobs on commit e65ee68289c874297b5267599a997d1bb06f5901. It verifies native hook ownership (create-time hooks dormant until enable), EngineRuntime update/Physics2D/render hook points, lifecycle cleanup, Linux GCC/Clang, DMod AST proof and Android arm64-v8a cross-compilation.
 - [Run 45811035311](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45811035311) passed all four jobs for the initial EngineRuntime hook integration.
 - [Run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851) completed successfully for native host interface enumeration and module lifecycle before hook integration.
