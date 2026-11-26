@@ -26,6 +26,25 @@ int main() {
     static_assert(sizeof(Transform2D) >= sizeof(float) * 5);
     static_assert(sizeof(Transform3D) >= sizeof(float) * 10);
 
+    const Transform2D parent2d{{10.0F, 20.0F}, 1.57079632679F, {2.0F, 2.0F}};
+    const Transform2D child2d{{1.0F, 0.0F}, 0.0F, {1.0F, 1.0F}};
+    const auto world2d = dream::world::multiply(
+        dream::world::transform_matrix(parent2d),
+        dream::world::transform_matrix(child2d));
+    const auto point2d = dream::world::transform_point(world2d, {0.0F, 0.0F});
+    require(point2d.x > 9.99F && point2d.x < 10.01F &&
+            point2d.y > 21.99F && point2d.y < 22.01F,
+            "2D transform composition applies parent scale, rotation and translation");
+
+    const Transform3D parent3d{{3.0F, 4.0F, 5.0F}, {0, 0, 0, 1}, {2, 2, 2}};
+    const Transform3D child3d{{1.0F, 0.0F, 0.0F}, {0, 0, 0, 1}, {1, 1, 1}};
+    const auto world3d = dream::world::multiply(
+        dream::world::transform_matrix(parent3d),
+        dream::world::transform_matrix(child3d));
+    const auto point3d = dream::world::transform_point(world3d, {0, 0, 0});
+    require(point3d.x == 5.0F && point3d.y == 4.0F && point3d.z == 5.0F,
+            "3D transform composition applies parent scale and translation");
+
     World world;
     const auto invalid = dream::world::Entity{};
     require(!world.is_alive(invalid), "default entity is invalid");
