@@ -66,6 +66,142 @@ struct FaceIndex final {
     std::int64_t normal{-1};
 };
 
+struct ProjectedPoint final {
+    double x{};
+    double y{};
+};
+
+[[nodiscard]] inline double orient2d(
+    const ProjectedPoint& a, const ProjectedPoint& b,
+    const ProjectedPoint& c) noexcept {
+    return (b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+}
+
+// Ear-clips a simple planar polygon in its dominant plane. Corner indices
+// refer to the original OBJ face, preserving its UV and normal seams.
+[[nodiscard]] inline bool triangulate_face(
+    const std::vector<FaceIndex>& face,
+    const std::vector<std::array<float,3>>& positions,
+    std::vector<std::array<std::size_t,3>>& triangles,
+    std::string& error) {
+    triangles.clear();
+    if(face.size()<3U) {
+        error="OBJ face has fewer than three vertices";
+        return false;
+    }
+
+    // Newell's method tolerates a collinear first triple and provides the
+    // normal used to select a stable 2D projection plane.
+    std::array<double,3> normal{};
+    for(std::size_t i=0U;i<face.size();++i) {
+        const auto& a=positions[static_cast<std::size_t>(face[i].position)];
+        const auto& b=positions[static_cast<std::size_t>(
+            face[(i+1U)%face.size()].position)];
+        normal[0]+=(static_cast<double>(a[1])-b[1])*(a[2]+b[2]);
+        normal[1]+=(static_cast<double>(a[2])-b[2])*(a[0]+b[0]);
+        normal[2]+=(static_cast<double>(a[0])-b[0])*(a[1]+b[1]);
+    }
+    const double ax=std::abs(normal[0]);
+    const double ay=std::abs(normal[1]);
+    const double az=std::abs(normal[2]);
+    const double normal_length_squared=ax*ax+ay*ay+az*az;
+    if(!std::isfinite(normal_length_squared)||normal_length_squared<=1.0e-20) {
+        error="OBJ face is degenerate and has no usable normal";
+        return false;
+    }
+
+    std::vector<ProjectedPoint> projected;
+    projected.reserve(face.size());
+    double minimum_x=std::numeric_limits<double>::infinity();
+    double minimum_y=std::numeric_limits<double>::infinity();
+    double maximum_x=-std::numeric_limits<double>::infinity();
+    double maximum_y=-std::numeric_limits<double>::infinity();
+    for(const auto& index:face) {
+        const auto& p=positions[static_cast<std::size_t>(index.position)];
+        ProjectedPoint q;
+        if(ax>=ay&&ax>=az) q={p[1],p[2]};
+        else if(ay>=az) q={p[2],p[0]};
+        else q={p[0],p[1]};
+        projected.push_back(q);
+        minimum_x=std::min(minimum_x,q.x);
+        minimum_y=std::min(minimum_y,q.y);
+        maximum_x=std::max(maximum_x,q.x);
+        maximum_y=std::max(maximum_y,q.y);
+    }
+
+    double twice_area=0.0;
+    for(std::size_t i=0U;i<projected.size();++i) {
+        const auto& a=projected[i];
+        const auto& b=projected[(i+1U)%projected.size()];
+        twice_area+=a.x*b.y-b.x*a.y;
+    }
+    const double extent=std::max(maximum_x-minimum_x,maximum_y-minimum_y);
+    const double epsilon=std::max(1.0e-12,extent*extent*1.0e-10);
+    if(!std::isfinite(twice_area)||std::abs(twice_area)<=epsilon) {
+        error="OBJ face has zero projected area";
+        return false;
+    }
+    const double winding=twice_area>0.0?1.0:-1.0;
+
+    const auto inside_triangle=[&](const ProjectedPoint& p,
+        const ProjectedPoint& a,const ProjectedPoint& b,
+        const ProjectedPoint& c) {
+        return winding*orient2d(a,b,p)>=-epsilon&&
+               winding*orient2d(b,c,p)>=-epsilon&&
+               winding*orient2d(c,a,p)>=-epsilon;
+    };
+
+    std::vector<std::size_t> remaining(face.size());
+    for(std::size_t i=0U;i<remaining.size();++i) remaining[i]=i;
+    triangles.reserve(face.size()-2U);
+    std::size_t cursor=1U;
+    while(remaining.size()>3U) {
+        const std::size_t count=remaining.size();
+        bool clipped=false;
+        for(std::size_t attempt=0U;attempt<count;++attempt) {
+            const std::size_t current=(cursor+attempt)%count;
+            const std::size_t previous=(current+count-1U)%count;
+            const std::size_t next=(current+1U)%count;
+            const auto& a=projected[remaining[previous]];
+            const auto& b=projected[remaining[current]];
+            const auto& c=projected[remaining[next]];
+            if(winding*orient2d(a,b,c)<=epsilon) continue;
+
+            bool contains_vertex=false;
+            for(std::size_t candidate=0U;candidate<count;++candidate) {
+                if(candidate==previous||candidate==current||candidate==next)
+                    continue;
+                if(inside_triangle(projected[remaining[candidate]],a,b,c)) {
+                    contains_vertex=true;
+                    break;
+                }
+            }
+            if(contains_vertex) continue;
+
+            triangles.push_back({remaining[previous],remaining[current],
+                                 remaining[next]});
+            remaining.erase(remaining.begin()+static_cast<std::ptrdiff_t>(current));
+            cursor=current%remaining.size();
+            clipped=true;
+            break;
+        }
+        if(!clipped) {
+            triangles.clear();
+            error="OBJ face is self-intersecting, non-planar or numerically degenerate";
+            return false;
+        }
+    }
+
+    if(winding*orient2d(projected[remaining[0]],projected[remaining[1]],
+                       projected[remaining[2]])<=epsilon) {
+        triangles.clear();
+        error="OBJ face ended in a degenerate final triangle";
+        return false;
+    }
+    triangles.push_back({remaining[0],remaining[1],remaining[2]});
+    return true;
+}
+
 struct VertexKey final {
     std::int64_t position{-1};
     std::int64_t texcoord{-1};
@@ -300,15 +436,29 @@ inline void append_string(std::vector<std::byte>& bytes,std::string_view value) 
                 return output;
             }
             ++face_id;
-            auto generated_normal=cross(
-                subtract(positions[static_cast<std::size_t>(face[1].position)],
-                         positions[static_cast<std::size_t>(face[0].position)]),
-                subtract(positions[static_cast<std::size_t>(face[2].position)],
-                         positions[static_cast<std::size_t>(face[0].position)]));
-            if(!normalize(generated_normal)) {
-                output.error="OBJ face is degenerate and has no usable normal";
+            std::vector<std::array<std::size_t,3>> triangles;
+            if(!builtin_importer_detail::triangulate_face(
+                    face,positions,triangles,output.error)) {
                 return output;
             }
+
+            std::array<double,3> newell_normal{};
+            for(std::size_t i=0U;i<face.size();++i) {
+                const auto& a=positions[static_cast<std::size_t>(face[i].position)];
+                const auto& b=positions[static_cast<std::size_t>(
+                    face[(i+1U)%face.size()].position)];
+                newell_normal[0]+=(static_cast<double>(a[1])-b[1])*(a[2]+b[2]);
+                newell_normal[1]+=(static_cast<double>(a[2])-b[2])*(a[0]+b[0]);
+                newell_normal[2]+=(static_cast<double>(a[0])-b[0])*(a[1]+b[1]);
+            }
+            const double normal_length=std::sqrt(
+                newell_normal[0]*newell_normal[0]+
+                newell_normal[1]*newell_normal[1]+
+                newell_normal[2]*newell_normal[2]);
+            const std::array<float,3> generated_normal{
+                static_cast<float>(newell_normal[0]/normal_length),
+                static_cast<float>(newell_normal[1]/normal_length),
+                static_cast<float>(newell_normal[2]/normal_length)};
 
             const auto append_vertex=[&](const FaceIndex& index)->std::optional<std::uint32_t> {
                 const VertexKey key{
@@ -329,8 +479,8 @@ inline void append_string(std::vector<std::byte>& bytes,std::string_view value) 
                 return id;
             };
 
-            for(std::size_t fan=1U;fan+1U<face.size();++fan) {
-                for(const auto corner:{std::size_t{0U},fan,fan+1U}) {
+            for(const auto& triangle:triangles) {
+                for(const auto corner:triangle) {
                     const auto vertex=append_vertex(face[corner]);
                     if(!vertex) {
                         output.error="OBJ output exceeds the one-million-vertex limit";
