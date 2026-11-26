@@ -1,6 +1,6 @@
 # Technical Audit
 
-**Status:** Core services, typed resource identity/ownership, keyed ResourceStore, asset dependency planning, bounded async asset loading, CPU-side AssetCache and optional cached loading are CI-verified. ChaiScript remains a proof-only candidate; no script runtime has been approved for production use.
+**Status:** Core services, typed resource identity/ownership, keyed ResourceStore, asset dependency planning, bounded async asset loading, CPU-side AssetCache, cooperative cancellation and in-flight request coordination are CI-verified. ChaiScript remains a proof-only candidate; no script runtime has been approved for production use.
 
 ## Core resource identity
 - Initial typed handle design is a tag-typed (index, generation) pair. Tag types prevent accidental interchange between domains such as textures and buffers at compile time.
@@ -34,7 +34,11 @@
 - `load_async_cached` checks for an existing cache key before file I/O, then bounded-reads, decodes and inserts with the supplied size estimator. It returns a distinct CacheHit status and reports cache budget/duplicate-key rejection. Tests prove cache hits avoid additional filesystem reads. All four jobs passed in [run 45768508344](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768508344).
 - Both loader paths accept an optional `AssetCancellationToken`, created by `AssetCancellationSource`. Cancellation is cooperative: checkpoints occur before I/O/cache hits, after file reads, after decoding, and (cached path) after size estimation. It cannot interrupt an active backend read or decoder/estimator callback. If cancellation is observed before registration/insertion, the result is `AssetLoadStatus::Cancelled` and no new resource is registered.
 - Cancellation tests passed Linux GCC, Linux Clang, DMod AST proof and Android ARM64 cross-compilation in [run 45769042275](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45769042275). Android verification is compile-only, not physical-device execution.
-- The cached loader still has a check-then-load race: concurrent requests for the same absent key may both read/decode; one insertion succeeds and the other reports CacheRejected/DuplicateKey. In-flight deduplication is not implemented. Cache and other borrowed dependencies must outlive submitted tasks.
+- `AssetRequestCoordinator<Result>` keeps pending shared futures keyed by caller-provided request ID. `load_async_coordinated` and `load_async_cached_coordinated` use it to deduplicate concurrent uncached or cached load requests. The factory runs only for the first caller while that ID remains pending; followers receive the same `shared_future` and result. The test deliberately blocks the first decoder, starts a second request, and verifies one read, one decode and one shared handle. All four CI jobs passed in [run 45770215802](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45770215802).
+- Completed entries are lazily pruned on the next request or by explicit `prune_completed()`. The coordinator is not a result cache; callers retaining shared futures can still read results after pruning.
+- Request IDs are caller-defined. They must namespace resource type, source/path, content version or other identity dimensions as appropriate; reusing one ID for unrelated resources will incorrectly share work.
+- The first caller owns the underlying factory, decoder and cancellation token. Later callers' factories and cancellation tokens are ignored while a matching request is pending, so independent per-subscriber cancellation is not supported. Cancellation remains cooperative and cannot interrupt an active read/decoder.
+- The coordinator does not own JobSystem, filesystem, ResourceStore or AssetCache. Those borrowed services must outlive the task. Explicit service shutdown/lifetime policy remains open.
 
 ## Engine references
 - Luanti: study runtime modding, API exposure, package lifecycle and server/client boundaries.
