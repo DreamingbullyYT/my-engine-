@@ -61,6 +61,28 @@ int main() {
     require(world.body_state(ball.handle)->linear_velocity.z>0.0F,
         "impulse changes linear velocity");
 
+    PhysicsWorld3D continuous(PhysicsSettings3D{.gravity={0,0,0}});
+    BodyDescription3D continuous_target;
+    continuous_target.type=BodyType3D::Static;
+    continuous_target.collider=SphereCollider3D{{},1.0F};
+    const auto fixed_target=continuous.create_body(continuous_target);
+    BodyDescription3D projectile;
+    projectile.type=BodyType3D::Dynamic;
+    projectile.position={-10.0F,0.0F,0.0F};
+    projectile.linear_velocity={100.0F,0.0F,0.0F};
+    projectile.mass=1.0F;
+    projectile.bullet=true;
+    projectile.collider=SphereCollider3D{{},0.25F};
+    const auto bullet=continuous.create_body(projectile);
+    require(fixed_target&&bullet,"continuous sphere projectile and target create");
+    const auto continuous_report=continuous.update(0.25);
+    const auto bullet_state=continuous.body_state(bullet.handle);
+    require(continuous_report&&continuous_report.contact_count>0U&&bullet_state&&
+            bullet_state->position.x<-1.0F&&bullet_state->position.x>-1.4F,
+            "sphere bullet CCD prevents a fast projectile tunnelling through a static sphere");
+    require(std::abs(bullet_state->linear_velocity.x)<0.1F,
+            "3D discrete contact solver resolves the swept sphere impact");
+
     const auto stale=ball.handle;
     require(world.destroy_body(stale)&&!world.body_state(stale),
         "body destruction invalidates its generational handle");
