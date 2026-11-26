@@ -98,6 +98,7 @@ add_library(dream_dmod STATIC
     engine/dmod/src/native_library.cpp
     engine/dmod/src/native_mod_host.cpp
     engine/dmod/src/native_mod_manager.cpp
+    engine/dmod/src/native_mod_package_installer.cpp
 )
 add_library(DreamEngine::DMod ALIAS dream_dmod)
 

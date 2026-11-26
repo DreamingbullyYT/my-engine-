@@ -1,4 +1,5 @@
 #include <dream/dmod/package_reader.hpp>
+#include <dream/dmod/native_mod_package_installer.hpp>
 
 #include <miniz.h>
 
@@ -9,6 +10,13 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <functional>
+#if defined(__unix__) || defined(__APPLE__)
+#include <sys/stat.h>
+#endif
 
 namespace {
 
@@ -234,6 +242,67 @@ int main() {
     const std::vector<std::byte> invalid_zip{std::byte{0x01}, std::byte{0x02}};
     require(open_package(invalid_zip, errors) == nullptr,
             "invalid ZIP bytes are rejected");
+
+#if defined(__unix__) || defined(__APPLE__)
+    const std::string native_manifest =
+        "format_version = 1\n"
+        "runtime = \"native\"\n"
+        "id = \"test.installer\"\n"
+        "name = \"Native Installer Test\"\n"
+        "version = \"2.3.4\"\n"
+        "engine_api_min = \"0.1.0\"\n"
+        "native_library = \"lib/linux-x86_64/libfixture.so\"\n";
+    const std::string native_payload = "ELF-test-payload";
+    const auto native_zip = make_zip({
+        {"manifest.toml", native_manifest},
+        {"lib/linux-x86_64/libfixture.so", native_payload}
+    });
+    errors.clear();
+    auto native_package = open_package(native_zip, errors);
+    require(native_package != nullptr, "native package with ABI library opens");
+
+    const auto install_root = std::filesystem::temp_directory_path() /
+        ("dream-dmod-installer-" + std::to_string(
+            static_cast<unsigned long long>(std::hash<std::string>{}(native_payload))));
+    std::filesystem::remove_all(install_root);
+    std::filesystem::create_directories(install_root);
+    const auto installed = NativeModPackageInstaller::install(*native_package, install_root);
+    require(installed.success(), "native library installs into private mod root");
+    require(installed.library_path.is_absolute(), "installed native library path is absolute");
+    std::ifstream installed_file(installed.library_path, std::ios::binary);
+    const std::string installed_payload(
+        (std::istreambuf_iterator<char>(installed_file)),
+        std::istreambuf_iterator<char>());
+    require(installed_payload == native_payload, "installed library bytes match package payload");
+    struct stat installed_stat {};
+    require(::stat(installed.library_path.c_str(), &installed_stat) == 0,
+            "installed native library exists");
+    require((installed_stat.st_mode & 0777) == 0500,
+            "installed native library is owner read/execute only");
+
+    const auto linked_root = install_root / "outside";
+    std::filesystem::create_directories(linked_root);
+    const auto link_package_zip = make_zip({
+        {"manifest.toml",
+         "format_version = 1\n"
+         "runtime = \"native\"\n"
+         "id = \"test.symlink\"\n"
+         "name = \"Native Symlink Test\"\n"
+         "version = \"1.0.0\"\n"
+         "engine_api_min = \"0.1.0\"\n"
+         "native_library = \"lib/escape.so\"\n"},
+        {"lib/escape.so", native_payload}
+    });
+    errors.clear();
+    auto link_package = open_package(link_package_zip, errors);
+    require(link_package != nullptr, "symlink-target test package opens");
+    const auto link_id = install_root / "test.symlink" / "1.0.0";
+    std::filesystem::create_directories(link_id);
+    std::filesystem::create_directory_symlink(linked_root, link_id / "lib");
+    const auto link_install = NativeModPackageInstaller::install(*link_package, install_root);
+    require(!link_install.success(), "installer refuses a symlink in package path");
+    std::filesystem::remove_all(install_root);
+#endif
 
     std::cout << "Dream Engine DMod package reader tests passed." << std::endl;
     return EXIT_SUCCESS;
