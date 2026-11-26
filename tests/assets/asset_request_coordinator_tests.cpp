@@ -78,6 +78,12 @@ int main() {
     require(independent.in_flight_count() == 0,
             "completed subscribed request is pruned normally");
 
+    auto deferred = independent.request_subscribed("mesh/deferred", [] {
+        return std::async(std::launch::deferred, [] { return 126; });
+    }, [] { return -3; });
+    require(deferred.get() == 126,
+            "deferred shared futures execute on get instead of spinning forever");
+
     auto next = coordinator.request("texture/player", [&] {
         ++factory_calls;
         return std::async(std::launch::async, [] { return 7; });

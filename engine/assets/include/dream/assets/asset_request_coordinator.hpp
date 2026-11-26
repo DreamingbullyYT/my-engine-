@@ -41,8 +41,11 @@ public:
     [[nodiscard]] Result get() const {
         if (!valid()) throw std::future_error(std::future_errc::no_state);
         while (!is_cancelled()) {
-            if (future_.wait_for(std::chrono::milliseconds(5)) ==
-                std::future_status::ready) {
+            const auto status = future_.wait_for(std::chrono::milliseconds(5));
+            // A deferred shared_future executes its callable on get(); it never
+            // transitions to ready through wait_for alone.
+            if (status == std::future_status::ready ||
+                status == std::future_status::deferred) {
                 break;
             }
         }
