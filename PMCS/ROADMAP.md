@@ -19,7 +19,8 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [x] Rooted POSIX NativeFileSystem for Linux/Android with openat/O_NOFOLLOW traversal, bounded reads, atomic writes and root directory listing (CI run 45816961428).
 - [x] AndroidX GameActivity 4.4.2 lifecycle/window/surface/key/pointer/gamepad adapter cross-compiled for ARM64 ([run 45820002663](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45820002663)).
 - [ ] Android host APK/Gradle/manifest integration and physical-device validation.
-- [ ] Android APK AssetManager read-only filesystem and full IME/soft-keyboard text-input support.
+- [x] Android APK AssetManager read-only filesystem (cross-compiled in run 45820002663).
+- [ ] Full IME/soft-keyboard text-input support.
 - [ ] Expanded concurrency, lifetime and shutdown stress tests.
 
 ## P2 — World and core runtime
@@ -47,7 +48,8 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [x] Initial PhysicsWorld2D rigid-body, collision/filter/sensor/contact/raycast implementation.
 - [x] Deterministic sweep-and-prune broadphase.
 - [ ] Physics2D solver hardening: joints, CCD, sleeping, warm starting, multiple fixtures and more stable contact manifolds.
-- [ ] Physics3D implementation and adapter.
+- [x] Physics3D collision geometry: sphere, AABB, OBB and OBB SAT queries ([run 45828037777](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45828037777)).
+- [ ] Physics3D body world, broadphase, integration and contact solver.
 - [ ] Animation and navigation integration.
 
 ## P5 — DMod and unrestricted native mods
@@ -65,7 +67,8 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [x] NativeHookRegistry with Before/Around/Replace/After stages, deterministic priority/registration order and repeatable call_next ([run 45810170873](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45810170873)).
 - [x] Manager-owned callback enable/disable/removal and deferred self-unload until hook dispatch exits.
 - [x] EngineRuntime hook points for runtime update, each PhysicsWorld2D step, begin-render-frame and render-frame, with mutable typed contexts ([run 45811326053](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45811326053)).
-- [ ] Integrate per-system hooks in Scene scheduler, World/ECS mutation hooks and asset lifecycle hooks.
+- [x] Integrate per-system hooks in the Scene scheduler (dream.engine.scene.system; run 45811326053).
+- [ ] Integrate World/ECS mutation hooks and asset lifecycle hooks.
 - [ ] Track module-owned resources/jobs/threads and make unload/hot reload safe; hook registrations are currently tracked and removed automatically.
 - [ ] Native package signature/publisher trust policy; signatures verify origin/integrity, not runtime isolation.
 - [ ] Native .dmod load/unload test on a real Android ARM64 device.
@@ -88,6 +91,9 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [ ] Validate with the planned planet/colony game.
 - [ ] Validate with a substantially different 3D game.
 - [ ] Confirm neither project requires an engine fork.
+
+## Foundation-first execution order
+The user chose to complete the engine foundation before expanding advanced DMod/modding features. Until the base is complete, keep DMod changes limited to correctness fixes and compatibility needed by engine work. Prioritize: (1) Android host integration, (2) operational 2D rendering and full 3D renderer/GPU resources, (3) Physics2D hardening and a complete Physics3D world/solver, (4) audio/animation/UI and asset import, (5) stress/performance/device validation. Then return to deep native mod APIs, World/ECS and asset hooks, owned-resource/job/thread cleanup, hot reload and Android package validation.
 
 ## Explicit non-goals
 - Sandboxing or capability restrictions for native mods. Native modules are trusted in-process code by user decision.

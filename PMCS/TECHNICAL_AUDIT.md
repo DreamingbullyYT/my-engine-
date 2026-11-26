@@ -217,3 +217,15 @@ Before adoption, pin repository, tag/commit and exact license files; inspect tra
 - Native mod IDs are inserted as disabled before create(), so hook callbacks registered in create() remain dormant until successful enable. Host/game hook owners are active by default unless explicitly disabled by NativeModManager.
 - CI run 45811326053 passed Linux GCC, Linux Clang, Android arm64-v8a cross-compilation and DMod AST proof (4/4 jobs).
 - Remaining integration is per-system Scene scheduler hooks, World/ECS structural/component operations and asset lifecycle; those do not automatically become hookable merely because the manager is exposed.
+
+
+## Physics3D collision geometry foundation — verified 2026-11-26
+
+- Added DreamEngine::Physics3D as a separate CMake interface target.
+- Geometry API includes finite-safe Vec3 operations, AABB3D, Sphere3D and OrientedBox3D with validated orthonormal world axes.
+- Collision queries implement AABB-AABB, sphere-sphere, sphere-AABB and OBB-OBB. OBB-OBB uses the complete 15 candidate SAT axes (three axes from each box and nine pairwise cross products), skipping degenerate cross axes.
+- Contact manifold normal points from the first shape toward the second; moving the first shape opposite the normal resolves penetration. OBB contact point is a support-point midpoint approximation, not a clipped manifold.
+- Tests cover overlap/separation, penetration/normal, sphere-inside-box exit selection, rotated OBB validity and malformed geometry.
+- [Run 45828037777](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45828037777) passed Linux GCC and Clang build/CTest, Android arm64-v8a cross-compilation (including the new geometry test), and DMod AST proof.
+- This is not a Physics3D simulation world. Broadphase, body handles/state, force integration, angular solver, contact persistence, joints, CCD and sleeping remain unimplemented.
+- Scene scheduler per-system native hook dispatch is implemented via dream.engine.scene.system; remaining automatic hook sites are World/ECS structural/component operations and asset load/decode/register lifecycle.

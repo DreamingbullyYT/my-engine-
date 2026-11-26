@@ -1,16 +1,16 @@
 # Architecture
 
-**Status:** Core/runtime foundations, World/ECS, serialization, gameplay input, async assets, Physics2D, backend-neutral rendering, EngineRuntime and native in-process DMod loading are implemented and CI-verified. Rooted POSIX file access and an AndroidX GameActivity lifecycle/window/surface/input adapter compile for Android ARM64. Android APK packaging/device validation, packaged-asset access, IME composition, production 3D rendering/physics and several runtime services remain incomplete.
+**Status:** Core/runtime foundations, World/ECS, serialization, gameplay input, async assets, Physics2D, backend-neutral rendering, EngineRuntime and native in-process DMod loading are implemented and CI-verified. Rooted POSIX file access, AndroidX GameActivity lifecycle/window/surface/input and read-only APK AssetManager access compile for Android ARM64. Android APK packaging/device validation, IME composition, production 3D rendering/physics and several runtime services remain incomplete.
 
 ## High-level modules
 - **Core:** time, jobs, events, logging, diagnostics, handles, resource ownership and serialization primitives.
-- **Platform:** lifecycle, windows/surfaces, input, filesystem and OS integration. Rooted POSIX NativeFileSystem and an AndroidX GameActivity backend are implemented; desktop native window/input adapters and Android host APK integration remain future work.
+- **Platform:** lifecycle, windows/surfaces, input, filesystem and OS integration. Rooted POSIX NativeFileSystem, AndroidAssetFileSystem and an AndroidX GameActivity backend are implemented; desktop native window/input adapters and Android host APK integration remain future work.
 - **World:** Scene, World/ECS, entities, components, hierarchy, transforms and scheduler.
 - **Assets:** bounded file loading, decoders, dependency planning, CPU cache and request coordination.
 - **Rendering:** engine-owned 2D/3D frame and resource contracts with replaceable backends.
 - **Simulation:** Physics2D is implemented initially; Physics3D, solver hardening, animation and navigation remain.
 - **Runtime:** combines Scene, fixed-step updates, input actions, Physics2D and rendering.
-- **DMod:** validated ZIP package, manifest/dependency handling, unrestricted in-process native modules and an ordered before/around/replace/after hook registry. Automatic hook insertion throughout the engine/game and a production script runtime remain future work.
+- **DMod:** validated ZIP package, manifest/dependency handling, unrestricted in-process native modules and an ordered before/around/replace/after hook registry. World/ECS mutation and asset-lifecycle hook insertion, module-owned resource/job/thread lifetime tracking and a production script runtime remain future work.
 - **Game project:** game-specific systems, content, assets, UI and gameplay code.
 - **Tools/editor:** diagnostics, profiling and editor tools are not required for the initial runtime.
 
@@ -88,7 +88,7 @@
 - Stable, advanced and experimental are compatibility/documentation tiers, not security boundaries.
 - Native ABI structs use a size/version contract. V1 extensions must be append-only and existing fields must retain their meaning.
 - Because mods receive raw C++ object pointers, modules need compatible headers, architecture, toolchain/runtime ABI and engine API range. Raw pointer access is powerful but not a promise that every private C++ symbol has a stable cross-version ABI.
-- Remaining hook work: integrate dispatch into each Scene scheduler system invocation, World/ECS structural and component operations, and asset load/decode/register lifecycle; add resource/job/thread ownership tracking. Runtime update/render and Physics2D stepping are already wired. Native hooks do not impose a sandbox.
+- Scene scheduler system invocations are now wired to dream.engine.scene.system, in addition to runtime update/render and Physics2D stepping. Remaining hook work is World/ECS structural/component operations and asset load/decode/register lifecycle, followed by resource/job/thread ownership tracking. Native hooks do not impose a sandbox.
 
 ## Dependency direction
 - Platform adapters implement platform interfaces.
@@ -101,5 +101,6 @@
 - Rooted NativeFileSystem tests and Android ARM64 compilation passed in [run 45816961428](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45816961428).
 - Linux GCC/Clang builds run CTest.
 - Android CI cross-compiles for arm64-v8a (ARMv8-A); it does not execute native modules on a real phone.
+- Physics3D collision geometry and its test passed Linux GCC/Clang CTest and Android ARM64 compile in [run 45828037777](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45828037777).
 - Current native interface enumeration is verified in [run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851).
 - Renderer backend proof is verified in [run 45790590738](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45790590738).
