@@ -24,6 +24,7 @@
 - ResourceRegistry<T, Tag> owns resources with unique_ptr, provides scoped callback access under a shared lock, rejects stale handles and safely invalidates identities before destruction. Callbacks must not re-enter the same registry; do not retain resource references outside the callback.
 - ResourceStore<T, Tag> adds a case-sensitive string-key mapping over ResourceRegistry, with insert/find/erase and scoped access by key or handle. It is intentionally not a loader: file I/O, decoding, async scheduling, dependency tracking and GPU upload belong to higher-level asset systems. Store callbacks must not re-enter the same store.
 - ResourceStore Linux GCC/Clang tests and Android ARM64 test cross-compilation passed in [run 45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493). Android is compile-only, not physical-device execution.
+- ResourceRegistry callback-vs-destroy synchronization test passed with all four CI jobs in [run 45758612936](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45758612936).
 
 ## Platform contracts
 - Application lifecycle owns initialization, frame polling/update and shutdown sequencing; stop requests are atomic and frame delta is clamped.
