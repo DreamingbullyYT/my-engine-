@@ -1,0 +1,13 @@
+add_executable(dream_example_2d_platformer 2d_platformer/main.cpp)
+target_link_libraries(dream_example_2d_platformer PRIVATE DreamEngine::Runtime)
+target_compile_features(dream_example_2d_platformer PRIVATE cxx_std_20)
+target_include_directories(dream_example_2d_platformer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+set_target_properties(dream_example_2d_platformer PROPERTIES CXX_EXTENSIONS OFF)
+add_test(NAME dream.example.2d_platformer COMMAND dream_example_2d_platformer)
+
+add_executable(dream_example_3d_physics_lab 3d_physics_lab/main.cpp)
+target_link_libraries(dream_example_3d_physics_lab PRIVATE DreamEngine::Runtime)
+target_compile_features(dream_example_3d_physics_lab PRIVATE cxx_std_20)
+target_include_directories(dream_example_3d_physics_lab PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+set_target_properties(dream_example_3d_physics_lab PROPERTIES CXX_EXTENSIONS OFF)
+add_test(NAME dream.example.3d_physics_lab COMMAND dream_example_3d_physics_lab)

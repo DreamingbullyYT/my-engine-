@@ -7,6 +7,7 @@ project(DreamEngine
 )
 
 option(DREAM_BUILD_TESTS "Build Dream Engine tests" ON)
+option(DREAM_BUILD_EXAMPLES "Build the headless 2D and 3D sample games" OFF)
 option(DREAM_BUILD_BGFX_BACKEND "Build the optional bgfx clear/present backend (requires an existing bgfx target)" OFF)
 option(DREAM_BUILD_ANDROID_GAME_ACTIVITY_BACKEND "Build the AndroidX GameActivity platform adapter (requires the GameActivity Prefab package)" OFF)
 option(DREAM_BUILD_ANDROID_AAUDIO_BACKEND "Build the Android AAudio output backend" OFF)
@@ -291,6 +292,13 @@ set_target_properties(dream_core PROPERTIES
     CXX_EXTENSIONS OFF
     POSITION_INDEPENDENT_CODE ON
 )
+
+if(DREAM_BUILD_EXAMPLES AND NOT ANDROID)
+    if(NOT DREAM_BUILD_TESTS)
+        enable_testing()
+    endif()
+    add_subdirectory(examples)
+endif()
 
 if(DREAM_BUILD_TESTS AND NOT ANDROID)
     enable_testing()
