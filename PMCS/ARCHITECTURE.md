@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Core services, application lifecycle, backend-neutral platform contracts, initial DMod package pipeline, typed generational handles, owning ResourceRegistry, keyed ResourceStore, asset dependency planning, bounded async loading, cooperative cancellation, AssetCache integration and in-flight request deduplication are CI-verified.
+**Status:** Core services, platform contracts, typed resource ownership, asset pipeline, initial World/ECS with hierarchy and transforms, Scene scheduler, versioned binary and World/Scene serialization, plus device-independent gameplay action mappings are CI-verified. No concrete renderer, physics engine or Android/desktop native backend exists yet.
 
 ## High-level modules
 - Platform: desktop and Android lifecycle, windows/surfaces, input, files, threads and OS integration.
@@ -27,6 +27,30 @@
 - `dream_assets::load_async` composes JobSystem, bounded IFileSystem reads, a caller-provided decoder and ResourceStore. `load_async_cached` is an optional sibling path targeting AssetCache; it checks for an existing key before file I/O and takes a caller-provided decoded-size estimator. Both accept an optional `AssetCancellationToken`; cancellation is cooperative and checked before I/O/cache hits, after reads, after decoding and, for cached loads, after size estimation. It cannot interrupt an in-progress backend read or decoder call. Cancellation observed before registration/insertion prevents that operation. AssetCache is a CPU-side byte-budgeted LRU; it does not measure allocations or manage GPU residency. Borrowed services must outlive the task and callbacks run on a worker thread. All four CI jobs passed in [run 45769042275](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45769042275).
 - `AssetRequestCoordinator<Result>` shares a `std::shared_future<Result>` among callers using the same request ID while the request is pending. `load_async_coordinated` and `load_async_cached_coordinated` are convenience wrappers over the existing loaders. Completed entries are pruned on the next request or explicit `prune_completed()` call; this is not a result cache. Request IDs are caller-defined and must include any type/source/version identity needed to distinguish requests. The first caller owns the decoder and cancellation token; followers receive the shared result and cannot independently cancel the underlying operation. Concurrent duplicate requests therefore perform one read/decode. Verified across Linux GCC, Linux Clang, DMod proof and Android ARM64 cross-compilation in [run 45770215802](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45770215802).
 - ResourceRegistry callback-vs-destroy synchronization test passed with all four CI jobs in [run 45758612936](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45758612936).
+
+## World, ECS and transforms
+- `DreamEngine::World` is an owning, thread-safe entity/component store using generational `Entity` handles. Each component type has a pool; stale entity generations cannot access components left by a prior entity occupying the same index.
+- Structural operations take the exclusive World lock; read access uses a shared lock. Component callbacks run while the relevant lock is held and must not re-enter the same World or retain references after the callback returns.
+- `with_component`, `with_component_mut`, multi-component access and `for_each`/`for_each_mut` provide scoped access. A component pool's runtime `std::type_index` is not a persistent identifier.
+- Parent links are World-owned and updated atomically with structural changes. Self-parenting and cycles are rejected. Destroying a parent detaches its direct children; destroying an entity clears its parent link.
+- `Transform2D` and `Transform3D` are data components. Matrix conventions are column-major storage with column vectors. 2D matrices are 3x3; 3D matrices are 4x4. Matrix composition is retained so hierarchical non-uniform scale/rotation does not lose shear. 3D quaternion inputs are expected to be normalized.
+- `Scene` owns a World and a `SystemScheduler`. Systems run in `PreUpdate`, `Update`, `PostUpdate` order, descending priority and stable registration order within a phase. A tick snapshots the registrations; systems added during a tick start next tick, and a system removed before its turn is skipped. Callback exceptions are reported without aborting remaining systems. Recursive/concurrent ticks are rejected.
+- ECS, hierarchy, transform and scheduler tests passed all four CI jobs in [run 45772233089](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45772233089).
+
+## Serialization and persistence
+- `DreamEngine::Serialization` provides a DENG-magic, major/minor-versioned, little-endian binary archive with bounded total size, bounded UTF-8 strings, strict UTF-8 validation and sticky error reporting.
+- World components are persisted only through explicitly registered codecs with stable project-defined 64-bit type IDs and explicit component versions. `std::type_index`, compiler type names and pointer values are never written as IDs.
+- World archive records use deterministic entity order and archive-local entity indices for parent relationships. Restored entities receive fresh runtime handles.
+- Saving fails on unregistered live component types instead of silently omitting data. Loading rejects invalid IDs, duplicate components, unsupported component versions, invalid/cyclic parents, oversized/truncated payloads and trailing bytes. Unknown components are rejected by default; skip behavior must be explicitly enabled.
+- World restoration is staged into a new World and exposed only after successful validation. Save callers must quiesce World mutations for the duration of a consistent snapshot; the current serializer does not provide a multi-operation transactional read lock across the entire save. Custom codecs that contain entity references must explicitly translate them; generic external entity-reference remapping is not automatic.
+- Scene archives persist the scene name and World. Runtime system callbacks are executable code and are intentionally not serialized; game code re-registers systems after load.
+- Binary archive, World archive and Scene archive passed all four CI jobs in [run 45772640872](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45772640872), [run 45773296150](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45773296150) and [run 45773898548](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45773898548).
+
+## Gameplay input actions
+- `DreamEngine::Input::ActionMap` maps platform input events into game action states. Bindings currently cover USB HID keyboard usages with exact modifiers, mouse buttons and specific gamepad device buttons/axes.
+- Digital and analog bindings contribute to a common action: an action remains down while any digital binding is held or its analog threshold is met. Edge flags are reset by `begin_frame()`, while values remain latched.
+- Gamepad axes use a configurable deadzone and scale. Device disconnect releases only that device's gamepad bindings. `reset_all()` supports focus-loss/global input reset.
+- ActionMap tests and Android ARM64 cross-compilation passed all four CI jobs in [run 45774213362](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45774213362) and [run 45774483591](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45774483591).
 
 ## Platform contracts
 - Application lifecycle owns initialization, frame polling/update and shutdown sequencing; stop requests are atomic and frame delta is clamped.

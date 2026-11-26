@@ -40,6 +40,33 @@
 - The first caller owns the underlying factory, decoder and cancellation token. Later callers' factories and cancellation tokens are ignored while a matching request is pending, so independent per-subscriber cancellation is not supported. Cancellation remains cooperative and cannot interrupt an active read/decoder.
 - The coordinator does not own JobSystem, filesystem, ResourceStore or AssetCache. Those borrowed services must outlive the task. Explicit service shutdown/lifetime policy remains open.
 
+## World, ECS and system scheduler
+- `World` owns generational entity handles and component pools keyed internally by `std::type_index`. Each component pool checks entity generation, so index reuse does not expose a stale component.
+- Access is callback-scoped under the World shared/exclusive mutex. Callbacks must not re-enter the same World; retaining component references after callback return is invalid.
+- Hierarchy data is stored in the World rather than only as a user component, allowing cycle validation, reparenting and entity-destruction cleanup under one lock. Parent destruction detaches direct children. Ancestor walks reject stale links and cycle attempts.
+- Transform composition uses column-major matrices with column vectors. This preserves shear from rotated children beneath non-uniformly scaled parents. `Transform3D` expects normalized quaternions; normalization/validation of each arbitrary component value is not automatically enforced.
+- Scheduler ordering is phase, descending priority, then registration order. A snapshot provides deterministic add/remove behavior during ticks. Exceptions are converted to per-system failures. Recursive/concurrent update calls are rejected via atomic guard.
+- Linux GCC/Clang tests and Android ARM64 cross-compilation passed in [run 45772233089](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45772233089).
+
+## Binary archive and World/Scene persistence
+- Binary primitives are explicitly little-endian. DENG archive header carries a major/minor version; reader accepts only the same major and a file minor not newer than the supported minor. Size limits are configurable.
+- UTF-8 is validated, including overlong sequences, surrogates, truncated sequences and out-of-range code points. Booleans accept only encoded 0/1. Error states are sticky.
+- World persistence uses a codec registry with stable project-defined 64-bit type IDs and explicit component versions. C++ `type_index` and implementation-defined RTTI names are not serialized.
+- World save emits entities deterministically by live handle index and writes archive-local parent IDs. Load allocates new runtime handles; old handles are intentionally not stable across restore.
+- Components without registered codecs cause save failure to prevent silent data loss. Unknown saved component IDs are rejected by default; explicit option can skip them. Component versions newer than registered codec are rejected; backwards migration must be implemented in codec decoder.
+- Loading is staged into a temporary World; partial worlds are never returned. Entity references inside user-defined components are not automatically remapped; codecs must define a stable representation and resolve references explicitly.
+- World save currently enumerates/accesses components in multiple locked operations. Caller must ensure no concurrent structural/component mutations while snapshotting; an atomic whole-world snapshot/transaction is not yet implemented.
+- Scene archives wrap scene name + World archive. System callbacks are omitted because they are code/runtime objects and must be registered by game code after load.
+- All four CI jobs passed binary archive, World archive and Scene archive in [run 45772640872](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45772640872), [run 45773296150](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45773296150) and [run 45773898548](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45773898548).
+
+## Gameplay ActionMap
+- Action names are ASCII-safe identifiers. Bindings can target HID keyboard usage IDs, mouse buttons or a specific gamepad device ID plus control.
+- Keyboard modifiers match exactly on key down; key-up clears a held binding even if modifier state changed before release.
+- Digital and analog contributions are combined; action down is digital-held or analog magnitude >= 0.5. `begin_frame()` clears transient edges; analog state otherwise stays latched at last event.
+- Axis deadzone is clamped through validation (0 <= deadzone < 0.95), then remaining range is rescaled. Binding scale supports inversion.
+- Gamepad disconnect affects only gamepad bindings belonging to that device. `reset_all()` is intended for app focus loss/system input reset.
+- Tests and Android ARM64 cross-compilation passed in [run 45774213362](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45774213362) and [run 45774483591](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45774483591).
+
 ## Engine references
 - Luanti: study runtime modding, API exposure, package lifecycle and server/client boundaries.
 - O3DE: study modular engine architecture, components, buses and extensibility.
@@ -47,9 +74,11 @@
 These are references, not code-copy permissions or automatic adoption decisions.
 
 ## Rendering candidates
-- bgfx: cross-platform rendering abstraction; verify API, backends, Android support, license and integration.
-- Compare Vulkan/OpenGL ES and practical Android/desktop backends before selecting.
-Do not select a backend until comparative research and a minimal Android ARM64 integration proof are complete.
+- bgfx: cross-platform rendering abstraction; official overview documents Android, Linux X11/Wayland, Windows and Apple support, OpenGL ES 3, Vulkan, Metal and Direct3D backends; BSD-2-Clause license. Its upstream build guide documents `android-arm64-release` and Linux GCC release builds. Sources: [bgfx overview](https://bkaradzic.github.io/bgfx/overview.html) and [build guide](https://github.com/bkaradzic/bgfx/blob/master/docs/build.rst).
+- Filament: Android-focused PBR renderer with native C++ API and OpenGL ES 3/Vulkan backends, but more opinionated toward 3D PBR and carries a broader tool/material pipeline. Source: [Google Filament](https://github.com/google/filament).
+- SDL_GPU: supports Android but SDL's FAQ warns broad Android device support may require disabling Vulkan features; it has no OpenGL backend for SDL_GPU. It is not the first-choice sole backend until hardware constraints are tested. Source: [SDL3 GPU FAQ](https://wiki.libsdl.org/SDL3/FAQDevelopment).
+- Current research shortlist: bgfx is the leading integration proof candidate for a general-purpose 2D/3D engine; this is not yet an approved dependency/backend. Compare build size, shader toolchain, surface integration, supported drivers, license notices and Android physical-device behavior before adoption.
+Do not select a backend until a minimal Android ARM64 and Linux integration proof passes.
 
 ## Physics candidates
 - Jolt Physics: 3D rigid-body candidate; verify Android ARM64, license, features and adapter boundary.

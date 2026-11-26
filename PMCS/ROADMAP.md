@@ -30,10 +30,10 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [ ] Expand event/job/resource concurrency, lifetime and shutdown stress tests.
 
 ## P2 — World and core runtime
-- [ ] Scene/world lifecycle.
-- [ ] Entity/component model.
-- [ ] Transform hierarchy.
-- [ ] Serialization and save/load contracts.
+- [x] Initial Scene/World lifecycle and scene-owned system scheduler; verified in run 45772233089.
+- [x] Initial generational entity/component model with scoped queries; verified in run 45772233089.
+- [x] Parent/child transform hierarchy and 2D/3D matrix math; verified in run 45772233089.
+- [x] Initial versioned binary archive plus explicit-codec World/Scene save-load; verified in runs 45772640872, 45773296150 and 45773898548. Full game-save migration policy and external entity-reference remapping remain open.
 - [x] Initial typed ResourceStore key-to-handle layer with duplicate-key rejection and scoped access.
 - [x] Async asset read/decode/register helper with bounded reads; Linux GCC/Clang tests and Android ARM64 cross-compilation passed in run 45765620129.
 - [x] Deterministic asset dependency planner with required/optional dependency handling and cycle detection; all four CI jobs passed in run 45766502045.
@@ -46,9 +46,9 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 
 ## P3 — Rendering
 - [ ] Compare renderer candidates.
-- [ ] Define engine-owned rendering API.
-- [ ] 2D rendering and camera.
-- [ ] 3D rendering, camera and materials.
+- [ ] Define and test engine-owned rendering API.
+- [ ] 2D renderer and camera.
+- [ ] 3D renderer, camera and materials.
 - [ ] Shared asset/resource pipeline.
 - [ ] Android surface/device validation.
 
@@ -76,7 +76,7 @@ All milestones begin incomplete. Mark tasks complete only with evidence.
 - [ ] Desktop and Android ARM64 runtime tests.
 
 ## P6 — Runtime services and content
-- [ ] Input actions.
+- [x] Initial keyboard/mouse/gamepad gameplay ActionMap; verified in runs 45774213362 and 45774483591.
 - [ ] Audio.
 - [ ] UI integration.
 - [ ] Asset import pipeline.

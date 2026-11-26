@@ -33,6 +33,9 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 - `AssetCache<T, Tag>` provides CPU-side byte-budgeted LRU storage; cache tests and exception-safety checks passed all four CI jobs in [run 45768090059](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768090059).
 - dream_core: version API, logging, diagnostics, event dispatcher, worker job system, typed generational handle pool, ResourceRegistry and ResourceStore.
 - dream_platform: application lifecycle, window/surface/input contracts and virtual filesystem path validation.
+- `DreamEngine::World`: generational Entity handles, typed component pools, safe scoped queries, parent-child hierarchy with cycle checks, Transform2D/Transform3D and matrix composition; `Scene` owns World + three-phase SystemScheduler. Run [45772233089](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45772233089) passed 4/4 jobs.
+- `DreamEngine::Serialization`: DENG versioned little-endian archive, UTF-8 validation and size bounds; explicit stable component codec IDs/versions; staged World restore; Scene name + World save/load. Runtime system callbacks are deliberately not serialized. Runs [45772640872](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45772640872), [45773296150](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45773296150), [45773898548](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45773898548) passed 4/4 jobs each.
+- `DreamEngine::Input`: device-independent gameplay actions for HID keyboard/modifiers, mouse buttons and specific gamepad device buttons/axes; edge state, deadzones, disconnect release and global reset. Runs [45774213362](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45774213362) and [45774483591](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45774483591) passed 4/4 jobs each.
 - dream_dmod: manifest model, validation, dependency resolver, TOML parser and read-only in-memory ZIP package reader with local-header validation.
 - Pinned dependencies: miniz 3.1.2 at 77d0dce8627735138c51770d1799a1ef48f2117d; toml++ 3.5.1 at efd80e03356af65c7d4e61c56ffb326b34f8d0f4.
 - Application lifecycle passed Linux GCC/Clang and Android ARM64 cross-build in [run 45708669112](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45708669112).
@@ -42,9 +45,11 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android ARM64 ta
 
 ## Next work
 1. Define explicit async service shutdown/lifetime behavior and independent subscriber cancellation semantics for coordinated requests.
-2. Add stronger cache concurrency/lifetime tests and define how cache handles interact with dependency-plan execution.
-3. Research renderer candidates and define engine-owned 2D/3D rendering interfaces before selecting a backend; later add GPU upload/residency.
-4. Continue DMod package trust/versioning and interpreter security audit.
+2. Research renderer candidates and prove a minimal Android ARM64 backend integration before committing to one; create the engine-owned 2D/3D renderer and GPU-residency layer.
+3. Build camera/view math and 2D/3D render pipelines after the backend-neutral design is tested.
+4. Compare 2D/3D physics candidates and add deterministic adapter tests.
+5. Continue DMod package trust/versioning and interpreter capability/sandbox audit.
+6. Add physical Android runtime tests when a device runner is available.
 
 ## Handoff requirements
 Update CURRENT_STATE.md, ARCHITECTURE.md, TECHNICAL_AUDIT.md and ROADMAP.md as work progresses. Update DECISIONS.md only for explicitly accepted decisions. Never label work VERIFIED without reproducible evidence.

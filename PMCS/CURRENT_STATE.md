@@ -5,13 +5,16 @@
 **Default branch:** main
 
 ## Implemented
-- CMake project with separate dream_core, dream_platform and dream_dmod static libraries.
+- CMake project with `dream_core`, `dream_platform`, `dream_dmod` static libraries and interface modules `DreamEngine::Assets`, `DreamEngine::World`, `DreamEngine::Serialization` and `DreamEngine::Input`.
 - Core version API, logger, diagnostics, typed event dispatcher, worker job system, typed generational handle pool, owning ResourceRegistry and keyed ResourceStore.
 - Platform application lifecycle with initialization/update/shutdown callbacks, stop requests, frame delta clamping and cleanup on failure.
 - Backend-neutral window configuration/metrics/events and opaque window IDs.
 - Native render-surface bridge with borrowed native handles and opaque surface IDs.
-- Input event contract for USB HID keyboard usages, Unicode text, mouse/touch/pen pointers, scrolling and gamepad controls.
+- Input event contract for USB HID keyboard usages, Unicode text, mouse/touch/pen pointers, scrolling and gamepad controls. `DreamEngine::Input` maps these into game actions with digital/analog state and binding edges.
 - Virtual filesystem contract with UTF-8 relative paths, traversal rejection and portable filename validation.
+- `DreamEngine::World`: generational entities, typed component pools, scoped const/mutable access, multi-component queries, parent/child hierarchy with cycle rejection, and data-only Transform2D/Transform3D plus matrix composition. `Scene` owns a World and a three-phase system scheduler (PreUpdate/Update/PostUpdate) with deterministic priority/order, safe add/remove during ticks and exception reporting. Verified in run 45772233089.
+- `DreamEngine::Serialization`: bounded versioned little-endian DENG binary reader/writer, strict UTF-8, and World/Scene save-load using explicit stable component IDs and versioned codecs. World restoration is staged; unknown component policy is explicit; Scene name/world are persisted but runtime system callbacks are re-registered. Verified in runs 45772640872, 45773296150 and 45773898548.
+- `DreamEngine::Input`: action map for HID keyboard, mouse buttons and device-specific gamepad buttons/axes; `down`, `just_pressed`, `just_released`, analog value, modifiers, deadzone, controller disconnect and global reset handling. Verified in runs 45774213362 and 45774483591.
 - DMod manifest model, validation, deterministic dependency resolver and tests.
 - TOML manifest parser with format-version check, strict MAJOR.MINOR.PATCH parsing, dependency/capability parsing and a 64 KiB input cap.
 - Read-only in-memory ZIP package reader. It does not extract package paths to disk, validates all local ZIP headers against the central directory, validates UTF-8 paths and case-collisions, rejects links/encryption/unsupported methods, enforces archive/per-entry/total-size and compression-ratio limits, reads the root manifest and checks the declared entry script exists.
@@ -22,6 +25,12 @@
 - Asset dependency planner in `engine/assets/include/dream/assets/dependency_graph.hpp`: deterministic dependency-first order, required/optional missing dependency reporting, duplicate/invalid key rejection and cycle detection. Verified in run 45766502045.
 
 ## Verified CI
+- Run [45774483591](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45774483591) completed successfully for all four jobs. It verifies action-map controller-disconnect isolation and global input reset/focus-loss handling.
+- Run [45774213362](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45774213362) completed successfully for all four jobs. It verifies game action mappings over keyboard, mouse and gamepad events, including modifiers, deadzones and multi-binding state.
+- Run [45773898548](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45773898548) completed successfully for all four jobs. It verifies Scene name/world save-load and confirms runtime system callbacks are intentionally not serialized.
+- Run [45773296150](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45773296150) completed successfully for all four jobs. It verifies deterministic World serialization, stable component IDs/codecs, hierarchy restore and rejection of unknown/unregistered components by default.
+- Run [45772640872](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45772640872) completed successfully for all four jobs. It verifies the bounded, versioned binary archive primitives and Android ARM64 cross-compilation.
+- Run [45772233089](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45772233089) completed successfully for all four jobs. It verifies ECS, generational entities, parent/child hierarchy, 2D/3D transform matrices and system scheduler.
 - Run [45770215802](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45770215802) completed successfully for all four jobs. It verifies in-flight asset request deduplication, one read/decode for concurrent identical request IDs, shared result/handle behavior and Android ARM64 cross-compilation.
 - Run [45768508344](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768508344) completed successfully for all four jobs. It verifies optional AssetCache-backed async loading, cache-hit I/O avoidance, estimator accounting and cache budget rejection; Android is cross-compilation only.
 - Run [45768090059](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768090059) completed successfully for all four jobs, verifying AssetCache LRU behavior and exception safety.
@@ -58,10 +67,10 @@
 
 ## Other engine work not yet implemented
 - Concrete desktop/Android platform backends and physical-device tests.
-- Renderer, ECS/world, physics, GPU upload/residency, audio, serialization, editor and profiling. The async asset loader, dependency planner, CPU AssetCache, cooperative cancellation and in-flight request deduplication are CI-verified. ResourceStore remains only a key-to-handle layer.
+- Concrete desktop/Android platform backends and physical-device tests; renderer/backend and GPU resource residency; 2D/3D physics; audio; runtime UI/editor/profiling; production DMod interpreter, security/capability enforcement and hot reload. The initial ECS/world, transforms, system scheduler, versioned binary archive, World/Scene persistence and gameplay action map are implemented and CI-verified, but they are not a complete renderer, physics engine or game runtime. The async asset pipeline remains CI-verified; ResourceStore remains a key-to-handle layer.
 
 ## Immediate next actions
 1. Define explicit async service shutdown/lifetime behavior and decide how independent subscribers should cancel shared requests.
 2. Strengthen cache concurrency/lifetime tests and define how dependency-plan execution coordinates with loading.
-3. Compare renderer candidates and define an engine-owned 2D/3D API without prematurely locking a backend; later add GPU upload/residency.
+3. Research renderer candidates, define the engine-owned 2D/3D rendering contract and prove a minimal Android ARM64 backend integration before selecting the renderer; later add GPU upload/residency.
 4. Continue DMod package trust/signatures, capability enforcement and interpreter integration/security review.

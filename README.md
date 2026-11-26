@@ -9,6 +9,10 @@ Dream Engine is a general-purpose **C++ game engine** for **2D and 3D** games, d
 3. Read [PMCS/AI_HANDOFF.md](PMCS/AI_HANDOFF.md) before making changes.
 4. Check [PMCS/CURRENT_STATE.md](PMCS/CURRENT_STATE.md) to see what actually exists and what is verified.
 
+## Current foundations
+
+The repository currently contains tested core/platform services, an initial ECS and scene scheduler, 2D/3D transform math, versioned binary and World/Scene save-load, an asset pipeline, DMod package parsing, and gameplay input action mapping. The renderer, physics, concrete native platform backends, production DMod runtime and physical-device validation are still in development. See [PMCS/CURRENT_STATE.md](PMCS/CURRENT_STATE.md) for verified scope and CI evidence.
+
 ## Important project rules
 
 - C++ is the engine language. Do not switch the engine to Rust.
