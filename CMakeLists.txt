@@ -97,6 +97,14 @@ add_library(dream_dmod STATIC
 )
 add_library(DreamEngine::DMod ALIAS dream_dmod)
 
+add_library(dream_input INTERFACE)
+add_library(DreamEngine::Input ALIAS dream_input)
+target_include_directories(dream_input INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/input/include>
+)
+target_compile_features(dream_input INTERFACE cxx_std_20)
+target_link_libraries(dream_input INTERFACE DreamEngine::Platform)
+
 add_library(dream_serialization INTERFACE)
 add_library(DreamEngine::Serialization ALIAS dream_serialization)
 target_include_directories(dream_serialization INTERFACE
@@ -209,6 +217,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_assets_dependency_graph_tests PRIVATE cxx_std_20)
     set_target_properties(dream_assets_dependency_graph_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.assets.dependency_graph COMMAND dream_assets_dependency_graph_tests)
+
+    add_executable(dream_input_action_map_tests tests/input/action_map_tests.cpp)
+    target_link_libraries(dream_input_action_map_tests PRIVATE DreamEngine::Input)
+    target_compile_features(dream_input_action_map_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_input_action_map_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.input.action_map COMMAND dream_input_action_map_tests)
 
     add_executable(dream_scene_archive_tests tests/world/scene_archive_tests.cpp)
     target_link_libraries(dream_scene_archive_tests PRIVATE DreamEngine::World)
