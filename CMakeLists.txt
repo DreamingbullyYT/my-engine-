@@ -97,6 +97,7 @@ add_library(dream_dmod STATIC
     engine/dmod/src/resolver.cpp
     engine/dmod/src/native_library.cpp
     engine/dmod/src/native_mod_host.cpp
+    engine/dmod/src/native_hook_registry.cpp
     engine/dmod/src/native_mod_manager.cpp
     engine/dmod/src/native_mod_package_installer.cpp
 )

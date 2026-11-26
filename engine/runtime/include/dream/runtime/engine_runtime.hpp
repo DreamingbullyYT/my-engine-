@@ -124,6 +124,8 @@ public:
         interfaces_valid = mod_host_.expose("dream.engine.clock.fixed", 1, simulation_clock_) && interfaces_valid;
         interfaces_valid = mod_host_.expose("dream.engine.render.frame_builder", 1, frame_builder_) && interfaces_valid;
         interfaces_valid = mod_host_.expose("dream.engine.render.device", 1, render_device_) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.mods.manager", 1, mod_manager_) && interfaces_valid;
+        interfaces_valid = mod_host_.expose("dream.engine.mods.hooks", 1, mod_manager_.hook_registry()) && interfaces_valid;
 
         configuration_valid_ =
             interfaces_valid &&

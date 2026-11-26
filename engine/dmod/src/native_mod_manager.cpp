@@ -47,7 +47,9 @@ void NativeModManager::end_callback() noexcept {
 }
 
 void NativeModManager::release(LoadedMod& mod) noexcept {
+    const auto owner_id = mod.manifest.id;
     if (mod.exports == nullptr || mod.context == nullptr) {
+        (void)hook_registry_.remove_owner(owner_id);
         mod.exports = nullptr;
         mod.context = nullptr;
         mod.library.close();
@@ -59,6 +61,8 @@ void NativeModManager::release(LoadedMod& mod) noexcept {
         mod.exports->disable(mod.context);
     }
     mod.enabled = false;
+    (void)hook_registry_.set_owner_enabled(owner_id, false);
+    (void)hook_registry_.remove_owner(owner_id);
     if (mod.exports->destroy != nullptr) {
         mod.exports->destroy(mod.context);
     }
@@ -170,6 +174,7 @@ NativeModResult NativeModManager::load(
     begin_callback();
     mod->context = exports->create(&host_api_, &info);
     if (mod->context == nullptr) {
+        (void)hook_registry_.remove_owner(loaded_id);
         mod->exports = nullptr;
         end_callback();
         return {NativeModError::CreationFailed, "Plugin create() returned null."};
@@ -353,10 +358,17 @@ NativeModResult NativeModManager::enable(std::string_view id) {
     if (mod == nullptr || mod->unload_requested)
         return {NativeModError::ModNotFound, "Native mod is not loaded."};
     if (mod->enabled) return {};
+    if (!hook_registry_.set_owner_enabled(id, true))
+        return {NativeModError::ActivationFailed, "Cannot activate native hook registrations."};
     if (mod->exports->enable != nullptr) {
         begin_callback();
         const auto accepted = mod->exports->enable(mod->context) != 0;
-        if (accepted) mod->enabled = true;
+        if (accepted) {
+            mod->enabled = true;
+        } else {
+            (void)hook_registry_.set_owner_enabled(id, false);
+            (void)hook_registry_.remove_owner(id);
+        }
         end_callback();
         if (!accepted)
             return {NativeModError::ActivationFailed, "Native mod rejected activation."};
@@ -375,6 +387,7 @@ NativeModResult NativeModManager::disable(std::string_view id) {
     if (!mod->enabled) return {};
     if (callback_depth_ != 0) {
         mod->disable_requested = true;
+        (void)hook_registry_.set_owner_enabled(id, false);
         return {};
     }
     mod->disable_requested = false;
@@ -382,9 +395,11 @@ NativeModResult NativeModManager::disable(std::string_view id) {
         begin_callback();
         mod->exports->disable(mod->context);
         mod->enabled = false;
+        (void)hook_registry_.set_owner_enabled(id, false);
         end_callback();
     } else {
         mod->enabled = false;
+        (void)hook_registry_.set_owner_enabled(id, false);
     }
     return {};
 }
@@ -399,6 +414,7 @@ NativeModResult NativeModManager::unload(std::string_view id) {
     if (callback_depth_ != 0) {
         (*it)->unload_requested = true;
         (*it)->disable_requested = false;
+        (void)hook_registry_.set_owner_enabled(id, false);
         return {};
     }
 
@@ -406,6 +422,26 @@ NativeModResult NativeModManager::unload(std::string_view id) {
     mods_.erase(it);
     release(*victim);
     return {};
+}
+
+NativeHookRegistry& NativeModManager::hook_registry() noexcept {
+    return hook_registry_;
+}
+
+NativeHookDispatchResult NativeModManager::dispatch_hooks(
+    std::string_view hook_point_id,
+    void* user_data,
+    NativeHookOriginalV1 original) noexcept {
+    if (original == nullptr) return {};
+    if (shutdown_ || shutdown_requested_) {
+        original(user_data);
+        return {true, true, 0};
+    }
+
+    begin_callback();
+    const auto result = hook_registry_.dispatch(hook_point_id, user_data, original);
+    end_callback();
+    return result;
 }
 
 bool NativeModManager::update(double delta_seconds) noexcept {

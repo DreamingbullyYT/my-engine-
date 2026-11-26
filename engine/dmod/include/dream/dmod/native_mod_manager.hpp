@@ -4,6 +4,7 @@
 #include <dream/dmod/package_reader.hpp>
 #include <dream/core/version.hpp>
 #include <dream/dmod/native_mod_api.hpp>
+#include <dream/dmod/native_hook_registry.hpp>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -69,6 +70,10 @@ public:
     // Unloads in reverse load order. Mods must stop their own threads and
     // unregister callbacks/hooks before disable/destroy returns.
     void shutdown() noexcept;
+    [[nodiscard]] NativeHookRegistry& hook_registry() noexcept;
+    [[nodiscard]] NativeHookDispatchResult dispatch_hooks(
+        std::string_view hook_point_id, void* user_data,
+        NativeHookOriginalV1 original) noexcept;
     [[nodiscard]] bool valid_host_api() const noexcept;
     [[nodiscard]] bool is_loaded(std::string_view id) const noexcept;
     [[nodiscard]] bool is_enabled(std::string_view id) const noexcept;
@@ -83,6 +88,7 @@ private:
     [[nodiscard]] LoadedMod* find(std::string_view) noexcept;
     [[nodiscard]] const LoadedMod* find(std::string_view) const noexcept;
     NativeModHostApiV1 host_api_{};
+    NativeHookRegistry hook_registry_{};
     std::vector<std::unique_ptr<LoadedMod>> mods_;
     std::size_t callback_depth_{0};
     bool processing_deferred_{false};

@@ -21,6 +21,13 @@ namespace {
 void require(bool ok, std::string_view what) {
     if (!ok) { std::cerr << "FAILED: " << what << std::endl; std::exit(EXIT_FAILURE); }
 }
+void increment_value(void* value) noexcept {
+    if (value) ++*static_cast<std::int32_t*>(value);
+}
+void multiply_value_by_two(void*, dream::dmod::NativeHookInvocationV1* invocation) noexcept {
+    if (invocation && invocation->user_data)
+        *static_cast<std::int32_t*>(invocation->user_data) *= 2;
+}
 }
 int main() {
     using namespace dream::dmod;
@@ -98,6 +105,25 @@ int main() {
     require(static_cast<bool>(enabled_batch) && manager.is_enabled("test.native"),
             "enable all runs modules in dependency order");
     require(counter == 10 && manager.is_enabled("test.native"), "enable callback");
+
+    const auto priority_hook = manager.hook_registry().register_hook(
+        "test.native", "test.game.adjust", NativeHookStage::Before,
+        20, &multiply_value_by_two, nullptr);
+    require(priority_hook != 0, "register a higher-priority native hook");
+    std::int32_t adjusted_value = 10;
+    const auto adjusted = manager.dispatch_hooks(
+        "test.game.adjust", &adjusted_value, &increment_value);
+    require(static_cast<bool>(adjusted) && adjusted.original_called &&
+            adjusted.callbacks_invoked == 4 && adjusted_value == 36,
+            "before/around/after hooks run in priority order around the original operation");
+
+    std::int32_t replaced_value = 10;
+    const auto replaced = manager.dispatch_hooks(
+        "test.game.replace", &replaced_value, &increment_value);
+    require(static_cast<bool>(replaced) && !replaced.original_called &&
+            replaced.callbacks_invoked == 1 && replaced_value == 77,
+            "replace hook can completely replace the original operation");
+
     require(manager.update(0.25), "run update");
     require(counter == 110, "update callback");
     require(!manager.update(-1.0), "reject negative delta");
@@ -107,6 +133,13 @@ int main() {
             "self-unload is deferred until the native callback returns");
     require(counter == 11211,
             "deferred self-unload calls disable and destroy after update returns");
+    std::int32_t after_unload_value = 10;
+    const auto after_unload = manager.dispatch_hooks(
+        "test.game.adjust", &after_unload_value, &increment_value);
+    require(static_cast<bool>(after_unload) && after_unload.original_called &&
+            after_unload.callbacks_invoked == 0 && after_unload_value == 11 &&
+            manager.hook_registry().registered_count() == 0,
+            "unloading a native module removes all of its hook callbacks before the library closes");
     require(!manager.enable("missing.mod"), "reject unknown module");
     manager.shutdown();
     require(!manager.update(0.01), "reject updates after shutdown");
