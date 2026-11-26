@@ -298,12 +298,6 @@ int main() {
             "runtime registers its built-in PhysicsWorld2D system");
     struct HookedComponent final { int value{0}; };
     struct HookedVelocity final { float value{0.0F}; };
-    auto& w = runtime.scene().world(); const auto parent = w.create_entity(); const auto child = w.create_entity();
-    require(parent && child && w.set_parent(child,parent) && w.emplace_component<HookedComponent>(parent,4) && w.emplace_component<HookedVelocity>(parent,1.5F), "runtime World accepts instrumented entity/component mutations");
-    require(w.with_component_mut<HookedComponent>(parent,[](HookedComponent& c){++c.value;}) && w.with_components_mut<HookedComponent,HookedVelocity>(parent,[](Entity,HookedComponent& c,HookedVelocity& v){++c.value;v.value*=2.0F;}) && w.for_each_mut<HookedComponent>([](Entity,HookedComponent& c){++c.value;})==1U, "single, multi-component and iteration writes flow through native hooks");
-    require(w.remove_component<HookedVelocity>(parent) && w.clear_parent(child) && w.destroy_entity(child) && w.destroy_entity(parent), "instrumented World cleanup succeeds");
-    require(world_mutation_probe.query_safe && world_mutation_probe.calls[0]==2U && world_mutation_probe.calls[1]==2U && world_mutation_probe.calls[2]==2U && world_mutation_probe.calls[3]==1U && world_mutation_probe.calls[4]==1U && world_mutation_probe.calls[5]==1U && world_mutation_probe.calls[6]==1U && world_mutation_probe.calls[7]==1U && world_mutation_probe.calls[8]==1U, "native mods observe all ECS mutation families outside the World lock");
-
     UpdateHookProbe update_hook_probe{&runtime, 0};
     PhysicsHookProbe physics_hook_probe;
     RenderHookProbe render_hook_probe;
@@ -355,6 +349,39 @@ int main() {
             render_after && system_replace && animation_after && asset_after &&
             ui_after && audio_after && std::all_of(world_regs.begin(), world_regs.end(), [](auto id){return id!=0U;}),
             "game code can register native hooks at runtime extension points");
+
+    auto& w = runtime.scene().world();
+    const auto parent = w.create_entity();
+    const auto child = w.create_entity();
+    require(parent && child && w.set_parent(child, parent) &&
+            w.emplace_component<HookedComponent>(parent, 4) &&
+            w.emplace_component<HookedVelocity>(parent, 1.5F),
+            "runtime World accepts instrumented entity/component mutations");
+    require(w.with_component_mut<HookedComponent>(parent,
+                [](HookedComponent& value) { ++value.value; }) &&
+            w.with_components_mut<HookedComponent, HookedVelocity>(parent,
+                [](Entity, HookedComponent& value, HookedVelocity& velocity) {
+                    ++value.value;
+                    velocity.value *= 2.0F;
+                }) &&
+            w.for_each_mut<HookedComponent>(
+                [](Entity, HookedComponent& value) { ++value.value; }) == 1U,
+            "single, multi-component and iteration writes flow through native hooks");
+    require(w.remove_component<HookedVelocity>(parent) &&
+            w.clear_parent(child) && w.destroy_entity(child) &&
+            w.destroy_entity(parent),
+            "instrumented World cleanup succeeds");
+    require(world_mutation_probe.query_safe &&
+            world_mutation_probe.calls[0] == 2U &&
+            world_mutation_probe.calls[1] == 2U &&
+            world_mutation_probe.calls[2] == 2U &&
+            world_mutation_probe.calls[3] == 1U &&
+            world_mutation_probe.calls[4] == 1U &&
+            world_mutation_probe.calls[5] == 1U &&
+            world_mutation_probe.calls[6] == 1U &&
+            world_mutation_probe.calls[7] == 1U &&
+            world_mutation_probe.calls[8] == 1U,
+            "native mods observe all ECS mutation families outside the World lock");
 
     InputEvent key_down;
     key_down.type = InputEventType::KeyDown;
