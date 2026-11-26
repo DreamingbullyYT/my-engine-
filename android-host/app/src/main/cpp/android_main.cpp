@@ -44,6 +44,7 @@ struct DemoState final {
     dream::physics3d::BodyHandle3D ball_3d{};
     dream::ui::UiNodeHandle root_panel{};
     dream::ui::UiNodeHandle status_panel{};
+    dream::ui::UiNodeHandle player_name_field{};
     dream::ui::UiNodeHandle action_button{};
     bool scene_created{false};
     bool gpu_resources_created{false};
@@ -129,8 +130,9 @@ bool create_demo_scene(
     ui::UiNodeDescription panel;
     panel.type = ui::UiNodeType::Panel;
     panel.style.width = ui::UiSize::fixed(240.0F);
-    panel.style.height = ui::UiSize::fixed(56.0F);
+    panel.style.height = ui::UiSize::fixed(118.0F);
     panel.style.padding = 8.0F;
+    panel.style.gap = 5.0F;
     panel.style.background = {0.035F, 0.055F, 0.09F, 0.92F};
     const auto panel_result = engine.ui().create_node(demo.root_panel, panel);
     if (!panel_result) {
@@ -139,6 +141,23 @@ bool create_demo_scene(
         return false;
     }
     demo.status_panel = panel_result.handle;
+
+    ui::UiNodeDescription name_field;
+    name_field.type = ui::UiNodeType::TextField;
+    name_field.text = "";
+    name_field.style.width = ui::UiSize::fill();
+    name_field.style.height = ui::UiSize::fixed(30.0F);
+    name_field.style.padding = 5.0F;
+    name_field.style.background = {0.09F, 0.12F, 0.18F, 1.0F};
+    name_field.style.foreground = {1.0F, 1.0F, 1.0F, 1.0F};
+    const auto name_result = engine.ui().create_node(
+        demo.status_panel, name_field);
+    if (!name_result) {
+        log_result(logger, LogLevel::error, "ui",
+                   "Could not create the Android demo text field");
+        return false;
+    }
+    demo.player_name_field = name_result.handle;
 
     ui::UiNodeDescription button;
     button.type = ui::UiNodeType::Button;
@@ -252,8 +271,23 @@ void render_demo_frame(
     const auto update = engine.update(delta_seconds, input_events);
     dream::ui::UiEvent ui_event;
     while (engine.ui().pop_event(ui_event)) {
-        if (ui_event.type == dream::ui::UiEventType::Clicked &&
-            ui_event.target == demo.action_button) {
+        if (ui_event.type == dream::ui::UiEventType::FocusChanged) {
+            if (engine.ui().is_text_field(ui_event.target)) {
+                if (!platform_backend.show_soft_keyboard(
+                        engine.ui().text_value(ui_event.target))) {
+                    logger.write(LogLevel::warning, "input.ime",
+                                 "Could not open the Android soft keyboard");
+                }
+            } else {
+                (void)platform_backend.hide_soft_keyboard();
+            }
+        } else if (ui_event.type == dream::ui::UiEventType::TextChanged &&
+                   ui_event.target == demo.player_name_field) {
+            logger.write(LogLevel::debug, "input.ime",
+                "Player name field updated; bytes=" +
+                std::to_string(engine.ui().text_value(ui_event.target).size()));
+        } else if (ui_event.type == dream::ui::UiEventType::Clicked &&
+                   ui_event.target == demo.action_button) {
             if (engine.physics2d().apply_impulse(
                     demo.player_2d, {0.0F, 5.0F})) {
                 logger.write(LogLevel::info, "demo.input",

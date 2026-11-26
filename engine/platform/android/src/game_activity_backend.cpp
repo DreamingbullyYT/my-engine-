@@ -21,6 +21,7 @@ namespace dream::platform {
 namespace {
 
 constexpr std::size_t kMaxQueuedEvents = 4096;
+constexpr std::size_t kMaxImeTextBytes = 65536U;
 constexpr std::uint64_t kMaxSurfaceId = std::numeric_limits<std::uint64_t>::max();
 
 std::mutex g_backend_registry_mutex;
@@ -226,6 +227,7 @@ bool AndroidGameActivityBackend::poll_events() {
     }
 
     consume_input_buffer();
+    consume_text_input_state();
     return app_->destroyRequested == 0;
 }
 
@@ -456,6 +458,80 @@ void AndroidGameActivityBackend::consume_input_buffer() noexcept {
     }
     android_app_clear_motion_events(buffer);
     android_app_clear_key_events(buffer);
+}
+
+void AndroidGameActivityBackend::consume_text_input_state() noexcept {
+    if (app_ == nullptr || app_->activity == nullptr ||
+        app_->textInputState == 0) return;
+    GameActivity_getTextInputState(
+        app_->activity,
+        &AndroidGameActivityBackend::text_input_state_callback,
+        this);
+}
+
+void AndroidGameActivityBackend::text_input_state_callback(
+    void* context, const GameTextInputState* state) noexcept {
+    auto* backend = static_cast<AndroidGameActivityBackend*>(context);
+    if (backend == nullptr || backend->app_ == nullptr) return;
+
+    if (state != nullptr && state->text_UTF8 != nullptr &&
+        state->text_length >= 0 &&
+        static_cast<std::size_t>(state->text_length) <= kMaxImeTextBytes) {
+        try {
+            InputEvent event{};
+            event.type = InputEventType::TextInput;
+            event.timestamp_ns = static_cast<std::uint64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count());
+            event.text_utf8.assign(
+                state->text_UTF8, static_cast<std::size_t>(state->text_length));
+            event.has_text_snapshot = true;
+            event.selection_start = state->selection.start;
+            event.selection_end = state->selection.end;
+            event.composing_start = state->composingRegion.start;
+            event.composing_end = state->composingRegion.end;
+            backend->push_input_event(event);
+        } catch (...) {
+            // Text snapshots are optional under memory pressure; keep the loop alive.
+        }
+    }
+
+    // GameActivity exposes a dirty flag, not a counted queue. Clear it after
+    // copying the state while it is valid inside this callback.
+    backend->app_->textInputState = 0;
+}
+
+bool AndroidGameActivityBackend::show_soft_keyboard(
+    std::string_view text) noexcept {
+    if (!initialized_ || !on_owner_thread() || app_ == nullptr ||
+        app_->activity == nullptr || text.size() > kMaxImeTextBytes ||
+        text.size() > static_cast<std::size_t>(
+            std::numeric_limits<std::int32_t>::max())) {
+        return false;
+    }
+
+    std::string owned_text;
+    try {
+        owned_text.assign(text);
+    } catch (...) {
+        return false;
+    }
+    GameTextInputState state{};
+    state.text_UTF8 = owned_text.c_str();
+    state.text_length = static_cast<std::int32_t>(owned_text.size());
+    const auto cursor = state.text_length;
+    state.selection = GameTextInputSpan{cursor, cursor};
+    state.composingRegion = GameTextInputSpan{SPAN_UNDEFINED, SPAN_UNDEFINED};
+    GameActivity_setTextInputState(app_->activity, &state);
+    GameActivity_showSoftInput(app_->activity, GAMEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT);
+    return true;
+}
+
+bool AndroidGameActivityBackend::hide_soft_keyboard() noexcept {
+    if (!initialized_ || app_ == nullptr || app_->activity == nullptr)
+        return false;
+    GameActivity_hideSoftInput(app_->activity, 0U);
+    return true;
 }
 
 void AndroidGameActivityBackend::consume_key_event(

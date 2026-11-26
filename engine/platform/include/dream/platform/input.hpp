@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 namespace dream::platform {
 
@@ -43,6 +44,14 @@ struct InputEvent final {
     // Keyboard values use USB HID Keyboard/Keypad usage IDs, not OS virtual-key codes.
     std::uint16_t key_code{0};
     char32_t codepoint{U'\0'};
+    // GameActivity IME snapshots use Modified UTF-8 bytes and carry the raw
+    // GameTextInput selection/composing span offsets. The buffer is owned.
+    std::string text_utf8;
+    bool has_text_snapshot{false};
+    std::int32_t selection_start{-1};
+    std::int32_t selection_end{-1};
+    std::int32_t composing_start{-1};
+    std::int32_t composing_end{-1};
     InputModifiers modifiers{};
 
     PointerKind pointer_kind{PointerKind::Unknown};

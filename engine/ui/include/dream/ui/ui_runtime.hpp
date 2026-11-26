@@ -30,7 +30,7 @@ struct UiColor final { float r{0},g{0},b{0},a{0}; };
     const float d=std::min(a.y+a.height,b.y+b.height);
     return {l,t,std::max(0.0F,r-l),std::max(0.0F,d-t)};
 }
-enum class UiNodeType:std::uint8_t { Panel,Text,Image,Button,Toggle,Slider };
+enum class UiNodeType:std::uint8_t { Panel,Text,Image,Button,Toggle,Slider,TextField };
 enum class LayoutDirection:std::uint8_t { Vertical,Horizontal };
 enum class SizeMode:std::uint8_t { Fixed,Percent,Content,Fill };
 enum class AlignItems:std::uint8_t { Start,Center,End,Stretch };
@@ -79,7 +79,7 @@ public:
     virtual ~IUiTextMetrics()=default;
     [[nodiscard]] virtual UiVec2 measure(std::string_view,float) const noexcept=0;
 };
-enum class UiEventType:std::uint8_t { Pressed,Released,Clicked,ValueChanged,FocusChanged };
+enum class UiEventType:std::uint8_t { Pressed,Released,Clicked,ValueChanged,FocusChanged,TextChanged,Submitted };
 struct UiEvent final { UiEventType type{UiEventType::Clicked};UiNodeHandle target{};float value{0}; };
 class IUiDrawSink {
 public:
@@ -125,6 +125,92 @@ public:
     [[nodiscard]] bool contains(UiNodeHandle h) const noexcept {return find_node(h)!=nullptr;}
     [[nodiscard]] std::size_t node_count() const noexcept {return nodes_.size();}
     [[nodiscard]] UiNodeHandle focused_node() const noexcept {return focused_;}
+    [[nodiscard]] bool focused_is_text_field() const noexcept {
+        const auto* node = find_node(focused_);
+        return node != nullptr && node->description.type == UiNodeType::TextField;
+    }
+    [[nodiscard]] bool is_text_field(UiNodeHandle handle) const noexcept {
+        const auto* node = find_node(handle);
+        return node != nullptr && node->description.type == UiNodeType::TextField;
+    }
+    [[nodiscard]] std::string_view text_value(UiNodeHandle handle) const noexcept {
+        const auto* node = find_node(handle);
+        return node == nullptr ? std::string_view{} : std::string_view{node->description.text};
+    }
+
+    // Applies a complete IME snapshot. GameTextInput span offsets are kept in
+    // their platform-defined units; the renderer never interprets them.
+    [[nodiscard]] bool set_focused_text_snapshot(
+        std::string_view text, std::int32_t selection_start,
+        std::int32_t selection_end, std::int32_t composing_start,
+        std::int32_t composing_end) {
+        auto* node = find_node(focused_);
+        if (node == nullptr || node->description.type != UiNodeType::TextField ||
+            text.size() > 4096U) return false;
+        const bool changed = node->description.text != text;
+        try {
+            node->description.text.assign(text);
+        } catch (...) {
+            return false;
+        }
+        node->selection_start = selection_start;
+        node->selection_end = selection_end;
+        node->composing_start = composing_start;
+        node->composing_end = composing_end;
+        if (changed) push_event(UiEventType::TextChanged, *node);
+        return true;
+    }
+
+    [[nodiscard]] bool insert_focused_codepoint(char32_t codepoint) {
+        auto* node = find_node(focused_);
+        if (node == nullptr || node->description.type != UiNodeType::TextField ||
+            codepoint == U'\0' || codepoint > 0x10FFFFU ||
+            (codepoint >= 0xD800U && codepoint <= 0xDFFFU)) return false;
+        std::string encoded;
+        try {
+            if (codepoint <= 0x7FU) {
+                encoded.push_back(static_cast<char>(codepoint));
+            } else if (codepoint <= 0x7FFU) {
+                encoded.push_back(static_cast<char>(0xC0U | (codepoint >> 6U)));
+                encoded.push_back(static_cast<char>(0x80U | (codepoint & 0x3FU)));
+            } else if (codepoint <= 0xFFFFU) {
+                encoded.push_back(static_cast<char>(0xE0U | (codepoint >> 12U)));
+                encoded.push_back(static_cast<char>(0x80U | ((codepoint >> 6U) & 0x3FU)));
+                encoded.push_back(static_cast<char>(0x80U | (codepoint & 0x3FU)));
+            } else {
+                encoded.push_back(static_cast<char>(0xF0U | (codepoint >> 18U)));
+                encoded.push_back(static_cast<char>(0x80U | ((codepoint >> 12U) & 0x3FU)));
+                encoded.push_back(static_cast<char>(0x80U | ((codepoint >> 6U) & 0x3FU)));
+                encoded.push_back(static_cast<char>(0x80U | (codepoint & 0x3FU)));
+            }
+            if (node->description.text.size() + encoded.size() > 4096U) return false;
+            node->description.text += encoded;
+        } catch (...) {
+            return false;
+        }
+        node->selection_start = node->selection_end =
+            static_cast<std::int32_t>(node->description.text.size());
+        node->composing_start = node->composing_end = -1;
+        push_event(UiEventType::TextChanged, *node);
+        return true;
+    }
+
+    [[nodiscard]] bool erase_focused_text_backward() {
+        auto* node = find_node(focused_);
+        if (node == nullptr || node->description.type != UiNodeType::TextField ||
+            node->description.text.empty()) return false;
+        std::size_t start = node->description.text.size() - 1U;
+        while (start > 0U &&
+               (static_cast<unsigned char>(node->description.text[start]) & 0xC0U) == 0x80U) {
+            --start;
+        }
+        node->description.text.erase(start);
+        node->selection_start = node->selection_end =
+            static_cast<std::int32_t>(node->description.text.size());
+        node->composing_start = node->composing_end = -1;
+        push_event(UiEventType::TextChanged, *node);
+        return true;
+    }
 
     // Traverses visible, enabled interactive nodes in stable tree order. This
     // provides a predictable fallback navigation model for keyboard/gamepad UI.
@@ -220,6 +306,10 @@ private:
         UiRect rect{},clip{};
         float value{0};
         bool pressed{false};
+        std::int32_t selection_start{-1};
+        std::int32_t selection_end{-1};
+        std::int32_t composing_start{-1};
+        std::int32_t composing_end{-1};
     };
     [[nodiscard]] static bool finite(UiVec2 v) noexcept {
         return std::isfinite(v.x)&&std::isfinite(v.y);
@@ -246,7 +336,8 @@ private:
         const auto& s=d.style;
         switch(d.type) {
         case UiNodeType::Panel:case UiNodeType::Text:case UiNodeType::Image:
-        case UiNodeType::Button:case UiNodeType::Toggle:case UiNodeType::Slider:break;
+        case UiNodeType::Button:case UiNodeType::Toggle:case UiNodeType::Slider:
+        case UiNodeType::TextField:break;
         default:return false;
         }
         switch(s.direction) {case LayoutDirection::Vertical:case LayoutDirection::Horizontal:break;default:return false;}
@@ -263,7 +354,8 @@ private:
         return true;
     }
     [[nodiscard]] static bool interactive(UiNodeType t) noexcept {
-        return t==UiNodeType::Button||t==UiNodeType::Toggle||t==UiNodeType::Slider;
+        return t==UiNodeType::Button||t==UiNodeType::Toggle||
+            t==UiNodeType::Slider||t==UiNodeType::TextField;
     }
     [[nodiscard]] Node* find_node(UiNodeHandle h) noexcept {
         if(!h)return nullptr;auto it=nodes_.find(h.index());
@@ -309,7 +401,7 @@ private:
         switch(d.type) {
         case UiNodeType::Text:return metrics.measure(d.text,d.style.font_size);
         case UiNodeType::Image:return d.intrinsic_size;
-        case UiNodeType::Button:case UiNodeType::Toggle: {
+        case UiNodeType::Button:case UiNodeType::Toggle:case UiNodeType::TextField: {
             const auto m=metrics.measure(d.text,d.style.font_size);
             const float icon=d.type==UiNodeType::Toggle?22.0F:0.0F;
             return {m.x+icon+2*d.style.padding,std::max(m.y,icon)+2*d.style.padding};
@@ -402,6 +494,7 @@ private:
     }
     void activate(Node& n) {
         if(n.description.type==UiNodeType::Button)push_event(UiEventType::Clicked,n);
+        else if(n.description.type==UiNodeType::TextField)push_event(UiEventType::Submitted,n);
         else if(n.description.type==UiNodeType::Toggle) {
             n.value=n.value>=0.5F?0.0F:1.0F;push_event(UiEventType::ValueChanged,n);
         }
@@ -411,7 +504,7 @@ private:
         const auto& s=n.description.style;
         if(s.background.a>0)sink.draw_rect(n.rect,n.clip,s.background,s.corner_radius);
         switch(n.description.type) {
-        case UiNodeType::Text:case UiNodeType::Button:
+        case UiNodeType::Text:case UiNodeType::Button:case UiNodeType::TextField:
             sink.draw_text(n.rect,n.clip,n.description.text,s.font_size,s.foreground);break;
         case UiNodeType::Toggle: {
             const float side=std::min(18.0F,n.rect.height);

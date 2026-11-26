@@ -793,15 +793,28 @@ private:
                     ui::PointerAction::Cancel, event.x, event.y}) ==
                     ui::UiError::None || handled;
                 break;
+            case platform::InputEventType::TextInput:
+                if (event.has_text_snapshot) {
+                    handled = ui_runtime_.set_focused_text_snapshot(
+                        event.text_utf8, event.selection_start, event.selection_end,
+                        event.composing_start, event.composing_end) || handled;
+                } else if (event.codepoint != U'\0') {
+                    handled = ui_runtime_.insert_focused_codepoint(event.codepoint) || handled;
+                }
+                break;
             case platform::InputEventType::KeyDown:
-                // USB HID Keyboard/Keypad usages: Tab, Enter, arrows and Space.
-                if (event.key_code == 0x28U || event.key_code == 0x2CU) {
+                // Text fields keep Enter/Backspace locally; otherwise the same
+                // keys control activation and stable keyboard focus traversal.
+                if (ui_runtime_.focused_is_text_field() && event.key_code == 0x2AU) {
+                    handled = ui_runtime_.erase_focused_text_backward() || handled;
+                } else if (event.key_code == 0x28U || event.key_code == 0x2CU) {
                     handled = ui_runtime_.activate_focused() || handled;
                 } else if (event.key_code == 0x2BU ||
-                           event.key_code == 0x4FU ||
-                           event.key_code == 0x50U ||
-                           event.key_code == 0x51U ||
-                           event.key_code == 0x52U) {
+                           (!ui_runtime_.focused_is_text_field() &&
+                            (event.key_code == 0x4FU ||
+                             event.key_code == 0x50U ||
+                             event.key_code == 0x51U ||
+                             event.key_code == 0x52U))) {
                     const bool reverse = event.modifiers.shift ||
                         event.key_code == 0x50U || event.key_code == 0x52U;
                     handled = ui_runtime_.focus_next(reverse) || handled;

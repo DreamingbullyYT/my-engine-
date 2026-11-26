@@ -41,6 +41,11 @@ int main(){
     text_d.style.width=UiSize::content();text_d.style.height=UiSize::content();
     const auto label=ui.create_node(root.handle,text_d);
     require(static_cast<bool>(label),"text creates");
+    UiNodeDescription input_d;input_d.type=UiNodeType::TextField;
+    input_d.text="";input_d.style.width=UiSize::fill();
+    input_d.style.height=UiSize::fixed(30.0F);
+    const auto text_field=ui.create_node(root.handle,input_d);
+    require(static_cast<bool>(text_field),"text field creates");
 
     const Metrics metrics;
     require(ui.layout({0,0,320,240},metrics)==UiError::None,"layout works");
@@ -55,6 +60,20 @@ int main(){
         "focus traversal advances in stable tree order");
     require(ui.focus_next(true) && ui.focused_node()==button.handle,
         "reverse focus traversal moves to the previous interactive node");
+    require(ui.focus(text_field.handle) && ui.focused_is_text_field(),
+        "text fields participate in retained UI focus");
+    require(ui.set_focused_text_snapshot(
+        "Dreamingbully", 13, 13, -1, -1) &&
+        ui.text_value(text_field.handle)=="Dreamingbully",
+        "complete Android IME snapshots update the focused text field");
+    require(ui.set_focused_text_snapshot(
+        "DreamingbullyYT", 15, 15, 13, 15) &&
+        ui.text_value(text_field.handle)=="DreamingbullyYT",
+        "IME composing spans are retained with the updated text");
+    require(ui.erase_focused_text_backward() &&
+        ui.text_value(text_field.handle)=="DreamingbullyY",
+        "hardware Backspace edits a focused text field by UTF-8 code point");
+    require(ui.focus(button.handle),"focus can leave a text field");
     require(ui.activate_focused(),
         "keyboard activation triggers the focused button");
 
@@ -82,6 +101,7 @@ int main(){
         "only panels accept children");
     require(ui.remove_node(root.handle)&&ui.node_count()==0,"root removal removes subtree");
     require(!ui.contains(button.handle)&&!ui.focused_node(),"stale widget references clear");
+    require(!ui.is_text_field(text_field.handle),"removed text fields invalidate their handles");
     require(ui.layout({0,0,0,0},metrics)==UiError::InvalidViewport,"invalid viewport rejects");
     return EXIT_SUCCESS;
 }

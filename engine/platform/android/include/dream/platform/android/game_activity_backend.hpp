@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <deque>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <unordered_map>
 
@@ -55,10 +56,17 @@ public:
 
     [[nodiscard]] bool poll_input_event(InputEvent& event) override;
 
+    [[nodiscard]] bool show_soft_keyboard(
+        std::string_view text = {}) noexcept;
+    [[nodiscard]] bool hide_soft_keyboard() noexcept;
+
 private:
     static void app_command_thunk(android_app* app, int32_t command);
     void handle_app_command(int32_t command) noexcept;
     void consume_input_buffer() noexcept;
+    void consume_text_input_state() noexcept;
+    static void text_input_state_callback(
+        void* context, const GameTextInputState* state) noexcept;
     void consume_key_event(const GameActivityKeyEvent& event) noexcept;
     void consume_motion_event(const GameActivityMotionEvent& event) noexcept;
     void push_window_event(WindowEventType type) noexcept;
