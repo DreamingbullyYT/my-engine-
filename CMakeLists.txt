@@ -80,6 +80,9 @@ add_library(dream_platform STATIC
     engine/platform/src/application.cpp
     engine/platform/src/filesystem.cpp
 )
+if(UNIX)
+    target_sources(dream_platform PRIVATE engine/platform/src/native_filesystem.cpp)
+endif()
 add_library(DreamEngine::Platform ALIAS dream_platform)
 target_include_directories(dream_platform PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/platform/include>
@@ -372,6 +375,18 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_platform_contract_tests PRIVATE cxx_std_20)
     set_target_properties(dream_platform_contract_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.platform.contracts COMMAND dream_platform_contract_tests)
+
+    if(UNIX)
+        add_executable(dream_platform_native_filesystem_tests
+            tests/platform/native_filesystem_tests.cpp
+        )
+        target_link_libraries(dream_platform_native_filesystem_tests
+            PRIVATE DreamEngine::Platform
+        )
+        target_compile_features(dream_platform_native_filesystem_tests PRIVATE cxx_std_20)
+        set_target_properties(dream_platform_native_filesystem_tests PROPERTIES CXX_EXTENSIONS OFF)
+        add_test(NAME dream.platform.native_filesystem COMMAND dream_platform_native_filesystem_tests)
+    endif()
 
     add_executable(dream_dmod_manifest_tests tests/dmod/manifest_tests.cpp)
     target_link_libraries(dream_dmod_manifest_tests PRIVATE DreamEngine::DMod)
