@@ -17,5 +17,6 @@ Persistent project memory for Dream Engine. Keep these documents separate; do no
 - ROADMAP.md — milestones and completion criteria
 - TECHNICAL_AUDIT.md — research candidates and evidence still needed
 - AI_HANDOFF.md — concise instructions for the next work session
+- ANDROID_INTEGRATION.md — AndroidX GameActivity host-app setup and backend contract
 
 Status labels: ACCEPTED, PROPOSED, RESEARCH, IMPLEMENTED, VERIFIED, BLOCKED. Never call something VERIFIED without reproducible evidence.

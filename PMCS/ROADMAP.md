@@ -17,7 +17,9 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [x] Application lifecycle contract.
 - [x] Window/surface/input/filesystem contracts and virtual-path validation.
 - [x] Rooted POSIX NativeFileSystem for Linux/Android with openat/O_NOFOLLOW traversal, bounded reads, atomic writes and root directory listing (CI run 45816961428).
-- [ ] Concrete Android lifecycle/window/surface/input backend.
+- [x] AndroidX GameActivity 4.4.2 lifecycle/window/surface/key/pointer/gamepad adapter cross-compiled for ARM64 ([run 45820002663](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45820002663)).
+- [ ] Android host APK/Gradle/manifest integration and physical-device validation.
+- [ ] Android APK AssetManager read-only filesystem and full IME/soft-keyboard text-input support.
 - [ ] Expanded concurrency, lifetime and shutdown stress tests.
 
 ## P2 — World and core runtime

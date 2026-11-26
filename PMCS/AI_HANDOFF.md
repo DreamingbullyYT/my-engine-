@@ -26,7 +26,7 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android arm64-v8
 
 ## Current implementation
 - Core: version, logger, diagnostics, typed events, JobSystem, handles, ResourceRegistry/ResourceStore and FixedStepClock.
-- Platform: lifecycle/window/surface/input/filesystem contracts; concrete Android platform backend is still missing.
+- Platform: lifecycle/window/surface/input/filesystem contracts; rooted POSIX NativeFileSystem and AndroidX GameActivity 4.4.2 adapter are implemented and CI-verified for ARM64. Host APK/Gradle/manifest integration and physical-device validation are still missing.
 - World: generational ECS, component queries, hierarchy, Transform2D/Transform3D, Scene scheduler and versioned World/Scene archives.
 - Input: keyboard/mouse/gamepad ActionMap.
 - Assets: bounded async load/decode/register, CPU LRU cache, cancellation, request deduplication and dependency planner.
@@ -38,10 +38,11 @@ Dream Engine — general-purpose C++ engine, first-class 2D/3D, Android arm64-v8
 - NativeHookRegistry supports Before/Around/Replace/After, descending priorities, stable order, repeated continuation calls, full replacement, owner deactivation/removal and safe deferred self-unload around dispatch. EngineRuntime already uses hooks for update, PhysicsWorld2D fixed steps, begin-render and render-frame. Scene per-system callbacks, World/ECS changes and asset lifecycle still need explicit integration.
 - Native manager lifecycle, create-time hook activation state, EngineRuntime hook points and Android ARM64 cross-compilation passed in [run 45811326053](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45811326053), 4/4 jobs. Generic hook semantics passed in [run 45810170873](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45810170873). Earlier interface enumeration passed in [run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851). Android is cross-compilation only.
 - bgfx backend proof passed in [run 45790590738](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45790590738), 2/2 jobs.
+- Android GameActivity adapter and all engine tests passed Linux GCC, Linux Clang, Android ARM64 and DMod AST jobs in [run 45820002663](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45820002663). It compiled against official GameActivity 4.4.2 Prefab headers; it has not been linked into an APK or run on a phone.
 - ChaiScript direct-AST evaluation is a proof only; no production script runtime is integrated.
 
 ## Next work
-1. Build the concrete Android application/window/surface/filesystem adapter and validate it on a physical device.
+1. Integrate the GameActivity adapter into a real Gradle host app, add Android AssetManager read-only filesystem and full IME/soft-keyboard support, then validate on a physical device.
 2. Finish runtime shader packaging/loading and operational 2D rendering, then implement the 3D renderer and GPU resource pipeline.
 3. Harden Physics2D and implement Physics3D.
 4. Add audio, animation, runtime UI and asset import where needed.

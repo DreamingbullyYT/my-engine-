@@ -3,7 +3,7 @@
 **Last checked:** 2026-11-26  
 **Repository:** DreamingbullyYT/my-engine-  
 **Default branch:** main  
-**Latest verified implementation commit:** 0f6401be20366ce65f38eb684c11e7508b5eae67
+**Latest verified implementation commit:** 4a783c57511ddad2db153c83eff597a435c01e10
 
 ## Implemented
 
@@ -12,9 +12,13 @@
 - Core version API, logger, diagnostics, typed event dispatcher, worker JobSystem, fixed-step clock, generational handles, owning ResourceRegistry and keyed ResourceStore.
 - Application lifecycle callbacks, frame-delta clamping, stop requests and failure cleanup.
 - Backend-neutral window, native render-surface, input and virtual-filesystem contracts. Input covers USB HID keyboard/keypad, Unicode text, mouse/touch/pen and gamepad controls. Virtual paths reject traversal, absolute paths and unsafe/nonportable segments.
-- NativeFileSystem is now a concrete rooted POSIX IFileSystem implementation for Linux and Android. Concrete Android lifecycle/window/surface/input integration is still missing.
+- NativeFileSystem is a concrete rooted POSIX IFileSystem implementation for Linux and Android. AndroidGameActivityBackend now attaches to a host-provided AndroidX GameActivity `android_app` and implements lifecycle/window/surface/input integration; it compiled against the official GameActivity 4.4.2 Prefab headers for ARM64 in CI.
 - NativeFileSystem anchors access to an opened root directory descriptor, traverses path components with openat/O_NOFOLLOW, rejects traversal and symlinks, checks read limits before allocation, and writes through same-directory temporary files plus fsync/atomic rename.
 - Directory listing is deterministic, filters symlink/special-file entries, and accepts an empty path to list the backend root. Read/list outputs remain unchanged on failure.
+- AndroidGameActivityBackend lives in `engine/platform/android`. The app retains ownership of its Java/Kotlin Activity and `android_main`; the adapter attaches to the supplied `android_app`, chains/restores the previous app-command callback and restores prior key/motion filters on shutdown.
+- It handles native-window create/destroy/resize, focus, pause/resume and low-memory commands; each acquired `SurfaceId` owns an `ANativeWindow_acquire` reference. Window events include surface-created/destroyed and app suspended/resumed/memory-low notifications.
+- It reads GameActivity's swapped input buffers, clears both arrays after consuming them, maps known Android key codes to USB HID, converts pointer positions to logical pixels, enables joystick axes, and reports key/text/touch/mouse/gamepad events. IME composition and soft-keyboard control remain unimplemented.
+- Host integration guide: [ANDROID_INTEGRATION.md](ANDROID_INTEGRATION.md). Android Gradle/manifest/Activity packaging and physical-device validation are not present in this engine repository; the CI result is a cross-compile only.
 
 ### World, serialization and input
 - World/ECS with generational entities, typed component pools, scoped access, multi-component queries, parent/child hierarchy with cycle rejection, Transform2D and Transform3D matrices.
@@ -60,6 +64,7 @@
 - The script interpreter is not a production runtime yet. ChaiScript direct-AST evaluation remains a proof-only candidate; do not describe script mods as implemented.
 
 ## Verified CI
+- [Run 45820002663](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45820002663) passed all four jobs for commit 4a783c57511ddad2db153c83eff597a435c01e10: Linux GCC/Clang, Android arm64-v8a and DMod AST proof. Android downloaded GameActivity 4.4.2 and compiled `game_activity_backend.cpp` against its official Prefab headers.
 - [Run 45818494612](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45818494612) passed all four jobs for commit 0f6401be20366ce65f38eb684c11e7508b5eae67: Linux GCC/Clang, Android arm64-v8a and DMod AST proof. It verifies AssetLoadScope cancellation, waiting for a blocked read, no registration after cancellation, and lease release on task exit.
 - [Run 45816961428](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45816961428) passed all four jobs for commit db4560523914556196a243a16642c7c3de9fbeed: Linux GCC/Clang, Android arm64-v8a (ARMv8-A), and DMod AST proof. It builds NativeFileSystem and runs its Linux security/behavior tests.
 - [Run 45811326053](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45811326053) completed successfully for all four jobs on commit e65ee68289c874297b5267599a997d1bb06f5901. It verifies native hook ownership (create-time hooks dormant until enable), EngineRuntime update/Physics2D/render hook points, lifecycle cleanup, Linux GCC/Clang, DMod AST proof and Android arm64-v8a cross-compilation.

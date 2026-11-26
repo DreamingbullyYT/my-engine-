@@ -1,10 +1,10 @@
 # Architecture
 
-**Status:** Core/runtime foundations, World/ECS, serialization, gameplay input, async assets, Physics2D, backend-neutral rendering, EngineRuntime and native in-process DMod loading are implemented and CI-verified. A rooted POSIX filesystem adapter now builds for Linux/Android; Android lifecycle/window/surface/input integration, production 3D rendering/physics and several runtime services remain incomplete.
+**Status:** Core/runtime foundations, World/ECS, serialization, gameplay input, async assets, Physics2D, backend-neutral rendering, EngineRuntime and native in-process DMod loading are implemented and CI-verified. Rooted POSIX file access and an AndroidX GameActivity lifecycle/window/surface/input adapter compile for Android ARM64. Android APK packaging/device validation, packaged-asset access, IME composition, production 3D rendering/physics and several runtime services remain incomplete.
 
 ## High-level modules
 - **Core:** time, jobs, events, logging, diagnostics, handles, resource ownership and serialization primitives.
-- **Platform:** lifecycle, windows/surfaces, input, filesystem and OS integration. Platform contracts exist; concrete Android/desktop backends remain future work.
+- **Platform:** lifecycle, windows/surfaces, input, filesystem and OS integration. Rooted POSIX NativeFileSystem and an AndroidX GameActivity backend are implemented; desktop native window/input adapters and Android host APK integration remain future work.
 - **World:** Scene, World/ECS, entities, components, hierarchy, transforms and scheduler.
 - **Assets:** bounded file loading, decoders, dependency planning, CPU cache and request coordination.
 - **Rendering:** engine-owned 2D/3D frame and resource contracts with replaceable backends.
@@ -27,7 +27,13 @@
 - Surface contract separates a window from its native render surface. Native display/window pointers are borrowed and valid only until the surface is released or destroyed.
 - Input contract separates physical keyboard usage IDs, Unicode text, mouse/touch/pen pointer identity, scrolling and normalized gamepad axes.
 - Filesystem uses UTF-8 relative virtual paths and rejects traversal/absolute/unsafe paths. NativeFileSystem implements the contract on POSIX/Linux/Android using a pinned root directory descriptor, openat/O_NOFOLLOW traversal, bounded reads, temp-file + atomic-rename writes, sorted directory listings and empty-path root enumeration.
-- NativeFileSystem is a concrete filesystem adapter only. No concrete SDL, Android NativeActivity/GameActivity, Win32, X11, Wayland or Apple window/lifecycle/input backend has been completed.
+- NativeFileSystem is the rooted POSIX filesystem adapter. AndroidGameActivityBackend is a separate adapter in `engine/platform/android`; it attaches to a host-owned `android_app`, chains/restores app command callbacks and key/motion filters, consumes GameActivity input buffers, reports lifecycle/surface events, and leases `ANativeWindow` references. The Activity, Gradle/manifest setup and android_main remain owned by the embedding app. Desktop window/lifecycle/input backends (SDL, Win32, X11, Wayland, Apple) are not implemented.
+
+## Android GameActivity adapter
+- Uses AndroidX GameActivity 4.4.2 and its `android_app`/native-app-glue interfaces. The adapter does not define the process entry point or own the Activity.
+- It converts known Android keys to USB HID usages, GameActivity pointer events to logical pixels, joystick axes and key events into the engine InputEvent contract; it enables the non-default joystick axes before reading them.
+- `SurfaceCreated`/`SurfaceDestroyed` events delimit the render surface lifetime. The host must drain those events and release/recreate its RenderDevice surface as appropriate.
+- The backend has passed ARM64 NDK compilation against the official 4.4.2 headers, not APK linking or physical-device execution. Host Gradle/manifest setup, AssetManager filesystem and full IME support remain integration work.
 
 ## World, ECS and simulation
 - World owns generational Entity handles and typed component pools. Structural operations use exclusive locking; scoped read/write callbacks use shared/exclusive access. Callbacks must not re-enter the same World or retain references after return.

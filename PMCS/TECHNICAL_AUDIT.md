@@ -161,6 +161,16 @@ For each interpreter, inspect exact source/version:
 Before adoption, pin repository, tag/commit and exact license files; inspect transitive dependencies and bundled assets; record modifications; preserve notices; confirm compatibility with distribution plans. The repository currently contains an MIT LICENSE; do not silently change it.
 
 
+
+## AndroidX GameActivity platform adapter
+- `AndroidGameActivityBackend` is an optional Android adapter in `engine/platform/android`; the embedding application supplies `android_app*` from its own `android_main`. The engine does not define a competing entry point or take ownership of the Activity.
+- It installs a scoped `onAppCmd` thunk, chains the previous callback without overwriting `userData`, clears GameActivity key/motion filters while attached to receive all device classes, then restores the previous callback and filters at shutdown. It uses a registry keyed by `android_app*` instead of claiming `userData`.
+- App commands are translated into resize, focus, surface created/destroyed, suspended/resumed, memory-low and close events. A surface lease owns an `ANativeWindow_acquire` reference. On `APP_CMD_TERM_WINDOW`, metrics for the old surface stop validating; the host must drain the surface-destroyed event and release/recreate renderer resources before rendering again.
+- Input is consumed through GameActivity's swapped `android_input_buffer`; both key and motion arrays are cleared after processing. Known Android key codes map to USB HID usage IDs; unrecognized keys are omitted. Pointer positions are normalized from native-window pixels to the engine's logical-pixel convention. Joystick axes beyond X/Y are explicitly enabled; gamepad buttons and axis events retain device IDs. `unicodeChar` is best-effort key-to-text conversion, not full IME composition.
+- The adapter compiles against official GameActivity 4.4.2 Prefab headers using the Android NDK arm64-v8a toolchain. All four jobs passed in [run 45820002663](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45820002663).
+- This is not an APK or link/run proof: the repository still has no host Gradle app, manifest, Kotlin/Java Activity or physical-device test. The app integrator must add the Gradle dependency, enable Prefab, extend GameActivity, provide `android_main`, set `DREAM_BUILD_ANDROID_GAME_ACTIVITY_BACKEND=ON`, and drain surface lifecycle events before rendering. The exact setup is in `PMCS/ANDROID_INTEGRATION.md`.
+- Remaining platform work: Android AssetManager-backed read-only IFileSystem, complete GameTextInput/IME and soft-keyboard control, APK integration and real device validation. Desktop native window/input adapters are not implemented.
+
 ## Native DMod runtime — implemented, intentionally unrestricted
 
 - Native manifests use runtime="native" and a safe relative native_library path. The package contains a prebuilt shared library for the target platform/ABI.

@@ -11,7 +11,7 @@ Dream Engine is a general-purpose **C++ game engine** for **2D and 3D** games, d
 
 ## Current foundations
 
-The repository currently contains tested core/platform services, an initial ECS and scene scheduler, 2D/3D transform math, versioned binary and World/Scene save-load, an asset pipeline, DMod package parsing, and gameplay input action mapping. The renderer, physics, concrete native platform backends, production DMod runtime and physical-device validation are still in development. See [PMCS/CURRENT_STATE.md](PMCS/CURRENT_STATE.md) for verified scope and CI evidence.
+The repository currently contains tested core/platform services, an initial ECS and scene scheduler, 2D/3D transform math, versioned binary and World/Scene save-load, an asset pipeline, a native in-process DMod runtime and gameplay input mapping. The AndroidX GameActivity adapter and rooted POSIX filesystem cross-compile for Android ARM64; host APK integration and physical-device validation remain pending. The renderer and physics are still incomplete for production 3D. See [PMCS/CURRENT_STATE.md](PMCS/CURRENT_STATE.md) for verified scope and CI evidence.
 
 ## Important project rules
 
