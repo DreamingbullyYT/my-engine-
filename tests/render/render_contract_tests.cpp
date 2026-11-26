@@ -125,19 +125,19 @@ CameraMatrices3D identity_camera_3d() {
 
 int main() {
     RenderCapabilities caps{true, true, true, 16U, 4096U};
-    auto frame = valid_empty_frame({1280U, 720U});
+    auto frame = valid_empty_frame({1280U, 960U});
     require(validate_frame_packet(frame, caps) == FrameValidationError::None,
             "empty frame with a valid extent is valid");
 
     frame.framebuffer_extent = {};
     require(validate_frame_packet(frame, caps) == FrameValidationError::InvalidExtent,
             "zero framebuffer extent is rejected");
-    frame = valid_empty_frame({1280U, 720U});
+    frame = valid_empty_frame({1280U, 960U});
     frame.delta_seconds = -1.0;
     require(validate_frame_packet(frame, caps) == FrameValidationError::InvalidDelta,
             "negative frame delta is rejected");
 
-    frame = valid_empty_frame({1280U, 720U});
+    frame = valid_empty_frame({1280U, 960U});
     std::array<DrawCommand2D, 1> missing_camera_draws{{DrawCommand2D{}}};
     frame.draws_2d = missing_camera_draws;
     require(validate_frame_packet(frame, caps) == FrameValidationError::MissingCamera,
@@ -152,7 +152,7 @@ int main() {
     std::array<DrawCommand2D, 1> draws2d{{
         DrawCommand2D{0U, 3U, 0U, 0U, Matrix3x3{}, {1, 1, 1, 1}, 0, 0, BlendMode::Alpha}
     }};
-    frame = valid_empty_frame({1280U, 720U});
+    frame = valid_empty_frame({1280U, 960U});
     frame.camera_2d = identity_camera_2d();
     frame.vertices_2d = vertices;
     frame.indices_2d = indices;
@@ -178,7 +178,7 @@ int main() {
     std::array<DrawCommand3D, 1> draws3d{{
         DrawCommand3D{11U, 21U, Matrix4x4{}, {1, 1, 1, 1}, 0U}
     }};
-    frame = valid_empty_frame({1280U, 720U});
+    frame = valid_empty_frame({1280U, 960U});
     frame.camera_3d = identity_camera_3d();
     frame.draws_3d = draws3d;
     require(validate_frame_packet(frame, caps) == FrameValidationError::None,
@@ -201,7 +201,7 @@ int main() {
                 device.capabilities().supports_3d,
                 "device exposes both 2D and 3D backend capabilities");
         require(!device.initialize({5U}) &&
-                device.render(valid_empty_frame({1280U, 720U})).error ==
+                device.render(valid_empty_frame({1280U, 960U})).error ==
                     RenderError::None,
                 "already initialized device rejects second init but renders valid frame");
 
@@ -227,7 +227,7 @@ int main() {
                 "backend rendering error is returned");
         backend.render_ok = true;
 
-        auto mismatch = valid_empty_frame({1280U, 720U});
+        auto mismatch = valid_empty_frame({1280U, 960U});
         require(device.render(mismatch).error == RenderError::InvalidFrame,
                 "frame with stale framebuffer extent is rejected");
 

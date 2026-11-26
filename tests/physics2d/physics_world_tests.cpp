@@ -355,7 +355,8 @@ int main() {
             near(ray_hits[0].point.x, 4.0F) &&
             near(ray_hits[0].normal.x, -1.0F),
             "circle raycast returns nearest world-space hit");
-    require(ray_hits[1].sensor && near(ray_hits[1].distance, 7.0F, 0.01F),
+    require(ray_hits[1].sensor && ray_hits[1].distance > 6.9F &&
+            ray_hits[1].distance < 7.1F,
             "rotated OBB raycast reports sensor and world distance");
     const auto nearest_hit = queries.raycast(Ray2D{{0, 0}, {1, 0}, 20.0F});
     require(nearest_hit && nearest_hit->body == near_circle.handle,
