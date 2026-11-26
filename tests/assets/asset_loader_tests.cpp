@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -81,6 +82,14 @@ auto decode_text(std::span<const std::byte> bytes) {
     }
     return dream::assets::AssetDecodeResult<TextAsset>::success(TextAsset(std::move(value)));
 }
+
+struct LoadEventRecorder final {
+    std::vector<dream::assets::AssetLoadEventV1> events;
+    static void record(void* context,
+                       const dream::assets::AssetLoadEventV1& event) {
+        if(context) static_cast<LoadEventRecorder*>(context)->events.push_back(event);
+    }
+};
 }
 
 int main() {
@@ -144,6 +153,31 @@ int main() {
     }), "loaded asset can be accessed through ResourceStore");
     require(content_matches, "decoder output is stored intact");
 
+    auto observed_events = std::make_shared<LoadEventRecorder>();
+    assets::AssetLoadObserverV1 observer{observed_events, &LoadEventRecorder::record};
+    auto observed_load = assets::load_async(
+        jobs, filesystem, store, "text/observed", "assets/hello.txt",
+        decode_text, 64u * 1024u * 1024u, {}, observer).get();
+    const std::array expected_load_phases{
+        assets::AssetLoadPhaseV1::ReadBegin,
+        assets::AssetLoadPhaseV1::ReadComplete,
+        assets::AssetLoadPhaseV1::DecodeBegin,
+        assets::AssetLoadPhaseV1::DecodeComplete,
+        assets::AssetLoadPhaseV1::ResourceRegisterBegin,
+        assets::AssetLoadPhaseV1::ResourceRegisterComplete
+    };
+    require(observed_load.loaded() &&
+            observed_events->events.size() == expected_load_phases.size(),
+            "uncached asset load emits every lifecycle phase");
+    for(std::size_t i=0U;i<expected_load_phases.size();++i)
+        require(observed_events->events[i].phase == expected_load_phases[i],
+                "uncached lifecycle events preserve read/decode/register order");
+    require(observed_events->events[1].succeeded &&
+            observed_events->events[1].source_bytes == 5U &&
+            observed_events->events[5].succeeded &&
+            observed_events->events[5].key == "text/observed",
+            "asset lifecycle events include owned identity, size and result fields");
+
     auto duplicate = assets::load_async(
         jobs, filesystem, store, "text/hello", "assets/hello.txt", decode_text).get();
     require(duplicate.status == assets::AssetLoadStatus::StoreRejected,
@@ -194,6 +228,32 @@ int main() {
             "cached loader returns the cache-owned handle");
     require(cache.used_bytes() == 5,
             "cached loader accounts the caller-provided size estimate");
+
+    auto cached_events = std::make_shared<LoadEventRecorder>();
+    assets::AssetLoadObserverV1 cached_observer{
+        cached_events, &LoadEventRecorder::record};
+    auto observed_cached = assets::load_async_cached(
+        jobs, filesystem, cache, "text/observed-cached", "assets/hello.txt",
+        decode_text, [](const TextAsset& asset) { return asset.value.size(); },
+        64u * 1024u * 1024u, {}, cached_observer).get();
+    const std::array expected_cached_phases{
+        assets::AssetLoadPhaseV1::CacheLookup,
+        assets::AssetLoadPhaseV1::ReadBegin,
+        assets::AssetLoadPhaseV1::ReadComplete,
+        assets::AssetLoadPhaseV1::DecodeBegin,
+        assets::AssetLoadPhaseV1::DecodeComplete,
+        assets::AssetLoadPhaseV1::CacheStoreBegin,
+        assets::AssetLoadPhaseV1::CacheStoreComplete
+    };
+    require(observed_cached.loaded() &&
+            cached_events->events.size() == expected_cached_phases.size(),
+            "cached asset load emits cache/read/decode/store lifecycle phases");
+    for(std::size_t i=0U;i<expected_cached_phases.size();++i)
+        require(cached_events->events[i].phase == expected_cached_phases[i],
+                "cached lifecycle events preserve stage order");
+    require(cached_events->events.back().succeeded &&
+            cached_events->events.back().decoded_bytes == 5U,
+            "cache store event reports its accepted resource size");
 
     auto cache_hit = assets::load_async_cached(
         jobs, filesystem, cache, "text/cached", "assets/missing-on-purpose.txt", decode_text,
