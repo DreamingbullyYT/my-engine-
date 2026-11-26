@@ -257,6 +257,7 @@ target_include_directories(dream_assets INTERFACE
 )
 target_compile_features(dream_assets INTERFACE cxx_std_20)
 target_link_libraries(dream_assets INTERFACE DreamEngine::Core DreamEngine::Platform)
+target_link_libraries(dream_asset_runtime INTERFACE DreamEngine::Assets DreamEngine::Render DreamEngine::Audio)
 
 add_library(dream_runtime INTERFACE)
 add_library(DreamEngine::Runtime ALIAS dream_runtime)
