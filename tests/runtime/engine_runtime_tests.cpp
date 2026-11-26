@@ -402,6 +402,7 @@ int main() {
             second_update.fixed_step.tick_index == 3U &&
             update_hook_probe.calls == 2U && physics_hook_probe.calls == 3U &&
             scene_system_hook_probe.bypassed_calls == 3U &&
+            service_hook_probe.animation_calls == 3U &&
             suppressed_system_body_calls == 0U,
             "scene system replace hooks run for each fixed simulation tick");
     const auto jump = runtime.actions().state("jump");
@@ -425,7 +426,7 @@ int main() {
 
     for (const auto registration : {update_before, update_after, physics_after,
                                     begin_before, render_after, system_replace,
-                                    animation_after, asset_after, ui_after, audio_after})
+                                    animation_after, ui_after})
         require(runtime_hooks.remove_hook(registration),
                 "remove runtime test hook registration");
     // Runtime-owned service integration: native clients use the same live
@@ -453,8 +454,7 @@ int main() {
     }
     const auto settled_ball = runtime.physics3d().body_state(runtime_ball_body.handle);
     require(settled_ball && settled_ball->position.y > 0.3F &&
-            settled_ball->position.y < 0.9F &&
-            service_hook_probe.animation_calls >= 20U,
+            settled_ball->position.y < 0.9F,
             "runtime scheduler advances Physics3D and dispatches animation hooks");
     dream::audio::AudioClip runtime_audio_clip;
     runtime_audio_clip.sample_rate = 48000U;
@@ -488,6 +488,9 @@ int main() {
             imported.output.error.empty() && imported.output.artifacts.size() == 1U &&
             service_hook_probe.asset_calls == 1U,
             "runtime invokes the built-in OBJ importer through the mod hook registry");
+    require(runtime_hooks.remove_hook(asset_after) &&
+            runtime_hooks.remove_hook(audio_after),
+            "asset and audio service hooks unregister after their tests");
 
     std::string importer_id;
     dream::assets::AssetImporter importer;
