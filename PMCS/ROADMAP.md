@@ -60,7 +60,8 @@ Milestones are marked complete only with reproducible evidence. Android cross-co
 - [ ] Expand raw host exposure as additional engine systems are implemented.
 - [x] NativeHookRegistry with Before/Around/Replace/After stages, deterministic priority/registration order and repeatable call_next ([run 45810170873](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45810170873)).
 - [x] Manager-owned callback enable/disable/removal and deferred self-unload until hook dispatch exits.
-- [ ] Integrate hook dispatch at actual EngineRuntime, Scene, physics, renderer, World/ECS and asset operations.
+- [x] EngineRuntime hook points for runtime update, each PhysicsWorld2D step, begin-render-frame and render-frame, with mutable typed contexts ([run 45811326053](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45811326053)).
+- [ ] Integrate per-system hooks in Scene scheduler, World/ECS mutation hooks and asset lifecycle hooks.
 - [ ] Track module-owned resources/jobs/threads and make unload/hot reload safe; hook registrations are currently tracked and removed automatically.
 - [ ] Native package signature/publisher trust policy; signatures verify origin/integrity, not runtime isolation.
 - [ ] Native .dmod load/unload test on a real Android ARM64 device.

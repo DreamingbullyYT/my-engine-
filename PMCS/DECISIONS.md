@@ -89,3 +89,14 @@
 - Dispatch is wrapped in NativeModManager's callback-depth guard, so self-unload is deferred until the current dispatch chain finishes.
 - The generic registry is not a binary detour engine. Engine/game methods become hookable when code explicitly calls dispatch_hooks; integration across subsystems is incremental.
 - This remains unrestricted native code in-process. No sandbox or capabilities are introduced.
+
+
+## ADR-0014 — Runtime operation hook points
+**Status:** ACCEPTED AND IMPLEMENTED (2026-11-26)  
+**Decision:** EngineRuntime dispatches native hooks around runtime update, individual PhysicsWorld2D fixed steps, beginning a render frame and rendering a frame. Hook contexts expose mutable inputs and operation results.  
+**Consequences:**
+- Runtime update hooks can modify frame delta and the input-event span before the update.
+- Physics2D hooks run once for each fixed simulation step and expose its report.
+- Begin-render hooks can change clear color and clear flags before the frame packet is built; render-frame hooks observe or modify the result.
+- The Scene scheduler's individual system invocation, World/ECS mutation and asset lifecycle still require their own explicit hook points.
+- Hooks remain unrestricted in-process native callbacks; no sandbox or capability system is introduced.

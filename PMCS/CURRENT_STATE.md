@@ -3,7 +3,7 @@
 **Last checked:** 2026-11-26  
 **Repository:** DreamingbullyYT/my-engine-  
 **Default branch:** main  
-**Latest verified implementation commit:** e3bd049db2f8b6dcd980840784e96ad39a8ff209
+**Latest verified implementation commit:** e65ee68289c874297b5267599a997d1bb06f5901
 
 ## Implemented
 
@@ -47,13 +47,17 @@
 - NativeHookRegistry supports Before, Around, Replace and After callbacks, descending priority with deterministic registration order, and reverse-order After unwinding. Around/Replace callbacks can invoke the remaining chain repeatedly or skip it; Replace can therefore bypass the original operation.
 - Hook invocation carries caller-defined argument/result data through a raw user_data pointer. Hook points define their own C++ context layout; modules and the engine/game must use compatible headers and ABI.
 - Manager tracks owner enable state and removes all callbacks owned by a mod before closing its shared library. Self-unload requested inside a hook is deferred until the entire dispatch chain returns. Invalid hook dispatch falls back to the original operation.
-- The generic hook dispatcher is implemented and tested; automatic dispatch points have not yet been added to every engine subsystem. Engine/game code must call NativeModManager::dispatch_hooks at the operations it wants to expose.
+- Generic hook dispatch is implemented. EngineRuntime now calls it at four live operation points: runtime update, each PhysicsWorld2D fixed step, begin-render-frame, and render-frame. Public V1 context structs expose the runtime, mutable frame delta/input span, physics step report, clear color/flags and render result.
+- Runtime Before hooks can modify frame delta and render clear state; After hooks can observe results. Each physics substep is independently hookable. EngineRuntime tests verify these concrete paths.
+- Native module owners are inserted into the disabled registry state before plugin create(); hooks registered during create() remain inactive until enable succeeds. Hooks registered by host/game owners without an explicit manager state are active by default. Owner hooks are disabled and erased before unloading the module library.
+- Scene scheduler individual system callbacks, World/ECS mutations and asset lifecycle are not automatically dispatched yet; those are next integration targets.
 - Native mods execute in-process with the application's process privileges. There is deliberately **no sandbox and no capability enforcement** for native modules. The archive validator is not a runtime security boundary. Only install native mods the user trusts.
 - Native packages must ship a prebuilt library for the target platform/ABI. The engine does not compile mods on the user's device and does not require an APK/engine/game rebuild to install a package.
 - The script interpreter is not a production runtime yet. ChaiScript direct-AST evaluation remains a proof-only candidate; do not describe script mods as implemented.
 
 ## Verified CI
-- [Run 45810170873](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45810170873) completed successfully for all four jobs on commit e3bd049db2f8b6dcd980840784e96ad39a8ff209. It verifies native hook ordering, before/around/replace/after dispatch, repeated continuation calls, fallback to the original operation, and callback removal before native library unload, as well as Linux GCC/Clang, DMod AST proof and Android ARM64 cross-compilation.
+- [Run 45811326053](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45811326053) completed successfully for all four jobs on commit e65ee68289c874297b5267599a997d1bb06f5901. It verifies native hook ownership (create-time hooks dormant until enable), EngineRuntime update/Physics2D/render hook points, lifecycle cleanup, Linux GCC/Clang, DMod AST proof and Android arm64-v8a cross-compilation.
+- [Run 45811035311](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45811035311) passed all four jobs for the initial EngineRuntime hook integration.
 - [Run 45807962851](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45807962851) completed successfully for native host interface enumeration and module lifecycle before hook integration.
 - [Run 45805442161](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45805442161) completed successfully for all four jobs before the interface-enumeration extension.
 - [Run 45790590738](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45790590738) completed successfully for both bgfx backend proof jobs.
@@ -72,7 +76,7 @@
 2. Finish the operational 2D renderer path, runtime shader packaging/loading and GPU resource lifecycle; then implement 3D rendering, meshes, materials, lighting and GPU asset residency.
 3. Harden Physics2D and implement 3D physics.
 4. Audio, animation, UI/runtime services and asset import pipeline.
-5. Integrate the verified hook dispatcher at real EngineRuntime, Scene, physics, render, World and asset operations; expand native interfaces as services are implemented; add ownership tracking for mod resources/jobs/threads and safe hot reload.
+5. Continue native hook integration into per-system Scene scheduler callbacks, World/ECS mutations and asset lifecycle; add ownership tracking for mod resources/jobs/threads and safe hot reload.
 6. Define package trust/signature policy and test native .dmod loading on real Android ARM64. Signatures may establish publisher/integrity; they do not sandbox code.
 7. Decide whether a separate script runtime is worth implementing. It is not a prerequisite for the native full-access path.
 

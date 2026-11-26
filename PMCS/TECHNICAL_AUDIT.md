@@ -192,3 +192,16 @@ Before adoption, pin repository, tag/commit and exact license files; inspect tra
 - Tests verify before/around/after sequencing, priority ordering, replace bypass, repeated call_next, invalid-ID fallback, and zero remaining hook registrations after self-unload.
 - [Run 45810170873](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45810170873) passed all four jobs: Linux GCC, Linux Clang, Android arm64-v8a cross-compilation and DMod AST proof.
 - Current limitation: the generic dispatcher does not automatically intercept arbitrary engine C++ methods. Runtime/game code must place dispatch_hooks at each operation to be extensible. Actual EngineRuntime/Scene/Physics2D/Render/World/Asset hook integration remains on the roadmap.
+
+
+## EngineRuntime native hook integration — verified 2026-11-26
+
+- Public hook point identifiers: dream.engine.runtime.update, dream.engine.physics2d.step, dream.engine.runtime.begin_render_frame and dream.engine.runtime.render_frame.
+- RuntimeUpdateHookDataV1 carries EngineRuntime*, mutable frame delta, input-event span and RuntimeUpdateResult. Native Before callbacks can alter the delta or input span; After callbacks can inspect/mutate the returned result.
+- RuntimePhysics2DStepHookDataV1 carries EngineRuntime*, per-step delta and PhysicsStepReport2D. Every fixed PhysicsWorld2D system execution dispatches the hook point.
+- RuntimeBeginRenderFrameHookDataV1 carries clear color, clear-color/depth flags and result; Before callbacks can change the frame's clear state.
+- RuntimeRenderFrameHookDataV1 provides the final render result for After callbacks.
+- EngineRuntime test verifies update delta hook, one Physics2D hook per fixed step, clear-color mutation reaching the backend and render completion observation.
+- Native mod IDs are inserted as disabled before create(), so hook callbacks registered in create() remain dormant until successful enable. Host/game hook owners are active by default unless explicitly disabled by NativeModManager.
+- CI run 45811326053 passed Linux GCC, Linux Clang, Android arm64-v8a cross-compilation and DMod AST proof (4/4 jobs).
+- Remaining integration is per-system Scene scheduler hooks, World/ECS structural/component operations and asset lifecycle; those do not automatically become hookable merely because the manager is exposed.

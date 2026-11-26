@@ -51,7 +51,7 @@
 - IRenderBackend is the backend contract. RenderDevice owns a SurfaceId lease, refreshes surface metrics, forwards resize, validates frames and forwards texture create/destroy.
 - RenderFrameBuilder builds indexed sprite quads and ordered 2D draw commands; it also represents 3D mesh draws at the contract level.
 - bgfx is currently an integration proof, not a final locked dependency. The optional bgfx backend can clear and draw 2D sprites when compatible shader binaries are provided. CI compiles ESSL 300 and GLSL 330 shaders and Android ARM64 builds the backend. No 3D mesh/material renderer or physical Android GPU test exists yet.
-- EngineRuntime composes Scene, fixed-step clock, ActionMap, PhysicsWorld2D, RenderFrameBuilder and RenderDevice. Native mods are updated from the fixed-step loop. ECS/physics body synchronization remains game/system-owned.
+- EngineRuntime composes Scene, fixed-step clock, ActionMap, PhysicsWorld2D, RenderFrameBuilder and RenderDevice. Native mods are updated from the fixed-step loop. Runtime update, Physics2D fixed steps, begin-render and render-frame operations are native hook points. ECS/physics body synchronization remains game/system-owned.
 
 ## Native DMod runtime — no sandbox
 - .dmod is a ZIP package with a root manifest. PackageReader validates archive structure, paths, local headers, collisions, sizes, compression ratios and CRC/decompression results before exposing bytes.
@@ -62,7 +62,9 @@
 - NativeHookRegistry exposes Before, Around, Replace and After callbacks. Hooks are sorted by descending priority and stable registration ID; After hooks unwind in reverse order. Around/Replace callbacks receive a call_next continuation that may be invoked multiple times or omitted to skip the original operation.
 - Hook callback user_data is a caller-defined C++ argument/result context. The engine/game defines each hook point's context structure; modules must compile against matching headers and C++ ABI.
 - NativeModManager tracks whether each owner is enabled, disables its hooks on disable, and removes all owned registrations before dlclose/FreeLibrary. Hook dispatch itself is wrapped in the manager's callback-depth guard, so self-unload waits until the whole hook chain exits. A failed/invalid dispatcher falls back to the original operation.
-- The verified registry is not magic interception of every C++ method. A subsystem/game operation becomes hookable only when its implementation calls NativeModManager::dispatch_hooks; adding those integration points is continuing work.
+- EngineRuntime now dispatches hooks at runtime.update, physics2d.step, runtime.begin_render_frame and runtime.render_frame. Public contexts expose mutable operation arguments and result reports; native Before/After callbacks can modify/read those data while Around/Replace can repeat, wrap or bypass the original operation.
+- Native module IDs are marked disabled before create(), so create-time hook registration is dormant until enable succeeds. Host/game-owned registrations without a manager owner state are active by default. Disable/unload deactivates owned hooks and removes them before the library is closed.
+- The verified registry is not magic interception of every C++ method. Scene scheduler per-system callbacks, World/ECS mutation and asset lifecycle still need explicit integration calls.
 - EngineRuntime currently registers dream.engine.runtime, dream.engine.scene, dream.engine.world, dream.engine.physics2d, dream.engine.input.actions, dream.engine.clock.fixed, dream.engine.render.frame_builder and dream.engine.render.device.
 - Native code runs inside the game process with the app's OS privileges. There is no sandbox, no capability enforcement and no promise of crash/memory isolation. A ZIP path validator only validates package data; it does not make executable code safe.
 - Native code can access any registered object and can also use its normal in-process/OS capabilities. Not every future engine subsystem or private implementation detail is automatically registered today. The roadmap includes broader engine service exposure and hook/replace/mixin points.
@@ -79,7 +81,7 @@
 - Stable, advanced and experimental are compatibility/documentation tiers, not security boundaries.
 - Native ABI structs use a size/version contract. V1 extensions must be append-only and existing fields must retain their meaning.
 - Because mods receive raw C++ object pointers, modules need compatible headers, architecture, toolchain/runtime ABI and engine API range. Raw pointer access is powerful but not a promise that every private C++ symbol has a stable cross-version ABI.
-- Remaining hook work: integrate dispatch into EngineRuntime update/render, Scene scheduler, PhysicsWorld2D, World/ECS mutation, asset lifecycle and other public/internal operations; define strongly typed context structs for these points; add resource/job/thread ownership tracking. Native hooks do not impose a sandbox.
+- Remaining hook work: integrate dispatch into each Scene scheduler system invocation, World/ECS structural and component operations, and asset load/decode/register lifecycle; add resource/job/thread ownership tracking. Runtime update/render and Physics2D stepping are already wired. Native hooks do not impose a sandbox.
 
 ## Dependency direction
 - Platform adapters implement platform interfaces.

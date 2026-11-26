@@ -41,3 +41,11 @@ The reusable engine provides generic core services, platform adapters, rendering
 - Hooks are disabled with the owner mod and erased before library unload. Self-unload inside a hook is deferred through NativeModManager until the whole dispatch completes.
 - CI run 45810170873 passed on Linux GCC, Linux Clang and Android arm64-v8a cross-compilation, plus the DMod AST proof.
 - Automatic hook calls still need to be inserted at real EngineRuntime/Scene/physics/render/World/assets operations; generic dispatch alone does not intercept every C++ method.
+
+
+## EngineRuntime hook points — 2026-11-26
+- Runtime update, each PhysicsWorld2D fixed step, begin-render-frame and render-frame now dispatch the native hook registry using public V1 context structs.
+- Hook tests verify that mods can modify update delta and frame clear color, observe physics reports, and observe render results.
+- DMods register their hooks during create() but remain inactive until enable() succeeds. Their hook registrations are disabled/removed before library unload. Host/game-owned hook registrations are active by default.
+- All four GitHub Actions jobs passed in run 45811326053 on implementation commit e65ee68289c874297b5267599a997d1bb06f5901.
+- Remaining hook integration: individual Scene system invocations, World/ECS mutations and asset lifecycle.
