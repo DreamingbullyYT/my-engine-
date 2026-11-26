@@ -24,7 +24,7 @@
 - ResourceRegistry<T, Tag> owns resources with unique_ptr, provides scoped callback access under a shared lock, rejects stale handles and safely invalidates identities before destruction. Callbacks must not re-enter the same registry; do not retain resource references outside the callback.
 - ResourceStore<T, Tag> adds a case-sensitive string-key mapping over ResourceRegistry, with insert/find/erase and scoped access by key or handle. It is intentionally not a loader: file I/O, decoding, async scheduling, dependency tracking and GPU upload belong to higher-level asset systems. Store callbacks must not re-enter the same store.
 - ResourceStore Linux GCC/Clang tests and Android ARM64 test cross-compilation passed in [run 45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493). Android is compile-only, not physical-device execution.
-- `dream_assets::load_async` composes JobSystem, bounded IFileSystem reads, a caller-provided decoder and ResourceStore. `load_async_cached` is an optional sibling path targeting AssetCache; it checks for an existing key before file I/O and takes a caller-provided decoded-size estimator. AssetCache is a CPU-side byte-budgeted LRU; it does not measure allocations or manage GPU residency. Borrowed services must outlive the task and callbacks run on a worker thread. Both paths passed all four CI jobs in [run 45768508344](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45768508344).
+- `dream_assets::load_async` composes JobSystem, bounded IFileSystem reads, a caller-provided decoder and ResourceStore. `load_async_cached` is an optional sibling path targeting AssetCache; it checks for an existing key before file I/O and takes a caller-provided decoded-size estimator. Both accept an optional `AssetCancellationToken`; cancellation is cooperative and checked before I/O/cache hits, after reads, after decoding and, for cached loads, after size estimation. It cannot interrupt an in-progress backend read or decoder call. Cancellation observed before registration/insertion prevents that operation. AssetCache is a CPU-side byte-budgeted LRU; it does not measure allocations or manage GPU residency. Borrowed services must outlive the task and callbacks run on a worker thread. All four CI jobs passed in [run 45769042275](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45769042275).
 - ResourceRegistry callback-vs-destroy synchronization test passed with all four CI jobs in [run 45758612936](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45758612936).
 
 ## Platform contracts
@@ -36,6 +36,12 @@
 - These are interfaces only; no concrete SDL, Win32, X11, Wayland, Android or Apple backend has been selected or implemented.
 - Window/surface/input/filesystem contracts and virtual-path tests passed Linux GCC, Linux Clang, DMod AST proof and Android ARM64 cross-build in [run 45710274229](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45710274229). Android is cross-compiled, not device-tested.
 - The typed handle pool and owning ResourceRegistry are verified in [run 45715295194](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715295194). Android is cross-compiled, not device-tested.
+
+## Asset loading cancellation
+- `AssetCancellationSource` creates a shared cancellation state and issues copyable `AssetCancellationToken` values. Calling `cancel()` requests cancellation for work using those tokens.
+- Cancellation is cooperative, not preemptive: an active filesystem backend read or decoder/estimator callback must return before the next checkpoint can observe the request. Callers must still keep borrowed services alive until the future completes.
+- The loader reports `AssetLoadStatus::Cancelled` when cancellation is observed at a checkpoint and avoids subsequent cache/store registration or insertion.
+- Cancellation behavior passed Linux GCC, Linux Clang, DMod AST proof and Android ARM64 cross-compilation in [run 45769042275](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45769042275). Android is compile-only, not physical-device execution.
 
 ## Asset dependency planning
 - `resolve_dependencies` accepts an in-memory set of asset definitions and returns deterministic dependency-first order using lexical tie-breaking.
