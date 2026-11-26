@@ -340,6 +340,88 @@ int main() {
                                     begin_before, render_after, system_replace})
         require(runtime_hooks.remove_hook(registration),
                 "remove runtime test hook registration");
+    // Runtime-owned service integration: native clients use the same live
+    // systems that the fixed-step scene scheduler advances.
+    auto& runtime_world = runtime.scene().world();
+    const auto animated_entity = runtime_world.create_entity();
+    require(static_cast<bool>(animated_entity),
+            "runtime scene can create an animation target");
+    require(runtime_world.emplace_component<dream::world::Transform2D>(
+                animated_entity,dream::world::Transform2D{}),
+            "runtime animation target receives Transform2D");
+
+    dream::animation::AnimationClip2D runtime_clip;
+    runtime_clip.name = "runtime-smoke";
+    runtime_clip.duration_seconds = 1.0;
+    runtime_clip.tracks.push_back({animated_entity,{
+        {0.0,dream::world::Transform2D{{0,0},0,{1,1}}},
+        {1.0,dream::world::Transform2D{{2,0},0,{1,1}}}
+    }});
+    const auto runtime_animation = runtime.animations().play(runtime_clip);
+    require(runtime_animation.second == dream::animation::AnimationError::None,
+            "EngineRuntime owns and creates animation players");
+
+    dream::physics3d::BodyDescription3D runtime_floor;
+    runtime_floor.type = dream::physics3d::BodyType3D::Static;
+    runtime_floor.position = {0.0F,-0.5F,0.0F};
+    runtime_floor.collider = dream::physics3d::BoxCollider3D{
+        {},{4.0F,0.5F,4.0F},{}};
+    const auto runtime_floor_body = runtime.physics3d().create_body(runtime_floor);
+    dream::physics3d::BodyDescription3D runtime_ball;
+    runtime_ball.type = dream::physics3d::BodyType3D::Dynamic;
+    runtime_ball.position = {0.0F,2.0F,0.0F};
+    runtime_ball.collider = dream::physics3d::SphereCollider3D{{},0.5F};
+    const auto runtime_ball_body = runtime.physics3d().create_body(runtime_ball);
+    require(runtime_floor_body && runtime_ball_body,
+            "EngineRuntime owns a working Physics3D world");
+    for (unsigned step=0; step<180U; ++step) {
+        const auto update = runtime.update(1.0/60.0,{});
+        require(static_cast<bool>(update),
+                "runtime fixed-step update advances animation and Physics3D");
+    }
+    const auto settled_ball = runtime.physics3d().body_state(runtime_ball_body.handle);
+    require(settled_ball && settled_ball->position.y > 0.3F &&
+            settled_ball->position.y < 0.9F,
+            "runtime scheduler advances the 3D body against its floor");
+    require(runtime_world.with_component<dream::world::Transform2D>(
+                animated_entity,[](const dream::world::Transform2D& transform) {
+                    require(transform.position.x > 0.0F,
+                            "runtime PreUpdate phase advances animation tracks");
+                }),
+            "runtime animation result remains attached to the ECS entity");
+
+    dream::audio::AudioClip runtime_audio_clip;
+    runtime_audio_clip.sample_rate = 48000U;
+    runtime_audio_clip.channels = 1U;
+    runtime_audio_clip.samples = {0.25F,0.5F};
+    const auto runtime_audio = runtime.audio().add_clip(runtime_audio_clip);
+    require(runtime_audio.second == dream::audio::AudioError::None,
+            "EngineRuntime owns an audio mixer");
+    const auto runtime_voice = runtime.audio().play(runtime_audio.first);
+    require(runtime_voice.second == dream::audio::AudioError::None,
+            "runtime audio mixer starts a voice");
+    std::array<float,4> runtime_audio_output{};
+    require(runtime.audio().mix_stereo(runtime_audio_output,2U,48000U) ==
+                dream::audio::AudioError::None &&
+            runtime_audio_output[0] > 0.0F,
+            "runtime audio mixer produces stereo PCM");
+    require(runtime.audio().remove_clip(runtime_audio.first),
+            "runtime audio clip releases after playback");
+
+    std::string importer_id;
+    dream::assets::AssetImporter importer;
+    require(runtime.asset_importers().find(".obj",importer_id,importer) &&
+            importer_id == "dream.builtin.obj",
+            "EngineRuntime registers the built-in OBJ importer");
+
+    dream::ui::UiNodeDescription runtime_panel;
+    runtime_panel.type = dream::ui::UiNodeType::Panel;
+    const auto runtime_ui_node = runtime.ui().create_node({},runtime_panel);
+    require(static_cast<bool>(runtime_ui_node),
+            "EngineRuntime owns a live retained UI tree");
+    require(runtime.ui().remove_node(runtime_ui_node.handle),
+            "runtime UI node can be destroyed cleanly");
+
     runtime.shutdown();
     require(runtime.state() == RuntimeState::Stopped &&
             surfaces.released == 1 &&
