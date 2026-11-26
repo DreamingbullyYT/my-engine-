@@ -214,15 +214,16 @@ int main() {
     require(mobile.set_touch_viewport(1000.0F, 500.0F),
             "logical touch viewport is configured");
     require(mobile.bind_touch_region(
-                "mobile/jump", NormalizedTouchRect{0.8F, 0.8F, 1.0F, 1.0F}) ==
+                "mobile/jump", dream::input::NormalizedTouchRect{0.8F, 0.8F, 1.0F, 1.0F},
+                0.25F) ==
                 ActionMapError::None,
             "normalized virtual button region binds");
     require(mobile.bind_touch_region(
-                "mobile/jump", NormalizedTouchRect{0.9F, 0.5F, 0.8F, 0.7F}) ==
+                "mobile/jump", dream::input::NormalizedTouchRect{0.9F, 0.5F, 0.8F, 0.7F}) ==
                 ActionMapError::InvalidBinding,
             "inverted touch rectangle is rejected");
     require(mobile.bind_touch_region(
-                "mobile/jump", NormalizedTouchRect{0.0F, 0.0F, 1.0F, 1.0F},
+                "mobile/jump", dream::input::NormalizedTouchRect{0.0F, 0.0F, 1.0F, 1.0F},
                 std::numeric_limits<float>::infinity()) ==
                 ActionMapError::InvalidBinding,
             "non-finite touch scale is rejected");
@@ -237,8 +238,9 @@ int main() {
     require(mobile.process_event(touch_one),
             "touch inside virtual button activates action");
     auto mobile_state = mobile.state("mobile/jump");
-    require(mobile_state && mobile_state->down && mobile_state->just_pressed,
-            "first touch creates a press edge");
+    require(mobile_state && mobile_state->down && mobile_state->just_pressed &&
+            mobile_state->value == 0.25F,
+            "touch is digital even when its analog scale is below the axis threshold");
 
     auto touch_move = touch_one;
     touch_move.type = InputEventType::PointerMove;

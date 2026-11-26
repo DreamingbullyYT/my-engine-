@@ -464,7 +464,8 @@ private:
             if (binding.active &&
                 (binding.kind == BindingKind::Key ||
                  binding.kind == BindingKind::MouseButton ||
-                 binding.kind == BindingKind::GamepadButton)) {
+                 binding.kind == BindingKind::GamepadButton ||
+                 binding.kind == BindingKind::TouchRegion)) {
                 digital_down = true;
             }
             if (std::abs(binding.value) > std::abs(value))
