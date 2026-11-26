@@ -202,10 +202,6 @@ bool AndroidGameActivityBackend::initialize(
     focused_ = false;
     suspended_ = false;
     error.clear();
-    if (surface_available_) {
-        push_window_event(WindowEventType::SurfaceCreated);
-        push_window_event(WindowEventType::Resized);
-    }
     return true;
 }
 
@@ -282,7 +278,10 @@ bool AndroidGameActivityBackend::create_window(
     window_id_ = WindowId{1};
     result = window_id_;
     error.clear();
-    if (surface_available_) push_window_event(WindowEventType::Resized);
+    if (surface_available_) {
+        push_window_event(WindowEventType::SurfaceCreated);
+        push_window_event(WindowEventType::Resized);
+    }
     return true;
 }
 
@@ -385,14 +384,14 @@ void AndroidGameActivityBackend::handle_app_command(int32_t command) noexcept {
     switch (command) {
     case APP_CMD_INIT_WINDOW:
         surface_available_ = app_ != nullptr && app_->window != nullptr;
-        if (surface_available_) {
+        if (surface_available_ && window_created_) {
             push_window_event(WindowEventType::SurfaceCreated);
             push_window_event(WindowEventType::Resized);
         }
         break;
     case APP_CMD_TERM_WINDOW:
         surface_available_ = false;
-        push_window_event(WindowEventType::SurfaceDestroyed);
+        if (window_created_) push_window_event(WindowEventType::SurfaceDestroyed);
         break;
     case APP_CMD_WINDOW_RESIZED:
     case APP_CMD_WINDOW_REDRAW_NEEDED:

@@ -48,7 +48,12 @@ enum class WindowEventType : std::uint8_t {
     FocusGained,
     FocusLost,
     Minimized,
-    Restored
+    Restored,
+    SurfaceCreated,
+    SurfaceDestroyed,
+    Suspended,
+    Resumed,
+    MemoryLow
 };
 
 struct WindowEvent final {
