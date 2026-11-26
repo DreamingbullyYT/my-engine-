@@ -119,15 +119,19 @@ This update is authoritative over older checklist/status text above where they c
 
 ## Native startup diagnostics — 2026-11-26
 
-The first physical-device launch opened the Activity and created a 1080×2412 SurfaceView, but the captured Logcat did not contain the native logger's initial `Dream Engine Android host entry` message. The APK binary was inspected separately: `libdream_engine_android_host.so` exports `android_main`, `GameActivity_onCreate` and the GameActivity JNI initialization symbol. This confirms symbol presence, not successful runtime invocation.
+The physical-device capture showed Android creating the `dev.dreamengine.host` process and Activity window, but no app-owned Java or native startup markers. Inspection of the exact downloaded APK from run 45899971300 (commit `e3371a3ea66aa88275a467d3e02dad630586dbc5`) found that its DEX did **not** contain the `DreamEngineBoot` Java logging strings or the diagnostic `onCreate` override, even though those are present in that commit's `MainActivity.java`. The native library did contain `android_main` and GameActivity JNI symbols. Therefore, the previous absence of markers cannot be used to diagnose GameActivity callback execution: the APK did not package the Java diagnostic source that was supposed to emit them.
 
-To avoid relying on the engine logger while diagnosing the startup boundary, the host now emits direct Logcat markers under tag `DreamEngineBoot`:
+The CMake dependency is already correct: `DreamEngine::PlatformAndroidGameActivity` links `game-activity::game-activity_static` publicly, and the host links that engine target. Do not add a second copy of GameActivity's glue or the old NDK glue.
+
+The Android APK workflow is hardened to run `:app:clean :app:assembleDebug` with Gradle's build cache disabled, then verify that the packaged DEX contains `DreamEngineBoot` and the packaged ARM64 native library contains `android_main entered`. This prevents uploading another APK that silently omits the diagnostic changes.
+
+The host source emits direct Logcat markers under tag `DreamEngineBoot`:
 - Java class initialization before and after `System.loadLibrary`.
 - `MainActivity.onCreate` before and after `GameActivity.onCreate`.
 - Native `android_main` entry and `android_app/activity` validity.
 - APK shader asset load, application initialization, native surface creation and EngineRuntime/render initialization.
 
-These are diagnostic markers only; they do not prove physical-device startup. For the next device capture, clear Logcat, launch the app and leave it in the foreground, then collect:
+These are diagnostic markers only; they do not prove physical-device startup. After the hardened workflow succeeds, install that newly built APK for the next device capture. Clear Logcat, launch the app and leave it in the foreground, then collect:
 ```sh
 su -c 'logcat -c'
 # Launch Dream Engine and keep it open for about 10 seconds.
