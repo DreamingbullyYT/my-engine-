@@ -183,6 +183,14 @@ target_include_directories(dream_physics2d INTERFACE
 target_compile_features(dream_physics2d INTERFACE cxx_std_20)
 target_link_libraries(dream_physics2d INTERFACE DreamEngine::Core)
 
+add_library(dream_physics3d INTERFACE)
+add_library(DreamEngine::Physics3D ALIAS dream_physics3d)
+target_include_directories(dream_physics3d INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/physics3d/include>
+)
+target_compile_features(dream_physics3d INTERFACE cxx_std_20)
+target_link_libraries(dream_physics3d INTERFACE DreamEngine::Core)
+
 add_library(dream_input INTERFACE)
 add_library(DreamEngine::Input ALIAS dream_input)
 target_include_directories(dream_input INTERFACE
@@ -327,6 +335,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_render_contract_tests PRIVATE cxx_std_20)
     set_target_properties(dream_render_contract_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.render.contracts COMMAND dream_render_contract_tests)
+
+    add_executable(dream_physics3d_geometry_tests tests/physics3d/geometry_tests.cpp)
+    target_link_libraries(dream_physics3d_geometry_tests PRIVATE DreamEngine::Physics3D)
+    target_compile_features(dream_physics3d_geometry_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_physics3d_geometry_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.physics3d.geometry COMMAND dream_physics3d_geometry_tests)
 
     add_executable(dream_physics2d_world_tests tests/physics2d/physics_world_tests.cpp)
     target_link_libraries(dream_physics2d_world_tests PRIVATE DreamEngine::Physics2D)
