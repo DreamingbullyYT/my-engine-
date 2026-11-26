@@ -19,12 +19,16 @@ struct Dependency final {
     bool optional{false};
 };
 
+enum class ModRuntimeKind : std::uint8_t { Script, Native };
+
 struct Manifest final {
     std::string id;
     std::string name;
     core::Version version{};
     VersionRange engine_api;
+    ModRuntimeKind runtime_kind{ModRuntimeKind::Script};
     std::string entry_script;
+    std::string native_library;
     std::vector<Dependency> dependencies;
     std::vector<std::string> capabilities;
 };

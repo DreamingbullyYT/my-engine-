@@ -95,6 +95,9 @@ add_library(dream_dmod STATIC
     engine/dmod/src/manifest_parser.cpp
     engine/dmod/src/package_reader.cpp
     engine/dmod/src/resolver.cpp
+    engine/dmod/src/native_library.cpp
+    engine/dmod/src/native_mod_host.cpp
+    engine/dmod/src/native_mod_manager.cpp
 )
 add_library(DreamEngine::DMod ALIAS dream_dmod)
 
@@ -184,7 +187,7 @@ target_compile_features(dream_assets INTERFACE cxx_std_20)
 target_link_libraries(dream_assets INTERFACE DreamEngine::Core DreamEngine::Platform)
 target_link_libraries(dream_dmod
     PUBLIC DreamEngine::Core
-    PRIVATE DreamEngine::Miniz DreamEngine::TomlPlusPlus
+    PRIVATE DreamEngine::Miniz DreamEngine::TomlPlusPlus ${CMAKE_DL_LIBS}
 )
 target_include_directories(dream_dmod PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/dmod/include>
@@ -387,4 +390,21 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_dmod_package_reader_tests PRIVATE cxx_std_20)
     set_target_properties(dream_dmod_package_reader_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.dmod.package_reader COMMAND dream_dmod_package_reader_tests)
+
+    add_library(dream_dmod_test_native_plugin SHARED tests/dmod/native_mod_test_plugin.cpp)
+    target_link_libraries(dream_dmod_test_native_plugin PRIVATE DreamEngine::DMod)
+    target_compile_features(dream_dmod_test_native_plugin PRIVATE cxx_std_20)
+    set_target_properties(dream_dmod_test_native_plugin PROPERTIES
+        CXX_EXTENSIONS OFF POSITION_INDEPENDENT_CODE ON
+    )
+
+    add_executable(dream_dmod_native_mod_runtime_tests tests/dmod/native_mod_runtime_tests.cpp)
+    target_link_libraries(dream_dmod_native_mod_runtime_tests PRIVATE DreamEngine::DMod)
+    target_compile_features(dream_dmod_native_mod_runtime_tests PRIVATE cxx_std_20)
+    target_compile_definitions(dream_dmod_native_mod_runtime_tests PRIVATE
+        DREAM_TEST_NATIVE_MOD_PATH="$<TARGET_FILE:dream_dmod_test_native_plugin>"
+    )
+    add_dependencies(dream_dmod_native_mod_runtime_tests dream_dmod_test_native_plugin)
+    set_target_properties(dream_dmod_native_mod_runtime_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.dmod.native_runtime COMMAND dream_dmod_native_mod_runtime_tests)
 endif()

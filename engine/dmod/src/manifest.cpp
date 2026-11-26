@@ -67,8 +67,18 @@ ManifestValidation validate_manifest(const Manifest& manifest) {
     if (manifest.name.empty() || manifest.name.size() > 256) {
         result.errors.emplace_back("Manifest name must contain between 1 and 256 bytes.");
     }
-    if (!valid_relative_script_path(manifest.entry_script)) {
-        result.errors.emplace_back("Entry script must be a safe relative path without traversal.");
+    if (manifest.runtime_kind == ModRuntimeKind::Script) {
+        if (!valid_relative_script_path(manifest.entry_script))
+            result.errors.emplace_back("Entry script must be a safe relative path without traversal.");
+        if (!manifest.native_library.empty())
+            result.errors.emplace_back("Script mods must not declare native_library.");
+    } else if (manifest.runtime_kind == ModRuntimeKind::Native) {
+        if (!valid_relative_script_path(manifest.native_library))
+            result.errors.emplace_back("Native library must be a safe relative package path.");
+        if (!manifest.entry_script.empty())
+            result.errors.emplace_back("Native mods must not declare entry_script.");
+    } else {
+        result.errors.emplace_back("Mod runtime kind is invalid.");
     }
     if (manifest.engine_api.maximum_exclusive &&
         !less_than(manifest.engine_api.minimum_inclusive,

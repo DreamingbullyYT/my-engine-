@@ -291,15 +291,22 @@ std::unique_ptr<PackageReader> PackageReader::open(
     }
     package->impl_->manifest = *parsed.manifest;
 
+    const auto& manifest = package->impl_->manifest;
+    const auto& declared_file = manifest.runtime_kind == ModRuntimeKind::Native
+        ? manifest.native_library : manifest.entry_script;
     std::string entry_key;
-    if (!normalize_archive_path(package->impl_->manifest.entry_script, false, entry_key)) {
-        return fail("Manifest entry_script is not a safe package path.");
+    if (!normalize_archive_path(declared_file, false, entry_key)) {
+        return fail(manifest.runtime_kind == ModRuntimeKind::Native
+            ? "Manifest native_library is not a safe package path."
+            : "Manifest entry_script is not a safe package path.");
     }
-    const auto entry_script = package->impl_->by_path.find(entry_key);
-    if (entry_script == package->impl_->by_path.end() ||
-        entry_script->second.public_entry.directory ||
-        entry_script->second.public_entry.path != package->impl_->manifest.entry_script) {
-        return fail("Manifest entry_script does not refer to a package file.");
+    const auto declared_entry = package->impl_->by_path.find(entry_key);
+    if (declared_entry == package->impl_->by_path.end() ||
+        declared_entry->second.public_entry.directory ||
+        declared_entry->second.public_entry.path != declared_file) {
+        return fail(manifest.runtime_kind == ModRuntimeKind::Native
+            ? "Manifest native_library does not refer to a package file."
+            : "Manifest entry_script does not refer to a package file.");
     }
 
     return package;

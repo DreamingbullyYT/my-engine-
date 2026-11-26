@@ -75,13 +75,34 @@ ManifestParseResult parse_manifest(std::string_view source) {
     const auto name = required_string(root, "name", result.errors);
     const auto version = required_version(root, "version", result.errors);
     const auto api_min = required_version(root, "engine_api_min", result.errors);
-    const auto entry = required_string(root, "entry_script", result.errors);
 
     if (id) manifest.id = *id;
     if (name) manifest.name = *name;
     if (version) manifest.version = *version;
     if (api_min) manifest.engine_api.minimum_inclusive = *api_min;
-    if (entry) manifest.entry_script = *entry;
+
+    const auto runtime_text = root["runtime"].value<std::string>();
+    if (runtime_text) {
+        if (*runtime_text == "native") manifest.runtime_kind = ModRuntimeKind::Native;
+        else if (*runtime_text == "script") manifest.runtime_kind = ModRuntimeKind::Script;
+        else result.errors.emplace_back("runtime must be either \"native\" or \"script\".");
+    } else if (root.get("runtime")) {
+        result.errors.emplace_back("runtime must be a string.");
+    } else if (root.get("native_library")) {
+        manifest.runtime_kind = ModRuntimeKind::Native;
+    }
+
+    if (manifest.runtime_kind == ModRuntimeKind::Native) {
+        const auto library = required_string(root, "native_library", result.errors);
+        if (library) manifest.native_library = *library;
+        if (root.get("entry_script"))
+            result.errors.emplace_back("Native manifests use native_library, not entry_script.");
+    } else {
+        const auto entry = required_string(root, "entry_script", result.errors);
+        if (entry) manifest.entry_script = *entry;
+        if (root.get("native_library"))
+            result.errors.emplace_back("Script manifests must not declare native_library.");
+    }
 
     if (const auto max_text = root["engine_api_max"].value<std::string>()) {
         const auto parsed = parse_version(*max_text);
