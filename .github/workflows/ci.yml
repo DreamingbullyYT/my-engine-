@@ -247,7 +247,7 @@ jobs:
             -Ibuild-android/_deps/miniz-src -Ibuild-android \
             -c tests/dmod/native_mod_runtime_tests.cpp -o /tmp/native-mod-runtime-android.o
           "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
-            -std=c++20 -Iengine/dmod/include \
+            -std=c++20 -Iengine/core/include -Iengine/dmod/include \
             -c tests/dmod/native_mod_test_plugin.cpp -o /tmp/native-mod-plugin-android.o
 
       - name: Checkout pinned ChaiScript source
