@@ -23,7 +23,7 @@ using AudioVoiceHandle = core::Handle<AudioVoiceTag>;
 
 enum class AudioError : std::uint8_t {
     None, InvalidClip, InvalidVoiceSettings, InvalidOutput,
-    InvalidHandle, ClipInUse, CapacityExhausted
+    InvalidHandle, ClipInUse, CapacityExhausted, Busy
 };
 
 struct AudioClip final {
@@ -175,11 +175,55 @@ public:
     [[nodiscard]] AudioError mix_stereo(
         std::span<float> output,std::size_t frame_count,
         std::uint32_t output_sample_rate) {
-        if(output_sample_rate<8000U||output_sample_rate>192000U||
-           frame_count>std::numeric_limits<std::size_t>::max()/2U||
-           output.size()!=frame_count*2U)
+        if(!valid_output(output,frame_count,output_sample_rate))
             return AudioError::InvalidOutput;
         std::lock_guard lock(mutex_);
+        return mix_stereo_locked(output,frame_count,output_sample_rate);
+    }
+
+    // Audio-device callbacks use this non-blocking path. If control operations
+    // own the mixer lock, silence is emitted instead of stalling the audio thread.
+    [[nodiscard]] AudioError mix_stereo_realtime(
+        std::span<float> output,std::size_t frame_count,
+        std::uint32_t output_sample_rate) noexcept {
+        if(!valid_output(output,frame_count,output_sample_rate))
+            return AudioError::InvalidOutput;
+        try {
+            std::unique_lock lock(mutex_,std::try_to_lock);
+            if(!lock.owns_lock()) {
+                std::fill(output.begin(),output.end(),0.0F);
+                return AudioError::Busy;
+            }
+            return mix_stereo_locked(output,frame_count,output_sample_rate);
+        } catch(...) {
+            std::fill(output.begin(),output.end(),0.0F);
+            return AudioError::InvalidOutput;
+        }
+    }
+
+    static void render_callback(
+        void* context,std::span<float> output,std::size_t frame_count,
+        std::uint32_t sample_rate) noexcept {
+        if(context==nullptr) {
+            std::fill(output.begin(),output.end(),0.0F);
+            return;
+        }
+        auto& mixer=*static_cast<AudioMixer*>(context);
+        (void)mixer.mix_stereo_realtime(output,frame_count,sample_rate);
+    }
+
+private:
+    [[nodiscard]] static bool valid_output(
+        std::span<float> output,std::size_t frame_count,
+        std::uint32_t output_sample_rate) noexcept {
+        return output_sample_rate>=8000U&&output_sample_rate<=192000U&&
+            frame_count<=std::numeric_limits<std::size_t>::max()/2U&&
+            output.size()==frame_count*2U;
+    }
+
+    [[nodiscard]] AudioError mix_stereo_locked(
+        std::span<float> output,std::size_t frame_count,
+        std::uint32_t output_sample_rate) {
         std::fill(output.begin(),output.end(),0.0F);
         if(frame_count==0U) return AudioError::None;
 

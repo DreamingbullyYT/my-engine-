@@ -9,6 +9,7 @@ project(DreamEngine
 option(DREAM_BUILD_TESTS "Build Dream Engine tests" ON)
 option(DREAM_BUILD_BGFX_BACKEND "Build the optional bgfx clear/present backend (requires an existing bgfx target)" OFF)
 option(DREAM_BUILD_ANDROID_GAME_ACTIVITY_BACKEND "Build the AndroidX GameActivity platform adapter (requires the GameActivity Prefab package)" OFF)
+option(DREAM_BUILD_ANDROID_AAUDIO_BACKEND "Build the Android AAudio output backend" OFF)
 
 include(FetchContent)
 include(GenerateExportHeader)
@@ -145,6 +146,27 @@ target_include_directories(dream_audio INTERFACE
 )
 target_compile_features(dream_audio INTERFACE cxx_std_20)
 target_link_libraries(dream_audio INTERFACE DreamEngine::Core)
+
+if(DREAM_BUILD_ANDROID_AAUDIO_BACKEND)
+    if(NOT ANDROID)
+        message(FATAL_ERROR "DREAM_BUILD_ANDROID_AAUDIO_BACKEND is only available for Android builds")
+    endif()
+    find_library(ANDROID_AAUDIO_LIBRARY aaudio REQUIRED)
+    add_library(dream_audio_android_aaudio STATIC
+        engine/audio/android/src/aaudio_output.cpp
+    )
+    add_library(DreamEngine::AudioAndroidAAudio ALIAS dream_audio_android_aaudio)
+    target_include_directories(dream_audio_android_aaudio PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/audio/android/include>
+    )
+    target_compile_features(dream_audio_android_aaudio PUBLIC cxx_std_20)
+    target_link_libraries(dream_audio_android_aaudio
+        PUBLIC DreamEngine::Audio ${ANDROID_AAUDIO_LIBRARY}
+    )
+    set_target_properties(dream_audio_android_aaudio PROPERTIES
+        CXX_EXTENSIONS OFF POSITION_INDEPENDENT_CODE ON
+    )
+endif()
 
 add_library(dream_render INTERFACE)
 add_library(DreamEngine::Render ALIAS dream_render)

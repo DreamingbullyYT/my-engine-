@@ -161,6 +161,14 @@ jobs:
             -c tests/animation/animation_runtime_tests.cpp \
             -o /tmp/animation-runtime-tests-android.o
 
+      - name: Cross-compile Android AAudio backend for ARM64
+        run: |
+          "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
+            -std=c++20 -Wall -Wextra -Wpedantic \
+            -Iengine/audio/include -Iengine/audio/android/include \
+            -c engine/audio/android/src/aaudio_output.cpp \
+            -o /tmp/audio-aaudio-output-android.o
+
       - name: Cross-compile audio mixer tests for Android ARM64
         run: |
           "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \

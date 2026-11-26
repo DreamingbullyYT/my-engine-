@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -352,7 +353,7 @@ public:
     }
 
 private:
-    struct PlayerBase final {
+    struct PlayerBase {
         AnimationPlayerHandle handle{};
         double time_seconds{0.0};
         double playback_rate{1.0};
