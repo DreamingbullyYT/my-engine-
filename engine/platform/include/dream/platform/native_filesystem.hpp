@@ -1,7 +1,7 @@
 #pragma once
 #include <dream/platform/filesystem.hpp>
 #include <string>
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__ANDROID__)
 namespace dream::platform {
 class NativeFileSystem final : public IFileSystem {
 public:

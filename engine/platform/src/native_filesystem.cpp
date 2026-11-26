@@ -1,5 +1,5 @@
 #include <dream/platform/native_filesystem.hpp>
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__ANDROID__)
 #include <algorithm>
 #include <array>
 #include <atomic>

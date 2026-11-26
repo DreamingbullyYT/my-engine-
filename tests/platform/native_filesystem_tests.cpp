@@ -7,7 +7,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
-#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__) || defined(__ANDROID__)
 #include <unistd.h>
 namespace {
 class TempDir final {
