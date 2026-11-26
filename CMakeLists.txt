@@ -202,6 +202,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     set_target_properties(dream_assets_dependency_graph_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.assets.dependency_graph COMMAND dream_assets_dependency_graph_tests)
 
+    add_executable(dream_world_scheduler_tests tests/world/system_scheduler_tests.cpp)
+    target_link_libraries(dream_world_scheduler_tests PRIVATE DreamEngine::World)
+    target_compile_features(dream_world_scheduler_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_world_scheduler_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.world.scheduler COMMAND dream_world_scheduler_tests)
+
     add_executable(dream_world_tests tests/world/world_tests.cpp)
     target_link_libraries(dream_world_tests PRIVATE DreamEngine::World)
     target_compile_features(dream_world_tests PRIVATE cxx_std_20)
