@@ -178,7 +178,7 @@ jobs:
       - name: Cross-compile UI bitmap font tests for Android ARM64
         run: |
           "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
-            -std=c++20 -Iengine/core/include -Iengine/ui/include -Iengine/render/include \
+            -std=c++20 -Iengine/core/include -Iengine/ui/include -Iengine/render/include -Iengine/world/include \
             -c tests/ui/bitmap_font_tests.cpp \
             -o /tmp/ui-bitmap-font-tests-android.o
 
