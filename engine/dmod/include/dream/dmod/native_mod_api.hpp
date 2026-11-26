@@ -5,6 +5,8 @@ namespace dream::dmod {
 inline constexpr std::uint32_t native_mod_abi_v1 = 1;
 inline constexpr char native_mod_entry_symbol_v1[] = "dream_mod_entry_v1";
 
+enum class NativeModLogLevelV1 : std::uint32_t { Trace, Debug, Info, Warning, Error };
+
 // Return non-zero to continue enumeration. The interface ID pointer is valid
 // only for the duration of the callback.
 using NativeModInterfaceVisitorV1 =
@@ -16,7 +18,7 @@ struct NativeModHostApiV1 final {
     void* host_context{};
     void* (*query_interface)(void*, const char*, std::uint32_t) noexcept{};
     void* log_context{};
-    void (*log)(void*, std::uint32_t, const char*) noexcept{};
+    void (*log)(void*, NativeModLogLevelV1, const char*) noexcept{};
     // Append-only ABI extension: lists every live raw engine interface in
     // deterministic ID order. The visitor runs without the host registry lock.
     // Returns non-zero only when enumeration completes normally.

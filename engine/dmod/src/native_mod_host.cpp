@@ -43,7 +43,7 @@ void* NativeModHost::query(void* context, const char* id, std::uint32_t minimum)
             ? it->second.object : nullptr;
     } catch (...) { return nullptr; }
 }
-void NativeModHost::log(void* context, std::uint32_t level, const char* message) noexcept {
+void NativeModHost::log(void* context, NativeModLogLevelV1 level, const char* message) noexcept {
     if (!context || !message) return;
     auto& host = *static_cast<NativeModHost*>(context);
     LogSink sink{}; void* sink_context{};
@@ -51,7 +51,7 @@ void NativeModHost::log(void* context, std::uint32_t level, const char* message)
         std::shared_lock lock(host.mutex_);
         sink = host.log_sink_; sink_context = host.log_context_;
     } catch (...) { return; }
-    if (sink) sink(sink_context, static_cast<NativeModLogLevelV1>(level), message);
+    if (sink) sink(sink_context, level, message);
 }
 std::uint8_t NativeModHost::enumerate(
     void* context, NativeModInterfaceVisitorV1 visitor, void* visitor_context) noexcept {

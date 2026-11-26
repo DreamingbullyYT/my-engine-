@@ -28,7 +28,7 @@ public:
 private:
     struct Entry { std::uint32_t version{}; void* object{}; };
     static void* query(void*, const char*, std::uint32_t) noexcept;
-    static void log(void*, std::uint32_t, const char*) noexcept;
+    static void log(void*, NativeModLogLevelV1, const char*) noexcept;
     static std::uint8_t enumerate(
         void*, NativeModInterfaceVisitorV1, void*) noexcept;
     mutable std::shared_mutex mutex_;
