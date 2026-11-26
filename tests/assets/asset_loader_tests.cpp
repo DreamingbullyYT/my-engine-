@@ -257,7 +257,7 @@ int main() {
 
     const auto reads_before_cache_hit = filesystem.read_count.load();
     auto cache_hit = assets::load_async_cached(
-        jobs, filesystem, cache, "text/missing-on-purpose", "assets/missing-on-purpose.txt", decode_text,
+        jobs, filesystem, cache, "text/cached", "assets/missing-on-purpose.txt", decode_text,
         [](const TextAsset& asset) { return asset.value.size(); }).get();
     require(cache_hit.loaded() && cache_hit.status == assets::AssetLoadStatus::CacheHit,
             "existing cached key returns its handle without reading the file");
