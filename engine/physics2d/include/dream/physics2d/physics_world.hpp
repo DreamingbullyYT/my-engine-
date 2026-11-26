@@ -653,7 +653,7 @@ private:
             return BodyCreateError::InvalidDamping;
         }
 
-        const bool collider_valid = std::visit([](const auto& collider) {
+        const bool collider_valid = std::visit([&description](const auto& collider) {
             using Collider = std::decay_t<decltype(collider)>;
             if (!finite(collider.local_center) ||
                 !std::isfinite(length_squared(collider.local_center))) return false;
