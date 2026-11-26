@@ -54,6 +54,7 @@ private:
     std::shared_ptr<void> lifetime_pin_;
     friend class AssetCancellationSource;
     friend class AssetLoadScope;
+    friend class AssetTaskLifetimeGuard;
 };
 
 class AssetCancellationSource final {
@@ -79,6 +80,19 @@ private:
 // dependencies it protects, so the scope is destroyed first. Do not call
 // shutdown_and_wait() from one of the scope's own worker tasks. A blocking
 // filesystem read or decoder cannot be interrupted; shutdown waits for it.
+// Releases a scope lease when the load callable exits, even if its
+// packaged-task/future state remains alive longer than the execution.
+class AssetTaskLifetimeGuard final {
+public:
+    explicit AssetTaskLifetimeGuard(AssetCancellationToken& token) noexcept
+        : token_(token) {}
+    AssetTaskLifetimeGuard(const AssetTaskLifetimeGuard&) = delete;
+    AssetTaskLifetimeGuard& operator=(const AssetTaskLifetimeGuard&) = delete;
+    ~AssetTaskLifetimeGuard() { token_.lifetime_pin_.reset(); }
+private:
+    AssetCancellationToken& token_;
+};
+
 class AssetLoadScope final {
 private:
     struct State final {
@@ -203,6 +217,7 @@ template <typename T, typename Tag, typename Decoder>
          path = std::move(virtual_path),
          decode = Decode(std::forward<Decoder>(decoder)), max_file_bytes,
          cancellation = std::move(cancellation)]() mutable -> Result {
+            AssetTaskLifetimeGuard lifetime_guard(cancellation);
             if (!platform::is_valid_virtual_path(path)) {
                 return {AssetLoadStatus::InvalidPath, {}, platform::FileError::InvalidPath,
                         "Asset path is not a valid virtual path"};
@@ -280,6 +295,7 @@ template <typename T, typename Tag, typename Decoder, typename SizeEstimator>
          decode = Decode(std::forward<Decoder>(decoder)),
          estimate = Estimate(std::forward<SizeEstimator>(estimate_bytes)),
          max_file_bytes, cancellation = std::move(cancellation)]() mutable -> Result {
+            AssetTaskLifetimeGuard lifetime_guard(cancellation);
             if (!platform::is_valid_virtual_path(path)) {
                 return {AssetLoadStatus::InvalidPath, {}, platform::FileError::InvalidPath,
                         "Asset path is not a valid virtual path"};
