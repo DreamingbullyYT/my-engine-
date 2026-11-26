@@ -213,6 +213,41 @@ int main() {
     require(cache_too_large.message.find("byte budget") != std::string::npos,
             "cache rejection explains the byte budget");
 
+    assets::AssetCache<TextAsset, TextAssetTag> coordinated_cache(16);
+    assets::AssetRequestCoordinator<LoadResult> cached_request_coordinator;
+    std::promise<void> cached_dedup_decoder_entered;
+    std::promise<void> cached_dedup_decoder_release;
+    auto cached_dedup_release = cached_dedup_decoder_release.get_future().share();
+    std::atomic<int> cached_dedup_decoder_calls{0};
+    const auto reads_before_cached_dedup = filesystem.read_count.load();
+
+    auto cached_dedup_first = assets::load_async_cached_coordinated(
+        cached_request_coordinator, "cache/deduplicated", jobs, filesystem,
+        coordinated_cache, "cache/deduplicated", "assets/hello.txt",
+        [&](std::span<const std::byte> bytes) {
+            ++cached_dedup_decoder_calls;
+            cached_dedup_decoder_entered.set_value();
+            cached_dedup_release.wait();
+            return decode_text(bytes);
+        },
+        [](const TextAsset& asset) { return asset.value.size(); });
+    cached_dedup_decoder_entered.get_future().wait();
+
+    auto cached_dedup_second = assets::load_async_cached_coordinated(
+        cached_request_coordinator, "cache/deduplicated", jobs, filesystem,
+        coordinated_cache, "cache/deduplicated", "assets/hello.txt", decode_text,
+        [](const TextAsset& asset) { return asset.value.size(); });
+    cached_dedup_decoder_release.set_value();
+    const auto& cached_dedup_first_result = cached_dedup_first.get();
+    const auto& cached_dedup_second_result = cached_dedup_second.get();
+    require(cached_dedup_first_result.loaded() && cached_dedup_second_result.loaded(),
+            "coordinated cached callers both receive a successful result");
+    require(cached_dedup_first_result.handle == cached_dedup_second_result.handle,
+            "coordinated cached callers receive the same cache handle");
+    require(cached_dedup_decoder_calls.load() == 1,
+            "coordinated cached callers execute only the first decoder");
+    require(filesystem.read_count.load() == reads_before_cached_dedup + 1,
+            "coordinated cached callers perform only one filesystem read");
 
     assets::AssetCancellationSource cancelled_before_start;
     cancelled_before_start.cancel();
