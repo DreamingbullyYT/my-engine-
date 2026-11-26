@@ -199,7 +199,9 @@ public:
             }};
 
             for (std::size_t index = 0; index < corners.size(); ++index) {
-                vertices_.push_back({corners[index], uvs[index], quad.tint});
+                vertices_.push_back({
+                    corners[index], uvs[index], Color{1.0F, 1.0F, 1.0F, 1.0F}
+                });
             }
             for (const auto index : quad_indices) indices_.push_back(index);
 

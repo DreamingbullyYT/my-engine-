@@ -63,6 +63,13 @@ public:
     int resize_calls{0};
     int render_calls{0};
     int shutdown_calls{0};
+    int texture_create_calls{0};
+    int texture_destroy_calls{0};
+    RenderAssetId last_texture_id{0};
+    Extent2D last_texture_extent{};
+    std::vector<std::byte> last_texture_pixels;
+    bool texture_create_ok{true};
+    bool texture_destroy_ok{true};
     RenderSurfaceInfo last_surface{};
     std::string error_message{"fake backend failure"};
 
@@ -99,6 +106,30 @@ public:
             error = error_message;
             return false;
         }
+        return true;
+    }
+
+    bool create_texture_rgba8(
+        RenderAssetId texture_id, Extent2D extent,
+        std::span<const std::byte> pixels, std::string& error) override {
+        ++texture_create_calls;
+        if (!texture_create_ok) {
+            error = error_message;
+            return false;
+        }
+        last_texture_id = texture_id;
+        last_texture_extent = extent;
+        last_texture_pixels.assign(pixels.begin(), pixels.end());
+        return true;
+    }
+
+    bool destroy_texture(RenderAssetId texture_id, std::string& error) override {
+        ++texture_destroy_calls;
+        if (!texture_destroy_ok) {
+            error = error_message;
+            return false;
+        }
+        last_texture_id = texture_id;
         return true;
     }
 
@@ -200,6 +231,26 @@ int main() {
         require(device.capabilities().supports_2d &&
                 device.capabilities().supports_3d,
                 "device exposes both 2D and 3D backend capabilities");
+
+        const std::array<std::byte, 16> texture_pixels{};
+        require(device.create_texture_rgba8(42U, {2U, 2U}, texture_pixels) &&
+                backend.texture_create_calls == 1 &&
+                backend.last_texture_id == 42U &&
+                backend.last_texture_extent == Extent2D{2U, 2U} &&
+                backend.last_texture_pixels.size() == texture_pixels.size(),
+                "valid RGBA8 texture is forwarded to the backend");
+        require(device.create_texture_rgba8(0U, {2U, 2U}, texture_pixels).error ==
+                    RenderError::InvalidResource &&
+                device.create_texture_rgba8(43U, {2U, 2U},
+                    std::span<const std::byte>(texture_pixels.data(), 15U)).error ==
+                    RenderError::InvalidResource,
+                "reserved texture ID and mismatched RGBA8 payload are rejected");
+        require(device.destroy_texture(42U) &&
+                backend.texture_destroy_calls == 1 &&
+                backend.last_texture_id == 42U,
+                "texture destruction is forwarded to the backend");
+        require(device.destroy_texture(0U).error == RenderError::InvalidResource,
+                "reserved white texture cannot be destroyed by callers");
         require(!device.initialize({5U}) &&
                 device.render(valid_empty_frame({1280U, 960U})).error ==
                     RenderError::None,

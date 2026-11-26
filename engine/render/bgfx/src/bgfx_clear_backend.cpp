@@ -240,6 +240,10 @@ bool BgfxClearBackend::create_texture_rgba8(
 
     const auto* memory = bgfx::copy(
         pixels.data(), static_cast<std::uint32_t>(pixels.size()));
+    if (memory == nullptr) {
+        error = "bgfx could not allocate a texture upload buffer";
+        return false;
+    }
     const auto handle = bgfx::createTexture2D(
         static_cast<std::uint16_t>(extent.width),
         static_cast<std::uint16_t>(extent.height),
@@ -251,7 +255,12 @@ bool BgfxClearBackend::create_texture_rgba8(
         return false;
     }
 
-    impl_->textures.emplace(texture_id, handle);
+    try {
+        impl_->textures.emplace(texture_id, handle);
+    } catch (...) {
+        bgfx::destroy(handle);
+        throw;
+    }
     return true;
 }
 
