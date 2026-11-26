@@ -694,16 +694,32 @@ private:
         }
     }
 
-    static void dispatch_world_mutation(void* context, std::string_view hook_point,
-        world::WorldMutationContext* mutation, world::WorldMutationOriginalV1 original, void* original_context) noexcept {
-        if (!context || !mutation) { if (original) original(original_context); return; }
+    static void invoke_world_mutation_original(void* opaque) noexcept {
+        if (opaque == nullptr) return;
+        auto& mutation = *static_cast<world::WorldMutationContext*>(opaque);
+        if (mutation.original_operation != nullptr)
+            mutation.original_operation(mutation.original_context);
+    }
+
+    static void dispatch_world_mutation(
+        void* context, std::string_view hook_point,
+        world::WorldMutationContext* mutation,
+        world::WorldMutationOriginalV1 original,
+        void* original_context) noexcept {
+        if (mutation == nullptr) {
+            if (original != nullptr) original(original_context);
+            return;
+        }
+        mutation->original_operation = original;
+        mutation->original_context = original_context;
+        if (context == nullptr) {
+            invoke_world_mutation_original(mutation);
+            return;
+        }
         auto& runtime = *static_cast<EngineRuntime*>(context);
-        struct OriginalCall final { world::WorldMutationOriginalV1 function{}; void* context{}; };
-        OriginalCall call{original, original_context};
-        (void)runtime.mod_manager_.dispatch_hooks(hook_point, mutation, [](void* opaque) noexcept {
-            if (!opaque) return; auto& value = *static_cast<OriginalCall*>(opaque);
-            if (value.function) value.function(value.context);
-        });
+        (void)runtime.mod_manager_.dispatch_hooks(
+            hook_point, mutation,
+            &EngineRuntime::invoke_world_mutation_original);
     }
 
     static void dispatch_scene_system(

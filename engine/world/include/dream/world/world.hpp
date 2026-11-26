@@ -27,8 +27,19 @@ struct EntityTag;
 using Entity = core::Handle<EntityTag>;
 class World;
 enum class WorldMutationKind : std::uint8_t { EntityCreate, EntityDestroy, ComponentEmplace, ComponentRemove, ComponentModify, ComponentsModify, ComponentsIterateMut, ParentSet, ParentClear };
-struct WorldMutationContext final { World* world{}; WorldMutationKind kind{WorldMutationKind::EntityCreate}; Entity entity{}; Entity related_entity{}; std::type_index component_type{typeid(void)}; bool succeeded{false}; std::size_t affected_entities{0}; };
 using WorldMutationOriginalV1 = void (*)(void*) noexcept;
+struct WorldMutationContext final {
+    World* world{};
+    WorldMutationKind kind{WorldMutationKind::EntityCreate};
+    Entity entity{};
+    Entity related_entity{};
+    std::type_index component_type{typeid(void)};
+    bool succeeded{false};
+    std::size_t affected_entities{0};
+    // Private bridge payload used by EngineRuntime's hook trampoline.
+    WorldMutationOriginalV1 original_operation{};
+    void* original_context{};
+};
 using WorldMutationDispatcherV1 = void (*)(void*, std::string_view, WorldMutationContext*, WorldMutationOriginalV1, void*) noexcept;
 
 // A thread-safe entity/component store. Structural changes are serialized.
