@@ -200,6 +200,7 @@ struct BgfxClearBackend::Impl final {
         bgfx::VertexBufferHandle vertices{};
         bgfx::IndexBufferHandle indices{};
         std::uint32_t index_count{0};
+        std::uint32_t vertex_count{0};
     };
 
     std::array<ShaderBinary, 3> shader_binaries{};
@@ -328,7 +329,7 @@ bool BgfxClearBackend::create_mesh(
         return false;
     }
 
-    MeshGpu gpu;
+    Impl::MeshGpu gpu;
     gpu.vertices = bgfx::createVertexBuffer(vertex_memory, impl_->mesh_vertex_layout);
     if (!bgfx::isValid(gpu.vertices)) {
         error = "bgfx failed to create the mesh vertex buffer";
@@ -341,6 +342,7 @@ bool BgfxClearBackend::create_mesh(
         return false;
     }
     gpu.index_count = static_cast<std::uint32_t>(mesh.indices.size());
+    gpu.vertex_count = static_cast<std::uint32_t>(mesh.vertices.size());
     try {
         const auto [it, inserted] = impl_->meshes.emplace(mesh_id, gpu);
         (void)it;
@@ -830,8 +832,8 @@ bool BgfxClearBackend::render(
             bgfx::setUniform(
                 impl_->mesh_light_direction, light_direction.data(), 1U);
             bgfx::setTexture(0U, impl_->sampler, mesh_textures[index]);
-            bgfx::setVertexBuffer(0U, &mesh.vertices);
-            bgfx::setIndexBuffer(&mesh.indices);
+            bgfx::setVertexBuffer(0U, mesh.vertices, 0U, mesh.vertex_count);
+            bgfx::setIndexBuffer(mesh.indices, 0U, mesh.index_count);
             bgfx::setState(state_for_material(material));
             bgfx::submit(view_3d, impl_->mesh_program);
         }
