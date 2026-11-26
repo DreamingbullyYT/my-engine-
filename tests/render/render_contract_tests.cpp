@@ -138,8 +138,8 @@ int main() {
             "negative frame delta is rejected");
 
     frame = valid_empty_frame({1280U, 720U});
-    frame.draws_2d = std::span<const DrawCommand2D>{
-        std::array<DrawCommand2D, 1>{DrawCommand2D{}}};
+    std::array<DrawCommand2D, 1> missing_camera_draws{{DrawCommand2D{}}};
+    frame.draws_2d = missing_camera_draws;
     require(validate_frame_packet(frame, caps) == FrameValidationError::MissingCamera,
             "2D draws require a 2D camera");
 
@@ -192,7 +192,8 @@ int main() {
     FakeRenderBackend backend;
     {
         RenderDevice device(surfaces, backend);
-        require(device.initialize({5U}), "render device initializes");
+        require(static_cast<bool>(device.initialize({5U})),
+                "render device initializes");
         require(device.initialized() && surfaces.acquired == 1 &&
                 backend.initialize_calls == 1,
                 "device acquires surface before backend initialization");
