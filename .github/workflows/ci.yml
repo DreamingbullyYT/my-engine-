@@ -107,6 +107,13 @@ jobs:
             -c tests/core/resource_store_tests.cpp \
             -o /tmp/resource-store-tests-android.o
 
+      - name: Cross-compile asset cache tests for Android ARM64
+        run: |
+          "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
+            -std=c++20 -Iengine/core/include -Iengine/platform/include -Iengine/assets/include \
+            -c tests/assets/asset_cache_tests.cpp \
+            -o /tmp/asset-cache-tests-android.o
+
       - name: Cross-compile asset dependency tests for Android ARM64
         run: |
           "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++" \
