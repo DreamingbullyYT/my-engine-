@@ -128,26 +128,21 @@ static_assert(sizeof(PackedVertex2D) == sizeof(float) * 4U + 4U);
     return state;
 }
 
-[[nodiscard]] world::Matrix4x4 make_2d_model_view_projection(
-    const world::Matrix3x3& view_projection,
-    const world::Matrix3x3& model) noexcept {
-    const auto combined = world::multiply(view_projection, model);
+[[nodiscard]] world::Matrix4x4 lift_2d_matrix(
+    const world::Matrix3x3& matrix) noexcept {
     world::Matrix4x4 result;
-    result.at(0, 0) = combined.at(0, 0);
-    result.at(0, 1) = combined.at(0, 1);
+    result.at(0, 0) = matrix.at(0, 0);
+    result.at(0, 1) = matrix.at(0, 1);
     result.at(0, 2) = 0.0F;
-    result.at(0, 3) = combined.at(0, 2);
-
-    result.at(1, 0) = combined.at(1, 0);
-    result.at(1, 1) = combined.at(1, 1);
+    result.at(0, 3) = matrix.at(0, 2);
+    result.at(1, 0) = matrix.at(1, 0);
+    result.at(1, 1) = matrix.at(1, 1);
     result.at(1, 2) = 0.0F;
-    result.at(1, 3) = combined.at(1, 2);
-
+    result.at(1, 3) = matrix.at(1, 2);
     result.at(2, 0) = 0.0F;
     result.at(2, 1) = 0.0F;
     result.at(2, 2) = 1.0F;
     result.at(2, 3) = 0.0F;
-
     result.at(3, 0) = 0.0F;
     result.at(3, 1) = 0.0F;
     result.at(3, 2) = 0.0F;
@@ -169,7 +164,6 @@ struct BgfxClearBackend::Impl final {
     std::map<RenderAssetId, bgfx::TextureHandle> textures;
     bgfx::TextureHandle white_texture{};
     bgfx::ProgramHandle sprite_program{};
-    bgfx::UniformHandle model_view_projection{};
     bgfx::UniformHandle tint{};
     bgfx::UniformHandle sampler{};
     bgfx::VertexLayout vertex_layout{};
@@ -372,13 +366,10 @@ bool BgfxClearBackend::initialize(
                 return false;
             }
 
-            impl_->model_view_projection =
-                bgfx::createUniform("u_modelViewProj", bgfx::UniformType::Mat4);
             impl_->tint = bgfx::createUniform("u_tint", bgfx::UniformType::Vec4);
             impl_->sampler =
                 bgfx::createUniform("s_texColor", bgfx::UniformType::Sampler);
-            if (!bgfx::isValid(impl_->model_view_projection) ||
-                !bgfx::isValid(impl_->tint) ||
+            if (!bgfx::isValid(impl_->tint) ||
                 !bgfx::isValid(impl_->sampler)) {
                 error = "bgfx could not create the required 2D shader uniforms";
                 shutdown();
@@ -464,6 +455,11 @@ bool BgfxClearBackend::render(
         0U, 0U, 0U,
         static_cast<std::uint16_t>(frame.framebuffer_extent.width),
         static_cast<std::uint16_t>(frame.framebuffer_extent.height));
+    if (!frame.camera_2d && !frame.draws_2d.empty()) {
+        error = "2D draw packet is missing its camera matrices";
+        return false;
+    }
+
     std::uint16_t clear_flags = BGFX_CLEAR_NONE;
     if (frame.clear_color_buffer) clear_flags |= BGFX_CLEAR_COLOR;
     if (frame.clear_depth_buffer) clear_flags |= BGFX_CLEAR_DEPTH;
@@ -475,6 +471,11 @@ bool BgfxClearBackend::render(
         (void)bgfx::frame();
         return true;
     }
+
+    const auto view_matrix = lift_2d_matrix(frame.camera_2d->view);
+    const auto projection_matrix = lift_2d_matrix(frame.camera_2d->projection);
+    bgfx::setViewTransform(
+        0U, view_matrix.values.data(), projection_matrix.values.data());
 
     if (frame.vertices_2d.size() > std::numeric_limits<std::uint32_t>::max() ||
         frame.indices_2d.size() > std::numeric_limits<std::uint32_t>::max()) {
@@ -508,18 +509,21 @@ bool BgfxClearBackend::render(
     constexpr bgfx::ViewId main_view = 0U;
     for (std::size_t index = 0; index < frame.draws_2d.size(); ++index) {
         const auto& draw = frame.draws_2d[index];
-        const auto mvp = make_2d_model_view_projection(
-            frame.camera_2d->view_projection, draw.transform);
+        const auto model = lift_2d_matrix(draw.transform);
         const std::array<float, 4> tint{
             draw.tint.r, draw.tint.g, draw.tint.b, draw.tint.a
         };
 
+        if (draw.base_vertex > vertex_count) {
+            error = "2D draw base vertex exceeds the uploaded vertex buffer";
+            return false;
+        }
+        bgfx::setTransform(model.values.data());
         bgfx::setVertexBuffer(
-            0U, &vertex_buffer, draw.base_vertex, 4U);
+            0U, &vertex_buffer, draw.base_vertex,
+            vertex_count - draw.base_vertex);
         bgfx::setIndexBuffer(
             &index_buffer, draw.first_index, draw.index_count);
-        bgfx::setUniform(
-            impl_->model_view_projection, mvp.values.data(), 1U);
         bgfx::setUniform(impl_->tint, tint.data(), 1U);
         bgfx::setTexture(0U, impl_->sampler, textures[index]);
         bgfx::setState(state_for_blend(draw.blend));
@@ -544,8 +548,6 @@ void BgfxClearBackend::shutdown() noexcept {
             bgfx::destroy(impl_->white_texture);
         if (bgfx::isValid(impl_->sprite_program))
             bgfx::destroy(impl_->sprite_program);
-        if (bgfx::isValid(impl_->model_view_projection))
-            bgfx::destroy(impl_->model_view_projection);
         if (bgfx::isValid(impl_->tint))
             bgfx::destroy(impl_->tint);
         if (bgfx::isValid(impl_->sampler))
@@ -555,7 +557,6 @@ void BgfxClearBackend::shutdown() noexcept {
 
     impl_->white_texture = BGFX_INVALID_HANDLE;
     impl_->sprite_program = BGFX_INVALID_HANDLE;
-    impl_->model_view_projection = BGFX_INVALID_HANDLE;
     impl_->tint = BGFX_INVALID_HANDLE;
     impl_->sampler = BGFX_INVALID_HANDLE;
     impl_->maximum_texture_dimension = 0U;
