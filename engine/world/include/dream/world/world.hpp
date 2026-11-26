@@ -153,8 +153,9 @@ public:
         while (current) {
             if (current == child) return false;
             if (++traversed > parents_.size() + 1U) return false;
+            if (!is_alive_unlocked(current)) return false;
             const auto found = parents_.find(current.index());
-            if (found == parents_.end() || found->second != current) break;
+            if (found == parents_.end()) break;
             current = found->second;
         }
 
@@ -204,7 +205,7 @@ public:
         while (current) {
             if (++traversed > parents_.size() + 1U) return false;
             const auto found = parents_.find(current.index());
-            if (found == parents_.end() || found->second != current) return false;
+            if (found == parents_.end()) return false;
             current = found->second;
             if (current == ancestor) return true;
             if (!is_alive_unlocked(current)) return false;
