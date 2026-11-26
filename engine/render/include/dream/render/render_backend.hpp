@@ -78,6 +78,36 @@ public:
         return false;
     }
 
+    [[nodiscard]] virtual bool create_mesh(
+        RenderAssetId mesh_id, const MeshDescription& mesh,
+        std::string& error) {
+        (void)mesh_id; (void)mesh;
+        error = "Render backend does not support mesh uploads";
+        return false;
+    }
+
+    [[nodiscard]] virtual bool destroy_mesh(
+        RenderAssetId mesh_id, std::string& error) {
+        (void)mesh_id;
+        error = "Render backend does not support mesh destruction";
+        return false;
+    }
+
+    [[nodiscard]] virtual bool create_material(
+        RenderAssetId material_id, const MaterialDescription& material,
+        std::string& error) {
+        (void)material_id; (void)material;
+        error = "Render backend does not support material creation";
+        return false;
+    }
+
+    [[nodiscard]] virtual bool destroy_material(
+        RenderAssetId material_id, std::string& error) {
+        (void)material_id;
+        error = "Render backend does not support material destruction";
+        return false;
+    }
+
     virtual void shutdown() noexcept = 0;
 };
 
@@ -218,6 +248,54 @@ public:
 
         std::string error;
         if (!backend_.destroy_texture(texture_id, error))
+            return {RenderError::BackendResourceFailed, {}, std::move(error)};
+        return {};
+    }
+
+    [[nodiscard]] RenderResult create_mesh(
+        RenderAssetId mesh_id, const MeshDescription& mesh) {
+        if (!initialized_)
+            return {RenderError::NotInitialized, {}, "RenderDevice is not initialized"};
+        const auto validation = validate_mesh_description(mesh);
+        if (mesh_id == 0U || validation != FrameValidationError::None)
+            return {RenderError::InvalidResource, validation,
+                    "Mesh ID, vertices or indices are invalid"};
+        std::string error;
+        if (!backend_.create_mesh(mesh_id, mesh, error))
+            return {RenderError::BackendResourceFailed, {}, std::move(error)};
+        return {};
+    }
+
+    [[nodiscard]] RenderResult destroy_mesh(RenderAssetId mesh_id) {
+        if (!initialized_)
+            return {RenderError::NotInitialized, {}, "RenderDevice is not initialized"};
+        if (mesh_id == 0U)
+            return {RenderError::InvalidResource, {}, "Mesh ID zero is reserved"};
+        std::string error;
+        if (!backend_.destroy_mesh(mesh_id, error))
+            return {RenderError::BackendResourceFailed, {}, std::move(error)};
+        return {};
+    }
+
+    [[nodiscard]] RenderResult create_material(
+        RenderAssetId material_id, const MaterialDescription& material) {
+        if (!initialized_)
+            return {RenderError::NotInitialized, {}, "RenderDevice is not initialized"};
+        if (material_id == 0U || !valid_material_description(material))
+            return {RenderError::InvalidResource, {}, "Material ID or properties are invalid"};
+        std::string error;
+        if (!backend_.create_material(material_id, material, error))
+            return {RenderError::BackendResourceFailed, {}, std::move(error)};
+        return {};
+    }
+
+    [[nodiscard]] RenderResult destroy_material(RenderAssetId material_id) {
+        if (!initialized_)
+            return {RenderError::NotInitialized, {}, "RenderDevice is not initialized"};
+        if (material_id == 0U)
+            return {RenderError::InvalidResource, {}, "Material ID zero is reserved"};
+        std::string error;
+        if (!backend_.destroy_material(material_id, error))
             return {RenderError::BackendResourceFailed, {}, std::move(error)};
         return {};
     }

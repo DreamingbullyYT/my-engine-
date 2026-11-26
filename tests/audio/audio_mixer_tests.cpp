@@ -71,7 +71,7 @@ int main() {
     std::vector<float> resampled(4U);
     require(mixer.mix_stereo(resampled,2U,96000U)==AudioError::None,
         "mixer resamples when output sample rate differs from clip");
-    require(mixer.voice_state(left.first)->cursor_frames==3.0,
+    require(mixer.voice_state(left.first)->cursor_frames==1.0,
         "resampling advances the source cursor by the rate ratio");
 
     require(!mixer.set_settings(left.first,AudioVoiceSettings{

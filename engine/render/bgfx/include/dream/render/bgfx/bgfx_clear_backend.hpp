@@ -33,6 +33,23 @@ public:
         std::span<const std::byte> fragment_shader,
         std::string& error);
 
+    [[nodiscard]] bool set_3d_shader_binaries(
+        Bgfx2DShaderFormat format,
+        std::span<const std::byte> vertex_shader,
+        std::span<const std::byte> fragment_shader,
+        std::string& error);
+
+    [[nodiscard]] bool create_mesh(
+        RenderAssetId mesh_id, const MeshDescription& mesh,
+        std::string& error) override;
+    [[nodiscard]] bool destroy_mesh(
+        RenderAssetId mesh_id, std::string& error) override;
+    [[nodiscard]] bool create_material(
+        RenderAssetId material_id, const MaterialDescription& material,
+        std::string& error) override;
+    [[nodiscard]] bool destroy_material(
+        RenderAssetId material_id, std::string& error) override;
+
     [[nodiscard]] bool create_texture_rgba8(
         RenderAssetId texture_id, Extent2D extent,
         std::span<const std::byte> pixels, std::string& error) override;

@@ -62,6 +62,26 @@ struct Vertex2D final {
     Color color{};
 };
 
+struct Vertex3D final {
+    world::Vec3 position{};
+    world::Vec3 normal{0.0F,1.0F,0.0F};
+    world::Vec2 uv{};
+};
+
+struct MeshDescription final {
+    std::span<const Vertex3D> vertices{};
+    std::span<const std::uint32_t> indices{};
+};
+
+struct MaterialDescription final {
+    Color base_color{1.0F,1.0F,1.0F,1.0F};
+    RenderAssetId texture_id{0};
+    BlendMode blend{BlendMode::Opaque};
+    bool depth_test{true};
+    bool depth_write{true};
+    bool backface_culling{true};
+};
+
 // Texture ID zero denotes the renderer's default white texture.
 struct DrawCommand2D final {
     std::uint32_t first_index{0};
@@ -221,6 +241,55 @@ enum class FrameValidationError : std::uint8_t {
         if (!finite(draw.tint))
             return FrameValidationError::InvalidTint;
     }
+
+[[nodiscard]] inline FrameValidationError validate_mesh_description(
+    const MeshDescription& mesh) noexcept {
+    if (mesh.vertices.empty() || mesh.indices.empty() ||
+        mesh.indices.size() % 3U != 0U ||
+        mesh.vertices.size() > std::numeric_limits<std::uint32_t>::max() ||
+        mesh.indices.size() > std::numeric_limits<std::uint32_t>::max())
+        return FrameValidationError::InvalidIndexRange;
+    for (const auto& vertex : mesh.vertices) {
+        if (!std::isfinite(vertex.position.x) ||
+            !std::isfinite(vertex.position.y) ||
+            !std::isfinite(vertex.position.z) ||
+            !std::isfinite(vertex.normal.x) ||
+            !std::isfinite(vertex.normal.y) ||
+            !std::isfinite(vertex.normal.z) ||
+            !std::isfinite(vertex.uv.x) ||
+            !std::isfinite(vertex.uv.y))
+            return FrameValidationError::InvalidVertex;
+        const float normal_length_squared =
+            vertex.normal.x * vertex.normal.x +
+            vertex.normal.y * vertex.normal.y +
+            vertex.normal.z * vertex.normal.z;
+        if (!std::isfinite(normal_length_squared) ||
+            normal_length_squared <= 1.0e-12F)
+            return FrameValidationError::InvalidVertex;
+    }
+    for (const auto index : mesh.indices)
+        if (index >= mesh.vertices.size())
+            return FrameValidationError::InvalidIndexRange;
+    return FrameValidationError::None;
+}
+
+[[nodiscard]] inline bool valid_material_description(
+    const MaterialDescription& material) noexcept {
+    if (!finite(material.base_color)) return false;
+    for (const float channel : {
+        material.base_color.r, material.base_color.g,
+        material.base_color.b, material.base_color.a}) {
+        if (channel < 0.0F || channel > 1.0F) return false;
+    }
+    switch (material.blend) {
+    case BlendMode::Opaque:
+    case BlendMode::Alpha:
+    case BlendMode::Additive:
+        return true;
+    }
+    return false;
+}
+
 
     return FrameValidationError::None;
 }

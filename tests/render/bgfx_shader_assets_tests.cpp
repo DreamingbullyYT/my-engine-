@@ -55,7 +55,22 @@ public:
     Bgfx2DShaderFormat format{Bgfx2DShaderFormat::OpenGLES};
     std::vector<std::byte> vertex;
     std::vector<std::byte> fragment;
+    std::size_t calls_3d{0};
+    Bgfx2DShaderFormat format_3d{Bgfx2DShaderFormat::OpenGLES};
+    std::vector<std::byte> vertex_3d;
+    std::vector<std::byte> fragment_3d;
 
+    bool set_3d_shader_binaries(Bgfx2DShaderFormat requested,
+        std::span<const std::byte> vs,std::span<const std::byte> fs,
+        std::string& error) {
+        ++calls_3d;
+        if(!accept){error="backend rejected 3D shaders";return false;}
+        format_3d=requested;
+        vertex_3d.assign(vs.begin(),vs.end());
+        fragment_3d.assign(fs.begin(),fs.end());
+        error.clear();
+        return true;
+    }
     bool set_2d_shader_binaries(Bgfx2DShaderFormat requested,
         std::span<const std::byte> vs,std::span<const std::byte> fs,
         std::string& error) {
@@ -97,6 +112,21 @@ int main() {
         BgfxShaderAssetLimits{2,4}),
         "shader file size limit is enforced by the asset filesystem");
     require(backend.calls==1,"oversized shader assets are not installed");
+
+    files.files["shader/vs3.bin"]={std::byte{7},std::byte{8}};
+    files.files["shader/fs3.bin"]={std::byte{9}};
+    require(load_bgfx_3d_shader_binaries(backend,files,
+        Bgfx2DShaderFormat::OpenGL,"shader/vs3.bin","shader/fs3.bin",error),
+        "both precompiled 3D shader assets load");
+    require(backend.calls_3d==1&&backend.format_3d==Bgfx2DShaderFormat::OpenGL&&
+        backend.vertex_3d.size()==2&&backend.fragment_3d.size()==1,
+        "3D shader pair reaches the backend");
+    const auto old_3d_vertex=backend.vertex_3d;
+    require(!load_bgfx_3d_shader_binaries(backend,files,
+        Bgfx2DShaderFormat::Vulkan,"shader/vs3.bin","missing3.bin",error),
+        "missing 3D fragment shader is reported");
+    require(backend.calls_3d==1&&backend.vertex_3d==old_3d_vertex,
+        "failed 3D fragment read does not partially update backend");
 
     files.files["shader/empty.bin"]={};
     require(!load_bgfx_2d_shader_binaries(backend,files,

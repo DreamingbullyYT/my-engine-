@@ -82,6 +82,23 @@ jobs:
             --platform linux --profile 330 --type fragment \
             --varyingdef "$VARYINGS" -i /tmp/bgfx/src
 
+          VARYINGS_3D="$GITHUB_WORKSPACE/engine/render/bgfx/shaders/varying_mesh.def.sc"
+          VS3="$GITHUB_WORKSPACE/engine/render/bgfx/shaders/vs_mesh.sc"
+          FS3="$GITHUB_WORKSPACE/engine/render/bgfx/shaders/fs_mesh.sc"
+
+          "$SHADERC" -f "$VS3" -o build-bgfx/shaders/vs_mesh_essl300.bin \
+            --platform android --profile 300_es --type vertex \
+            --varyingdef "$VARYINGS_3D" -i /tmp/bgfx/src
+          "$SHADERC" -f "$FS3" -o build-bgfx/shaders/fs_mesh_essl300.bin \
+            --platform android --profile 300_es --type fragment \
+            --varyingdef "$VARYINGS_3D" -i /tmp/bgfx/src
+          "$SHADERC" -f "$VS3" -o build-bgfx/shaders/vs_mesh_glsl330.bin \
+            --platform linux --profile 330 --type vertex \
+            --varyingdef "$VARYINGS_3D" -i /tmp/bgfx/src
+          "$SHADERC" -f "$FS3" -o build-bgfx/shaders/fs_mesh_glsl330.bin \
+            --platform linux --profile 330 --type fragment \
+            --varyingdef "$VARYINGS_3D" -i /tmp/bgfx/src
+
       - name: Build and execute bgfx compile proof
         run: |
           cmake --build build-bgfx --target dream_bgfx_compile_proof --parallel 2

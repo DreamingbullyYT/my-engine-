@@ -70,6 +70,13 @@ public:
     std::vector<std::byte> last_texture_pixels;
     bool texture_create_ok{true};
     bool texture_destroy_ok{true};
+    bool resource_create_ok{true};
+    bool resource_destroy_ok{true};
+    int mesh_create_calls{0},mesh_destroy_calls{0};
+    int material_create_calls{0},material_destroy_calls{0};
+    RenderAssetId last_mesh_id{0},last_material_id{0};
+    std::size_t last_mesh_vertex_count{0},last_mesh_index_count{0};
+    MaterialDescription last_material{};
     RenderSurfaceInfo last_surface{};
     std::string error_message{"fake backend failure"};
 
@@ -131,6 +138,28 @@ public:
         }
         last_texture_id = texture_id;
         return true;
+    }
+
+    bool create_mesh(RenderAssetId id,const MeshDescription& mesh,std::string& error) override {
+        ++mesh_create_calls;
+        if (!resource_create_ok) {error=error_message;return false;}
+        last_mesh_id=id;last_mesh_vertex_count=mesh.vertices.size();
+        last_mesh_index_count=mesh.indices.size();return true;
+    }
+    bool destroy_mesh(RenderAssetId id,std::string& error) override {
+        ++mesh_destroy_calls;
+        if (!resource_destroy_ok) {error=error_message;return false;}
+        last_mesh_id=id;return true;
+    }
+    bool create_material(RenderAssetId id,const MaterialDescription& material,std::string& error) override {
+        ++material_create_calls;
+        if (!resource_create_ok) {error=error_message;return false;}
+        last_material_id=id;last_material=material;return true;
+    }
+    bool destroy_material(RenderAssetId id,std::string& error) override {
+        ++material_destroy_calls;
+        if (!resource_destroy_ok) {error=error_message;return false;}
+        last_material_id=id;return true;
     }
 
     void shutdown() noexcept override { ++shutdown_calls; }
@@ -251,6 +280,34 @@ int main() {
                 "texture destruction is forwarded to the backend");
         require(device.destroy_texture(0U).error == RenderError::InvalidResource,
                 "reserved white texture cannot be destroyed by callers");
+        const std::array<Vertex3D,3> mesh_vertices{{
+            {{0,0,0},{0,0,1},{0,0}},
+            {{1,0,0},{0,0,1},{1,0}},
+            {{0,1,0},{0,0,1},{0,1}}
+        }};
+        const std::array<std::uint32_t,3> mesh_indices{{0U,1U,2U}};
+        const MeshDescription mesh{mesh_vertices,mesh_indices};
+        require(device.create_mesh(50U,mesh)&&backend.mesh_create_calls==1&&
+                backend.last_mesh_vertex_count==3U&&backend.last_mesh_index_count==3U,
+                "valid indexed mesh upload is forwarded");
+        require(device.destroy_mesh(50U)&&backend.mesh_destroy_calls==1,
+                "mesh destruction is forwarded");
+        MaterialDescription material;
+        material.base_color={0.8F,0.7F,0.6F,1.0F};
+        material.texture_id=42U;
+        require(device.create_material(60U,material)&&backend.material_create_calls==1&&
+                backend.last_material_id==60U&&backend.last_material.texture_id==42U,
+                "material properties are forwarded");
+        require(device.destroy_material(60U)&&backend.material_destroy_calls==1,
+                "material destruction is forwarded");
+        auto invalid_mesh_indices=mesh_indices;
+        invalid_mesh_indices[2]=9U;
+        require(device.create_mesh(51U,MeshDescription{mesh_vertices,invalid_mesh_indices}).error==
+                    RenderError::InvalidResource,
+                "mesh upload rejects indices outside vertex span");
+        material.base_color.r=2.0F;
+        require(device.create_material(61U,material).error==RenderError::InvalidResource,
+                "material channels outside zero-to-one are rejected");
         require(!device.initialize({5U}) &&
                 device.render(valid_empty_frame({1280U, 960U})).error ==
                     RenderError::None,
