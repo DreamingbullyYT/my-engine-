@@ -1,0 +1,107 @@
+name: bgfx backend compile proof
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "tests/render/bgfx_backend_proof/**"
+      - ".github/workflows/bgfx-backend-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: Linux / bgfx static library
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Dream Engine
+        uses: actions/checkout@v4
+
+      - name: Install Linux graphics development headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build git g++ pkg-config \
+            libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+            libxext-dev libgl1-mesa-dev
+
+      - name: Checkout pinned bgfx sources
+        run: |
+          git clone --filter=blob:none https://github.com/bkaradzic/bgfx.cmake.git /tmp/bgfx.cmake
+          git -C /tmp/bgfx.cmake fetch --depth 1 origin c07b70ddc18d84538a460d6b022b6bb22d0e0950
+          git -C /tmp/bgfx.cmake checkout --detach FETCH_HEAD
+
+          git clone --filter=blob:none https://github.com/bkaradzic/bgfx.git /tmp/bgfx
+          git -C /tmp/bgfx fetch --depth 1 origin 3fe177f616c712a84a39e597a404ac5fdc04a3f7
+          git -C /tmp/bgfx checkout --detach FETCH_HEAD
+
+          git clone --filter=blob:none https://github.com/bkaradzic/bx.git /tmp/bx
+          git -C /tmp/bx fetch --depth 1 origin b8ee10a606ae41db9fdd1dbb2bb4d1e565f9a7b7
+          git -C /tmp/bx checkout --detach FETCH_HEAD
+
+          git clone --filter=blob:none https://github.com/bkaradzic/bimg.git /tmp/bimg
+          git -C /tmp/bimg fetch --depth 1 origin 38ceda5c7778228f976f75900623fb5923b49107
+          git -C /tmp/bimg checkout --detach FETCH_HEAD
+
+      - name: Configure pinned bgfx build
+        run: |
+          cmake -S tests/render/bgfx_backend_proof -B build-bgfx \
+            -G Ninja \
+            -DBGFX_CMAKE_SOURCE_DIR=/tmp/bgfx.cmake \
+            -DBGFX_DIR=/tmp/bgfx \
+            -DBX_DIR=/tmp/bx \
+            -DBIMG_DIR=/tmp/bimg \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build and execute bgfx compile proof
+        run: |
+          cmake --build build-bgfx --target dream_bgfx_compile_proof --parallel 2
+          ./build-bgfx/dream_bgfx_compile_proof
+
+  android-arm64:
+    name: Android / arm64-v8a bgfx static library
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Dream Engine
+        uses: actions/checkout@v4
+
+      - name: Install Android NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "ndk;27.2.12479018"
+
+      - name: Checkout pinned bgfx sources
+        run: |
+          git clone --filter=blob:none https://github.com/bkaradzic/bgfx.cmake.git /tmp/bgfx.cmake
+          git -C /tmp/bgfx.cmake fetch --depth 1 origin c07b70ddc18d84538a460d6b022b6bb22d0e0950
+          git -C /tmp/bgfx.cmake checkout --detach FETCH_HEAD
+
+          git clone --filter=blob:none https://github.com/bkaradzic/bgfx.git /tmp/bgfx
+          git -C /tmp/bgfx fetch --depth 1 origin 3fe177f616c712a84a39e597a404ac5fdc04a3f7
+          git -C /tmp/bgfx checkout --detach FETCH_HEAD
+
+          git clone --filter=blob:none https://github.com/bkaradzic/bx.git /tmp/bx
+          git -C /tmp/bx fetch --depth 1 origin b8ee10a606ae41db9fdd1dbb2bb4d1e565f9a7b7
+          git -C /tmp/bx checkout --detach FETCH_HEAD
+
+          git clone --filter=blob:none https://github.com/bkaradzic/bimg.git /tmp/bimg
+          git -C /tmp/bimg fetch --depth 1 origin 38ceda5c7778228f976f75900623fb5923b49107
+          git -C /tmp/bimg checkout --detach FETCH_HEAD
+
+      - name: Configure bgfx for Android ARM64
+        run: |
+          cmake -S tests/render/bgfx_backend_proof -B build-bgfx-android \
+            -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/27.2.12479018/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-26 \
+            -DANDROID_STL=c++_static \
+            -DBGFX_CMAKE_SOURCE_DIR=/tmp/bgfx.cmake \
+            -DBGFX_DIR=/tmp/bgfx \
+            -DBX_DIR=/tmp/bx \
+            -DBIMG_DIR=/tmp/bimg \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build bgfx and link Android ARM64 proof
+        run: |
+          cmake --build build-bgfx-android --target dream_bgfx_compile_proof --parallel 2
