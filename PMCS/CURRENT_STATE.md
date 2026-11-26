@@ -6,7 +6,7 @@
 
 ## Implemented
 - CMake project with separate dream_core, dream_platform and dream_dmod static libraries.
-- Core version API, logger, diagnostics, typed event dispatcher, worker job system and typed generational handle pool and owning ResourceRegistry (verified in run 45715803430); initial typed ResourceStore implementation and tests added, pending CI.
+- Core version API, logger, diagnostics, typed event dispatcher, worker job system, typed generational handle pool, owning ResourceRegistry and keyed ResourceStore.
 - Platform application lifecycle with initialization/update/shutdown callbacks, stop requests, frame delta clamping and cleanup on failure.
 - Backend-neutral window configuration/metrics/events and opaque window IDs.
 - Native render-surface bridge with borrowed native handles and opaque surface IDs.
@@ -19,13 +19,12 @@
 - GitHub Actions for Linux GCC/Clang, Android ARM64 cross-build and ChaiScript AST proof.
 
 ## Verified CI
-- Run [45710274229](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45710274229) completed successfully for all four jobs: Linux GCC, Linux Clang, DMod AST proof and Android ARM64 cross-build.
-- This run verifies the window/surface/input/filesystem contracts and their Linux tests; Android remains cross-compilation, not physical-device execution.
-- Run [45708669112](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45708669112) completed successfully for commit 0706b05976fd5cb03ffd3d2fa2d169ac099aa478.
-- Linux GCC and Clang: configure, build and all CTest tests passed, including application lifecycle tests.
-- Android NDK: engine core, DMod, miniz and application lifecycle code cross-build passed for arm64-v8a (ARMv8-A).
-- ChaiScript direct AST proof passed on Linux and cross-compiled for Android ARM64.
-- Android proof is cross-compilation, not physical-device execution.
+- Run [45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493) completed successfully for all four jobs: Linux GCC, Linux Clang, DMod AST proof and Android ARM64 cross-build. This run includes ResourceStore unit tests on Linux and a dedicated Android ARM64 cross-compilation of the ResourceStore tests.
+- Run [45715803430](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45715803430) completed successfully for ResourceRegistry and all four CI jobs.
+- Run [45714411879](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45714411879) completed successfully for typed handles and all four CI jobs.
+- Run [45710274229](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45710274229) completed successfully for window/surface/input/filesystem contracts and all four CI jobs.
+- Run [45708669112](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45708669112) completed successfully for application lifecycle and all four CI jobs.
+- Android results are NDK cross-compilation for arm64-v8a (ARMv8-A), not execution on a physical device.
 
 ## Dependency pins
 - miniz: richgel999/miniz, commit 77d0dce8627735138c51770d1799a1ef48f2117d, upstream LICENSE is MIT.
@@ -51,10 +50,10 @@
 
 ## Other engine work not yet implemented
 - Concrete desktop/Android platform backends and physical-device tests.
-- Renderer, ECS/world, physics, asset pipeline, audio, serialization, editor and profiling. Typed handle identity and initial resource ownership/registry are implemented; ResourceStore now provides an initial key-to-handle layer; actual asset loading/decoding/dependency tracking remains unimplemented.
+- Renderer, ECS/world, physics, asset loading/decoding/dependency pipeline, audio, serialization, editor and profiling. ResourceStore is only a key-to-handle layer; it does not load or decode assets.
 
 ## Immediate next actions
-1. Verify typed generational handles in Linux GCC/Clang and Android ARM64 CI.
-2. Verify ResourceRegistry, then extend resource lifetime/concurrency tests.
-3. Compare renderer candidates and define an engine-owned 2D/3D API without locking a backend prematurely.
-4. Verify ResourceStore, then design asset loading/decoding and dependency tracking as separate layers.
+1. Add deterministic callback-vs-destroy concurrency tests for ResourceRegistry/ResourceStore.
+2. Design a separate asset loading pipeline: filesystem reads, decoding interfaces, async scheduling, dependency tracking and cache/lifetime policy.
+3. Compare renderer candidates and define an engine-owned 2D/3D API without prematurely locking a backend.
+4. Continue DMod package trust/signatures, capability enforcement and interpreter integration/security review.
