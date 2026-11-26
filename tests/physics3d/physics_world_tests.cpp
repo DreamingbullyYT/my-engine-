@@ -148,6 +148,20 @@ int main() {
             !queries.raycast(Ray3D{{0,0,3},{0,0,-1},-1}),
         "invalid ray direction and range are rejected");
 
+    for(int i=0;i<96;++i) {
+        BodyDescription3D distant;
+        distant.type=BodyType3D::Static;
+        distant.position={100.0F+static_cast<float>(i)*10.0F,0,0};
+        distant.collider=SphereCollider3D{{},0.5F};
+        require(static_cast<bool>(queries.create_body(distant)),
+                "distant broadphase query body creates");
+    }
+    const auto indexed_ray=queries.raycast_all(Ray3D{{0,0,3},{0,0,-1},10});
+    const auto indexed_overlap=queries.overlap_sphere(Sphere3D{{1.5F,0,0},0.75F});
+    require(indexed_ray.size()==1U&&indexed_ray[0].body==query_sphere.handle&&
+            indexed_overlap.size()==1U&&indexed_overlap[0]==query_sphere.handle,
+            "ray and overlap queries prune distant bodies through broadphase");
+
     PhysicsWorld3D rotated_queries(PhysicsSettings3D{.gravity={0,0,0}});
     BodyDescription3D rotated_box_desc;
     rotated_box_desc.type=BodyType3D::Static;
