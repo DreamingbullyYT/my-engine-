@@ -62,21 +62,28 @@ public:
             return {AssetCachePutStatus::TooLarge, {}};
         }
 
-        // Make room before constructing the new resource. No existing entry is
-        // removed when the requested asset alone exceeds the configured budget.
-        evict_until_fits(estimated_bytes);
-
+        // Construct and register first, so a constructor/allocation failure
+        // cannot evict otherwise usable cache entries.
         auto handle = resources_.emplace(key, std::forward<Args>(args)...);
         if (!handle) {
             return {AssetCachePutStatus::InvalidKey, {}};
         }
 
         try {
-            entries_.emplace(key, Entry{handle, estimated_bytes, next_stamp()});
+            const auto [entry, inserted] =
+                entries_.emplace(key, Entry{handle, estimated_bytes, next_stamp()});
+            (void)entry;
+            if (!inserted) {
+                resources_.erase(key);
+                return {AssetCachePutStatus::DuplicateKey, {}};
+            }
         } catch (...) {
             resources_.erase(key);
             throw;
         }
+
+        // The new entry has the newest LRU stamp and is therefore retained.
+        evict_until_fits(estimated_bytes);
         used_bytes_ += estimated_bytes;
         return {AssetCachePutStatus::Inserted, handle};
     }
