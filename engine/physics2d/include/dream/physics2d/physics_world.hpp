@@ -191,8 +191,7 @@ public:
     [[nodiscard]] bool is_alive(BodyHandle handle) const noexcept {
         if (!handle) return false;
         const auto found = bodies_.find(handle.index());
-        return found != bodies_.end() && found->second.handle == handle &&
-               handles_.is_alive(handle);
+        return found != bodies_.end() && found->second.handle == handle;
     }
 
     [[nodiscard]] std::optional<BodyState2D> body_state(BodyHandle handle) const {
