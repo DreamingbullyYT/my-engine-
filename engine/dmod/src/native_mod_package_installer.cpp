@@ -7,6 +7,7 @@
 #include <string_view>
 #include <system_error>
 #include <vector>
+#include <utility>
 
 #if defined(__unix__) || defined(__APPLE__)
 #include <cerrno>
@@ -18,6 +19,10 @@
 
 namespace dream::dmod {
 namespace {
+
+NativeModInstallResult failure(std::string message) {
+    return {{}, std::move(message)};
+}
 
 #if defined(__unix__) || defined(__APPLE__)
 class FileDescriptor final {
@@ -44,28 +49,24 @@ private:
     int value_{-1};
 };
 
-NativeModInstallResult failure(std::string message) {
-    return {{}, std::move(message)};
-}
-
 FileDescriptor open_or_create_directory(int parent, const std::string& name,
                                         std::string& error) {
     if (::mkdirat(parent, name.c_str(), 0700) != 0 && errno != EEXIST) {
         error = "Cannot create native mod directory '" + name + "': " +
             std::error_code(errno, std::generic_category()).message();
-        return {};
+        return FileDescriptor{};
     }
     const int fd = ::openat(parent, name.c_str(),
         O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
     if (fd < 0) {
         error = "Native mod path component is not a real directory: '" + name + "'.";
-        return {};
+        return FileDescriptor{};
     }
     struct stat status {};
     if (::fstat(fd, &status) != 0 || !S_ISDIR(status.st_mode)) {
         (void)::close(fd);
         error = "Native mod path component is not a directory: '" + name + "'.";
-        return {};
+        return FileDescriptor{};
     }
     return FileDescriptor(fd);
 }
