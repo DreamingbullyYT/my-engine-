@@ -132,6 +132,17 @@ if(DREAM_BUILD_BGFX_BACKEND)
     )
 endif()
 
+add_library(dream_runtime INTERFACE)
+add_library(DreamEngine::Runtime ALIAS dream_runtime)
+target_include_directories(dream_runtime INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/runtime/include>
+)
+target_compile_features(dream_runtime INTERFACE cxx_std_20)
+target_link_libraries(dream_runtime INTERFACE
+    DreamEngine::Core DreamEngine::Platform DreamEngine::World
+    DreamEngine::Input DreamEngine::Physics2D DreamEngine::Render
+)
+
 add_library(dream_physics2d INTERFACE)
 add_library(DreamEngine::Physics2D ALIAS dream_physics2d)
 target_include_directories(dream_physics2d INTERFACE
@@ -260,6 +271,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_assets_dependency_graph_tests PRIVATE cxx_std_20)
     set_target_properties(dream_assets_dependency_graph_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.assets.dependency_graph COMMAND dream_assets_dependency_graph_tests)
+
+    add_executable(dream_runtime_tests tests/runtime/engine_runtime_tests.cpp)
+    target_link_libraries(dream_runtime_tests PRIVATE DreamEngine::Runtime)
+    target_compile_features(dream_runtime_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_runtime_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.runtime.integration COMMAND dream_runtime_tests)
 
     add_executable(dream_render_frame_builder_tests tests/render/render_frame_builder_tests.cpp)
     target_link_libraries(dream_render_frame_builder_tests PRIVATE DreamEngine::Render)
