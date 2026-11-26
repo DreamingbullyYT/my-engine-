@@ -90,7 +90,7 @@ int main() {
     events=sensors.update(1.0/60.0);
     require(events.events.size()==1&&events.events[0].type==ContactEventType3D::Stay,
         "persistent sensor overlap reports Stay");
-    require(sensors.set_velocity(overlapping.handle,{10,0,0}),
+    require(sensors.set_velocity(overlapping.handle,{120,0,0}),
         "sensor body can be moved by setting velocity");
     events=sensors.update(1.0/60.0);
     require(events.events.size()==1&&events.events[0].type==ContactEventType3D::End,

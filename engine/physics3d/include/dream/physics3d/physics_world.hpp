@@ -223,16 +223,26 @@ public:
         auto* body=find_body(handle);
         if(!body||body->type!=BodyType3D::Dynamic||!finite(force)||!finite(point))
             return false;
-        body->force=body->force+force;
-        body->torque=body->torque+cross(point-body->position,force);
-        return finite(body->force)&&finite(body->torque);
+        const Vec3 next_force=body->force+force;
+        const Vec3 next_torque=body->torque+cross(point-body->position,force);
+        if(!finite(next_force)||!finite(next_torque)) return false;
+        body->force=next_force;
+        body->torque=next_torque;
+        return true;
     }
     [[nodiscard]] bool apply_impulse(BodyHandle3D handle,Vec3 impulse,Vec3 point) noexcept {
         auto* body=find_body(handle);
         if(!body||body->type!=BodyType3D::Dynamic||!finite(impulse)||!finite(point))
             return false;
+        const Vec3 old_linear=body->linear_velocity;
+        const Vec3 old_angular=body->angular_velocity;
         apply_impulse_to(*body,impulse,point-body->position);
-        return finite(body->linear_velocity)&&finite(body->angular_velocity);
+        if(!finite(body->linear_velocity)||!finite(body->angular_velocity)) {
+            body->linear_velocity=old_linear;
+            body->angular_velocity=old_angular;
+            return false;
+        }
+        return true;
     }
     [[nodiscard]] bool set_gravity(Vec3 gravity) noexcept {
         if(!finite(gravity)) return false;
@@ -537,21 +547,29 @@ private:
             auto& a=ia->second;auto& b=ib->second;
             const Vec3 ra=contact.manifold.point-a.position;
             const Vec3 rb=contact.manifold.point-b.position;
+            const Vec3 normal=normalized(contact.manifold.normal);
+            const float normal_mass=effective_mass(a,b,ra,rb,normal);
+            if(normal_mass<=1.0e-8F) continue;
+            const float initial_speed=dot(
+                velocity_at(b,contact.manifold.point)-
+                velocity_at(a,contact.manifold.point),normal);
+            const float restitution=initial_speed<-
+                settings_.restitution_velocity_threshold
+                ?std::max(a.restitution,b.restitution):0.0F;
+            const float target_speed=-restitution*initial_speed;
+
             for(std::uint32_t iteration=0;iteration<settings_.velocity_iterations;++iteration) {
                 Vec3 relative=velocity_at(b,contact.manifold.point)-
                     velocity_at(a,contact.manifold.point);
-                const Vec3 normal=normalized(contact.manifold.normal);
                 const float normal_speed=dot(relative,normal);
-                const float normal_mass=effective_mass(a,b,ra,rb,normal);
-                if(normal_mass<=1.0e-8F) continue;
-                float restitution=std::max(a.restitution,b.restitution);
-                if(std::abs(normal_speed)<settings_.restitution_velocity_threshold)
-                    restitution=0.0F;
-                const float impulse=std::max(0.0F,-(1.0F+restitution)*normal_speed/normal_mass);
+                const float candidate=std::max(
+                    0.0F,contact.normal_impulse+
+                    (target_speed-normal_speed)/normal_mass);
+                const float impulse=candidate-contact.normal_impulse;
+                contact.normal_impulse=candidate;
                 const Vec3 normal_impulse=normal*impulse;
                 apply_impulse_to(a,-normal_impulse,ra);
                 apply_impulse_to(b,normal_impulse,rb);
-                contact.normal_impulse+=impulse;
 
                 relative=velocity_at(b,contact.manifold.point)-
                     velocity_at(a,contact.manifold.point);
@@ -561,14 +579,18 @@ private:
                     const Vec3 tangent=tangent_velocity/tangent_length;
                     const float tangent_mass=effective_mass(a,b,ra,rb,tangent);
                     if(tangent_mass>1.0e-8F) {
-                        float friction_impulse=-dot(relative,tangent)/tangent_mass;
                         const float coefficient=std::sqrt(a.friction*b.friction);
-                        friction_impulse=std::clamp(friction_impulse,
-                            -impulse*coefficient,impulse*coefficient);
+                        const float limit=contact.normal_impulse*coefficient;
+                        const float candidate_tangent=std::clamp(
+                            contact.tangent_impulse-
+                                dot(relative,tangent)/tangent_mass,
+                            -limit,limit);
+                        const float friction_impulse=
+                            candidate_tangent-contact.tangent_impulse;
+                        contact.tangent_impulse=candidate_tangent;
                         const Vec3 applied=tangent*friction_impulse;
                         apply_impulse_to(a,-applied,ra);
                         apply_impulse_to(b,applied,rb);
-                        contact.tangent_impulse+=std::abs(friction_impulse);
                     }
                 }
             }
