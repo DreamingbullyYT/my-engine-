@@ -262,6 +262,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     set_target_properties(dream_assets_loader_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.assets.loader COMMAND dream_assets_loader_tests)
 
+    add_executable(dream_assets_load_scope_tests tests/assets/asset_load_scope_tests.cpp)
+    target_link_libraries(dream_assets_load_scope_tests PRIVATE DreamEngine::Assets)
+    target_compile_features(dream_assets_load_scope_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_assets_load_scope_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.assets.load_scope COMMAND dream_assets_load_scope_tests)
+
     add_executable(dream_assets_request_coordinator_tests tests/assets/asset_request_coordinator_tests.cpp)
     target_link_libraries(dream_assets_request_coordinator_tests PRIVATE DreamEngine::Assets)
     target_compile_features(dream_assets_request_coordinator_tests PRIVATE cxx_std_20)

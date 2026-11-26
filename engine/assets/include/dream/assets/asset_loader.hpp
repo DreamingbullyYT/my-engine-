@@ -7,9 +7,11 @@
 #include <dream/platform/filesystem.hpp>
 
 #include <atomic>
+#include <condition_variable>
 #include <cstddef>
 #include <future>
 #include <functional>
+#include <mutex>
 #include <optional>
 #include <memory>
 #include <span>
@@ -43,8 +45,15 @@ public:
 private:
     explicit AssetCancellationToken(std::shared_ptr<std::atomic_bool> state)
         : state_(std::move(state)) {}
+    AssetCancellationToken(
+        std::shared_ptr<std::atomic_bool> state,
+        std::shared_ptr<void> lifetime_pin)
+        : state_(std::move(state)), lifetime_pin_(std::move(lifetime_pin)) {}
     std::shared_ptr<std::atomic_bool> state_;
+    // Keeps a scoped load lease alive for the entire asynchronous task.
+    std::shared_ptr<void> lifetime_pin_;
     friend class AssetCancellationSource;
+    friend class AssetLoadScope;
 };
 
 class AssetCancellationSource final {
@@ -59,6 +68,88 @@ public:
     }
 private:
     std::shared_ptr<std::atomic_bool> state_;
+};
+
+// Tracks asynchronous tasks that borrow engine services. The task must receive
+// a token returned by acquire_token(); that token pins the scope until the task
+// releases its capture. shutdown_and_wait() closes admission, requests
+// cooperative cancellation, then waits until every scoped task has exited.
+//
+// Declare the scope after the JobSystem, filesystem, store/cache and decoder
+// dependencies it protects, so the scope is destroyed first. Do not call
+// shutdown_and_wait() from one of the scope's own worker tasks. A blocking
+// filesystem read or decoder cannot be interrupted; shutdown waits for it.
+class AssetLoadScope final {
+private:
+    struct State final {
+        std::shared_ptr<std::atomic_bool> cancelled{
+            std::make_shared<std::atomic_bool>(false)};
+        mutable std::mutex mutex;
+        std::condition_variable idle;
+        std::size_t active{0};
+        bool shutting_down{false};
+    };
+
+    struct Lease final {
+        explicit Lease(std::shared_ptr<State> owner) : state(std::move(owner)) {}
+        ~Lease() {
+            if (!registered || !state) return;
+            std::lock_guard lock(state->mutex);
+            if (state->active > 0) --state->active;
+            if (state->active == 0) state->idle.notify_all();
+        }
+        std::shared_ptr<State> state;
+        bool registered{false};
+    };
+
+public:
+    AssetLoadScope() : state_(std::make_shared<State>()) {}
+    AssetLoadScope(const AssetLoadScope&) = delete;
+    AssetLoadScope& operator=(const AssetLoadScope&) = delete;
+    AssetLoadScope(AssetLoadScope&&) = delete;
+    AssetLoadScope& operator=(AssetLoadScope&&) = delete;
+
+    ~AssetLoadScope() { shutdown_and_wait(); }
+
+    // One acquired token represents one scoped async operation. Move it into
+    // load_async()/load_async_cached(); copies share the same lifetime lease.
+    [[nodiscard]] AssetCancellationToken acquire_token() {
+        auto lease = std::make_shared<Lease>(state_);
+        {
+            std::lock_guard lock(state_->mutex);
+            if (state_->shutting_down) {
+                return AssetCancellationToken(state_->cancelled);
+            }
+            ++state_->active;
+            lease->registered = true;
+        }
+        return AssetCancellationToken(state_->cancelled, std::move(lease));
+    }
+
+    // Idempotent. Waits for queued/running tasks holding acquired tokens.
+    void shutdown_and_wait() noexcept {
+        std::unique_lock lock(state_->mutex);
+        state_->shutting_down = true;
+        state_->cancelled->store(true, std::memory_order_release);
+        state_->idle.wait(lock, [this] { return state_->active == 0; });
+    }
+
+    [[nodiscard]] bool is_cancelled() const noexcept {
+        return state_->cancelled->load(std::memory_order_acquire);
+    }
+
+    [[nodiscard]] bool is_shutting_down() const noexcept {
+        std::lock_guard lock(state_->mutex);
+        return state_->shutting_down;
+    }
+
+    [[nodiscard]] std::size_t active_count() const noexcept {
+        std::lock_guard lock(state_->mutex);
+        return state_->active;
+    }
+
+private:
+    std::shared_ptr<State> state_;
 };
 
 template <typename T>
