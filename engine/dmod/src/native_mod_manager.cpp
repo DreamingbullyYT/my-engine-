@@ -1,11 +1,13 @@
 #include <dream/dmod/native_mod_manager.hpp>
 #include <dream/dmod/resolver.hpp>
 #include <dream/dmod/native_mod_package_installer.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <memory>
 #include <utility>
+#include <vector>
 
 namespace dream::dmod {
 namespace {
@@ -16,84 +18,176 @@ std::string bounded_string(const char* value, std::size_t maximum) {
     return size == maximum ? std::string{} : std::string(value, size);
 }
 }
+
 struct NativeModManager::LoadedMod final {
     Manifest manifest;
     NativeLibrary library;
     const NativeModExportsV1* exports{};
     void* context{};
     bool enabled{};
-    void release() noexcept {
-        if (exports && context) {
-            if (enabled && exports->disable) exports->disable(context);
-            enabled = false;
-            if (exports->destroy) exports->destroy(context);
-            context = nullptr;
-        }
-        exports = nullptr; library.close();
-    }
-    ~LoadedMod() { release(); }
+    bool disable_requested{};
+    bool unload_requested{};
 };
 
 NativeModManager::NativeModManager(NativeModHostApiV1 api) noexcept : host_api_(api) {}
 NativeModManager::~NativeModManager() { shutdown(); }
+
 bool NativeModManager::valid_host_api() const noexcept {
     return host_api_.struct_size >= sizeof(NativeModHostApiV1) &&
         host_api_.abi_version == native_mod_abi_v1;
 }
+
+void NativeModManager::begin_callback() noexcept {
+    ++callback_depth_;
+}
+
+void NativeModManager::end_callback() noexcept {
+    if (callback_depth_ > 0) --callback_depth_;
+    if (callback_depth_ == 0) process_deferred();
+}
+
+void NativeModManager::release(LoadedMod& mod) noexcept {
+    if (mod.exports == nullptr || mod.context == nullptr) {
+        mod.exports = nullptr;
+        mod.context = nullptr;
+        mod.library.close();
+        return;
+    }
+
+    begin_callback();
+    if (mod.enabled && mod.exports->disable != nullptr) {
+        mod.exports->disable(mod.context);
+    }
+    mod.enabled = false;
+    if (mod.exports->destroy != nullptr) {
+        mod.exports->destroy(mod.context);
+    }
+    mod.context = nullptr;
+    mod.exports = nullptr;
+    mod.library.close();
+    end_callback();
+}
+
+void NativeModManager::process_deferred() noexcept {
+    if (callback_depth_ != 0 || processing_deferred_) return;
+    processing_deferred_ = true;
+
+    for (;;) {
+        if (shutdown_requested_) {
+            shutdown_requested_ = false;
+            shutdown_ = true;
+            while (!mods_.empty()) {
+                auto mod = std::move(mods_.back());
+                mods_.pop_back();
+                release(*mod);
+            }
+            break;
+        }
+
+        bool processed = false;
+        for (std::size_t index = mods_.size(); index > 0; --index) {
+            auto& mod = *mods_[index - 1];
+            if (mod.disable_requested && mod.enabled) {
+                const std::string_view id = mod.manifest.id;
+                mod.disable_requested = false;
+                (void)disable(id);
+                processed = true;
+                break;
+            }
+        }
+        if (processed) continue;
+
+        for (std::size_t index = mods_.size(); index > 0; --index) {
+            auto& mod = *mods_[index - 1];
+            if (mod.unload_requested) {
+                const std::string_view id = mod.manifest.id;
+                (void)unload(id);
+                processed = true;
+                break;
+            }
+        }
+        if (!processed) break;
+    }
+
+    processing_deferred_ = false;
+}
+
 NativeModResult NativeModManager::load(
     const Manifest& manifest, const std::filesystem::path& path) {
-    if (shutdown_) return {NativeModError::Shutdown, "Mod manager is shut down."};
-    if (!valid_host_api()) return {NativeModError::InvalidHostApi, "Host API size or ABI is invalid."};
+    if (shutdown_ || shutdown_requested_)
+        return {NativeModError::Shutdown, "Mod manager is shut down."};
+    if (!valid_host_api())
+        return {NativeModError::InvalidHostApi, "Host API size or ABI is invalid."};
     const auto validation = validate_manifest(manifest);
-    if (!validation.valid()) return {NativeModError::InvalidManifest, validation.errors.front()};
+    if (!validation.valid())
+        return {NativeModError::InvalidManifest, validation.errors.front()};
     if (manifest.runtime_kind != ModRuntimeKind::Native || manifest.native_library.empty())
         return {NativeModError::WrongRuntime, "Manifest does not describe a native mod."};
     if (path.empty() || !path.is_absolute())
         return {NativeModError::InvalidLibraryPath, "Installed library path must be absolute."};
-    if (find(manifest.id)) return {NativeModError::DuplicateMod, "Mod is already loaded: " + manifest.id};
+    if (find(manifest.id) != nullptr)
+        return {NativeModError::DuplicateMod, "Mod is already loaded: " + manifest.id};
 
     auto mod = std::make_unique<LoadedMod>();
     mod->manifest = manifest;
+    const auto loaded_id = mod->manifest.id;
     std::string error;
     if (!mod->library.open(path, error))
         return {NativeModError::LibraryLoadFailed, std::move(error)};
     auto* symbol = mod->library.symbol(native_mod_entry_symbol_v1, error);
-    if (!symbol) return {NativeModError::EntryPointMissing, std::move(error)};
+    if (symbol == nullptr)
+        return {NativeModError::EntryPointMissing, std::move(error)};
     const auto entry = reinterpret_cast<NativeModEntryPointV1>(symbol);
     const auto* exports = entry();
-    if (!exports || exports->struct_size < sizeof(NativeModExportsV1) ||
-        exports->abi_version != native_mod_abi_v1 || !exports->create || !exports->destroy)
-        return {NativeModError::InvalidPluginDescriptor, "Plugin descriptor is incomplete or ABI-incompatible."};
+    if (exports == nullptr ||
+        exports->struct_size < sizeof(NativeModExportsV1) ||
+        exports->abi_version != native_mod_abi_v1 ||
+        exports->create == nullptr || exports->destroy == nullptr) {
+        return {NativeModError::InvalidPluginDescriptor,
+                "Plugin descriptor is incomplete or ABI-incompatible."};
+    }
 
     const auto id = bounded_string(exports->id, 129);
     const auto name = bounded_string(exports->name, 257);
     if (id.empty() || name.empty() || id != manifest.id ||
         exports->version_major != manifest.version.major ||
         exports->version_minor != manifest.version.minor ||
-        exports->version_patch != manifest.version.patch)
-        return {NativeModError::IdentityMismatch, "Library identity/version does not match manifest.toml."};
+        exports->version_patch != manifest.version.patch) {
+        return {NativeModError::IdentityMismatch,
+                "Library identity/version does not match manifest.toml."};
+    }
 
     const NativeModInfoV1 info{
         static_cast<std::uint32_t>(sizeof(NativeModInfoV1)),
         mod->manifest.id.c_str(), mod->manifest.name.c_str(),
         mod->manifest.version.major, mod->manifest.version.minor, mod->manifest.version.patch
     };
+
+    // Reserve before plugin code runs: storing the module after create() must
+    // not allocate or throw while the module is already executing.
+    mods_.reserve(mods_.size() + 1);
     mod->exports = exports;
+    begin_callback();
     mod->context = exports->create(&host_api_, &info);
-    if (!mod->context) {
+    if (mod->context == nullptr) {
         mod->exports = nullptr;
+        end_callback();
         return {NativeModError::CreationFailed, "Plugin create() returned null."};
     }
     mods_.push_back(std::move(mod));
+    end_callback();
+    if (shutdown_ || !is_loaded(loaded_id))
+        return {NativeModError::Shutdown, "Mod manager shut down during native module creation."};
     return {};
 }
+
 NativeModResult NativeModManager::install_and_load(
     const PackageReader& package, const std::filesystem::path& private_mod_root) {
-    if (shutdown_) return {NativeModError::Shutdown, "Mod manager is shut down."};
+    if (shutdown_ || shutdown_requested_)
+        return {NativeModError::Shutdown, "Mod manager is shut down."};
     const auto installed = NativeModPackageInstaller::install(package, private_mod_root);
-    if (!installed.success()) {
+    if (!installed.success())
         return {NativeModError::PackageInstallFailed, installed.error};
-    }
     return load(package.manifest(), installed.library_path);
 }
 
@@ -129,7 +223,7 @@ NativeModBatchResult NativeModManager::install_and_load_all(
 NativeModBatchResult NativeModManager::load_all(
     std::span<const NativeModPackage> packages, core::Version engine_api_version) {
     NativeModBatchResult result;
-    if (shutdown_) {
+    if (shutdown_ || shutdown_requested_) {
         result.error = NativeModError::Shutdown;
         result.message = "Mod manager is shut down.";
         return result;
@@ -174,7 +268,13 @@ NativeModBatchResult NativeModManager::load_all(
     result.load_order = resolution.load_order;
     std::vector<std::string> loaded;
     loaded.reserve(packages.size());
+    begin_callback();
     for (const auto& id : resolution.load_order) {
+        if (shutdown_requested_) {
+            result.error = NativeModError::Shutdown;
+            result.message = "Mod manager shut down during batch loading.";
+            break;
+        }
         const auto package = std::find_if(packages.begin(), packages.end(),
             [&id](const NativeModPackage& item) { return item.manifest.id == id; });
         if (package == packages.end()) {
@@ -197,31 +297,40 @@ NativeModBatchResult NativeModManager::load_all(
         }
         result.load_order.clear();
     }
+    end_callback();
     return result;
 }
 
 NativeModBatchResult NativeModManager::enable_all() {
     NativeModBatchResult result;
-    if (shutdown_) {
+    if (shutdown_ || shutdown_requested_) {
         result.error = NativeModError::Shutdown;
         result.message = "Mod manager is shut down.";
         return result;
     }
+
+    std::vector<std::string> ids;
+    ids.reserve(mods_.size());
+    for (const auto& mod : mods_) ids.push_back(mod->manifest.id);
+
     std::vector<std::string> enabled;
-    enabled.reserve(mods_.size());
-    for (const auto& mod : mods_) {
-        const auto enabled_result = enable(mod->manifest.id);
+    enabled.reserve(ids.size());
+    begin_callback();
+    for (const auto& id : ids) {
+        const auto enabled_result = enable(id);
         if (!enabled_result) {
             result.error = enabled_result.error;
-            result.message = mod->manifest.id + ": " + enabled_result.message;
+            result.message = id + ": " + enabled_result.message;
             for (auto it = enabled.rbegin(); it != enabled.rend(); ++it) {
                 (void)disable(*it);
             }
-            return result;
+            break;
         }
-        enabled.push_back(mod->manifest.id);
-        result.load_order.push_back(mod->manifest.id);
+        enabled.push_back(id);
+        result.load_order.push_back(id);
     }
+    if (result.error != NativeModError::None) result.load_order.clear();
+    end_callback();
     return result;
 }
 
@@ -230,54 +339,115 @@ NativeModManager::LoadedMod* NativeModManager::find(std::string_view id) noexcep
         [id](const auto& mod) { return mod->manifest.id == id; });
     return it == mods_.end() ? nullptr : it->get();
 }
+
 const NativeModManager::LoadedMod* NativeModManager::find(std::string_view id) const noexcept {
     const auto it = std::find_if(mods_.begin(), mods_.end(),
         [id](const auto& mod) { return mod->manifest.id == id; });
     return it == mods_.end() ? nullptr : it->get();
 }
+
 NativeModResult NativeModManager::enable(std::string_view id) {
-    if (shutdown_) return {NativeModError::Shutdown, "Mod manager is shut down."};
+    if (shutdown_ || shutdown_requested_)
+        return {NativeModError::Shutdown, "Mod manager is shut down."};
     auto* mod = find(id);
-    if (!mod) return {NativeModError::ModNotFound, "Native mod is not loaded."};
+    if (mod == nullptr || mod->unload_requested)
+        return {NativeModError::ModNotFound, "Native mod is not loaded."};
     if (mod->enabled) return {};
-    if (mod->exports->enable && mod->exports->enable(mod->context) == 0)
-        return {NativeModError::ActivationFailed, "Native mod rejected activation."};
-    mod->enabled = true; return {};
+    if (mod->exports->enable != nullptr) {
+        begin_callback();
+        const auto accepted = mod->exports->enable(mod->context) != 0;
+        if (accepted) mod->enabled = true;
+        end_callback();
+        if (!accepted)
+            return {NativeModError::ActivationFailed, "Native mod rejected activation."};
+        return {};
+    }
+    mod->enabled = true;
+    return {};
 }
+
 NativeModResult NativeModManager::disable(std::string_view id) {
-    if (shutdown_) return {NativeModError::Shutdown, "Mod manager is shut down."};
+    if (shutdown_ || shutdown_requested_)
+        return {NativeModError::Shutdown, "Mod manager is shut down."};
     auto* mod = find(id);
-    if (!mod) return {NativeModError::ModNotFound, "Native mod is not loaded."};
+    if (mod == nullptr || mod->unload_requested)
+        return {NativeModError::ModNotFound, "Native mod is not loaded."};
     if (!mod->enabled) return {};
-    if (mod->exports->disable) mod->exports->disable(mod->context);
-    mod->enabled = false; return {};
+    if (callback_depth_ != 0) {
+        mod->disable_requested = true;
+        return {};
+    }
+    mod->disable_requested = false;
+    if (mod->exports->disable != nullptr) {
+        begin_callback();
+        mod->exports->disable(mod->context);
+        mod->enabled = false;
+        end_callback();
+    } else {
+        mod->enabled = false;
+    }
+    return {};
 }
+
 NativeModResult NativeModManager::unload(std::string_view id) {
-    if (shutdown_) return {NativeModError::Shutdown, "Mod manager is shut down."};
+    if (shutdown_ || shutdown_requested_)
+        return {NativeModError::Shutdown, "Mod manager is shut down."};
     const auto it = std::find_if(mods_.begin(), mods_.end(),
         [id](const auto& mod) { return mod->manifest.id == id; });
-    if (it == mods_.end()) return {NativeModError::ModNotFound, "Native mod is not loaded."};
-    (*it)->release(); mods_.erase(it); return {};
+    if (it == mods_.end())
+        return {NativeModError::ModNotFound, "Native mod is not loaded."};
+    if (callback_depth_ != 0) {
+        (*it)->unload_requested = true;
+        (*it)->disable_requested = false;
+        return {};
+    }
+
+    auto victim = std::move(*it);
+    mods_.erase(it);
+    release(*victim);
+    return {};
 }
-bool NativeModManager::update(double dt) noexcept {
-    if (shutdown_ || !std::isfinite(dt) || dt < 0.0) return false;
-    for (auto& mod : mods_)
-        if (mod->enabled && mod->exports->update) mod->exports->update(mod->context, dt);
+
+bool NativeModManager::update(double delta_seconds) noexcept {
+    if (shutdown_ || shutdown_requested_ ||
+        !std::isfinite(delta_seconds) || delta_seconds < 0.0) return false;
+    begin_callback();
+    for (const auto& mod : mods_) {
+        if (shutdown_requested_) break;
+        if (mod->enabled && !mod->disable_requested && !mod->unload_requested &&
+            mod->exports != nullptr && mod->exports->update != nullptr) {
+            mod->exports->update(mod->context, delta_seconds);
+        }
+    }
+    end_callback();
     return true;
 }
+
 void NativeModManager::shutdown() noexcept {
-    if (shutdown_) return;
-    for (auto it = mods_.rbegin(); it != mods_.rend(); ++it) (*it)->release();
-    mods_.clear(); shutdown_ = true;
+    if (shutdown_ || shutdown_requested_) return;
+    shutdown_requested_ = true;
+    process_deferred();
 }
-bool NativeModManager::is_loaded(std::string_view id) const noexcept { return find(id) != nullptr; }
+
+bool NativeModManager::is_loaded(std::string_view id) const noexcept {
+    return find(id) != nullptr;
+}
+
 bool NativeModManager::is_enabled(std::string_view id) const noexcept {
-    const auto* mod = find(id); return mod && mod->enabled;
+    const auto* mod = find(id);
+    return mod != nullptr && mod->enabled && !mod->unload_requested;
 }
-std::size_t NativeModManager::loaded_count() const noexcept { return mods_.size(); }
+
+std::size_t NativeModManager::loaded_count() const noexcept {
+    return mods_.size();
+}
+
 std::vector<NativeModStatus> NativeModManager::statuses() const {
-    std::vector<NativeModStatus> result; result.reserve(mods_.size());
-    for (const auto& mod : mods_) result.push_back({mod->manifest.id, mod->enabled});
+    std::vector<NativeModStatus> result;
+    result.reserve(mods_.size());
+    for (const auto& mod : mods_)
+        result.push_back({mod->manifest.id, mod->enabled && !mod->unload_requested});
     return result;
 }
+
 } // namespace dream::dmod
