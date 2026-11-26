@@ -12,6 +12,7 @@ namespace {
 using namespace dream::runtime;
 using namespace dream::render;
 using namespace dream::platform;
+using namespace dream;
 using namespace dream::world;
 
 void require(bool condition, std::string_view message) {
