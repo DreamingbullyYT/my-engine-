@@ -1,6 +1,6 @@
 # Technical Audit
 
-**Status:** Core services, typed resource identity/ownership, keyed ResourceStore and DMod package parsing are CI-verified. ChaiScript remains a proof-only candidate; no script runtime has been approved for production use.
+**Status:** Core services, typed resource identity/ownership, keyed ResourceStore, bounded async asset loading and DMod package parsing are CI-verified. Asset dependency planning is implemented and awaiting CI. ChaiScript remains a proof-only candidate; no script runtime has been approved for production use.
 
 ## Core resource identity
 - Initial typed handle design is a tag-typed (index, generation) pair. Tag types prevent accidental interchange between domains such as textures and buffers at compile time.
@@ -23,6 +23,13 @@
 - Store and registry locks are acquired in a consistent outer-to-inner order; store callbacks must not re-enter the same store. ResourceRegistry enforces callback return type void and holds its shared lock for the callback duration.
 - The store does not interpret keys as filesystem paths and performs no I/O, decoding, async work, dependency tracking, cache eviction or GPU upload. Those are separate asset-pipeline responsibilities.
 - Linux GCC/Clang unit tests and Android ARM64 cross-compilation of the tests passed in [run 45716324493](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45716324493). Android result is compile-only, not device execution.
+
+## Initial asset loading and dependency planning
+- `load_async` validates the virtual path and key before I/O, requests a bounded read (64 MiB default, configurable), decodes a byte span on a JobSystem worker and registers the decoded value in ResourceStore.
+- The filesystem, ResourceStore and JobSystem are borrowed; all must outlive the submitted task. Decoder execution is on a worker thread, so shared decoder state must be synchronized by its owner. Futures propagate thrown exceptions.
+- `IFileSystem` implementations must check the file size against `max_bytes` before allocating the output buffer and report `FileError::TooLarge` when exceeded. The current fake filesystem test follows this contract; audit future concrete backends against it.
+- The asset dependency planner is a pure deterministic Kahn topological sort. It rejects invalid/duplicate keys and duplicate dependency declarations, reports missing required/optional dependencies, and returns no partial order on cycles. It does not execute loads or manage resource lifetimes/cache. Its CI verification is pending.
+- Bounded async loader tests passed Linux GCC/Clang and Android ARM64 cross-compilation in [run 45765620129](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45765620129). Android is compile-only, not physical-device execution.
 
 ## Engine references
 - Luanti: study runtime modding, API exposure, package lifecycle and server/client boundaries.
