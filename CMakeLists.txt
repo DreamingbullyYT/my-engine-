@@ -336,6 +336,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     set_target_properties(dream_render_contract_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.render.contracts COMMAND dream_render_contract_tests)
 
+    add_executable(dream_physics3d_broadphase_tests tests/physics3d/broadphase_tests.cpp)
+    target_link_libraries(dream_physics3d_broadphase_tests PRIVATE DreamEngine::Physics3D)
+    target_compile_features(dream_physics3d_broadphase_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_physics3d_broadphase_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.physics3d.broadphase COMMAND dream_physics3d_broadphase_tests)
+
     add_executable(dream_physics3d_geometry_tests tests/physics3d/geometry_tests.cpp)
     target_link_libraries(dream_physics3d_geometry_tests PRIVATE DreamEngine::Physics3D)
     target_compile_features(dream_physics3d_geometry_tests PRIVATE cxx_std_20)
