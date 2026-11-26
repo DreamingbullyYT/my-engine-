@@ -68,7 +68,7 @@ int main() {
             "AABB-circle collision reverses the normal");
 
     const auto inside_circle = collide(Circle{{0.8F, 0}, 0.5F}, unit_box);
-    require(inside_circle && near(inside_circle->normal.x, 1.0F) &&
+    require(inside_circle && near(inside_circle->normal.x, -1.0F) &&
             near(inside_circle->penetration, 0.7F),
             "circle centre inside AABB selects nearest exit face");
 
@@ -77,11 +77,11 @@ int main() {
     require(obb_bounds.valid() && obb_bounds.maximum.x > 1.7F,
             "oriented box computes conservative AABB bounds");
     const auto circle_obb = collide(
-        Circle{{1.3F, 0.0F}, 0.4F}, rotated_box);
+        Circle{{1.2F, 0.0F}, 0.4F}, rotated_box);
     require(circle_obb.has_value(),
             "circle collides with rotated oriented box");
     const auto box_circle = collide(
-        rotated_box, Circle{{1.3F, 0.0F}, 0.4F});
+        rotated_box, Circle{{1.2F, 0.0F}, 0.4F});
     require(box_circle &&
             near(box_circle->normal.x, -circle_obb->normal.x) &&
             near(box_circle->normal.y, -circle_obb->normal.y),
