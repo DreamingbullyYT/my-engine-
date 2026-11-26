@@ -81,6 +81,8 @@ enum class BodyCreateError : std::uint8_t {
     InvalidMaterial,
     InvalidDamping,
     InvalidCollider,
+    InvalidInertia,
+    InvalidWorldBounds,
     CapacityExhausted
 };
 
@@ -183,8 +185,29 @@ public:
         if (!handle) return {{}, BodyCreateError::CapacityExhausted};
 
         Body body = make_body(handle, std::move(description));
+        if (body.type == BodyType::Dynamic &&
+            (!std::isfinite(body.inverse_mass) ||
+             !std::isfinite(body.inertia) ||
+             !std::isfinite(body.inverse_inertia) ||
+             body.inverse_mass <= 0.0F ||
+             body.inertia <= 1.0e-12F ||
+             body.inverse_inertia <= 0.0F)) {
+            (void)handles_.release(handle);
+            return {{}, BodyCreateError::InvalidInertia};
+        }
+
         try {
-            bodies_.emplace(handle.index(), std::move(body));
+            const auto [inserted_at, inserted] =
+                bodies_.emplace(handle.index(), std::move(body));
+            if (!inserted) {
+                (void)handles_.release(handle);
+                return {{}, BodyCreateError::CapacityExhausted};
+            }
+            if (!update_proxy(inserted_at->second)) {
+                bodies_.erase(inserted_at);
+                (void)handles_.release(handle);
+                return {{}, BodyCreateError::InvalidWorldBounds};
+            }
         } catch (...) {
             (void)handles_.release(handle);
             throw;
@@ -222,9 +245,15 @@ public:
         auto* body = find_body(handle);
         if (body == nullptr || !finite(position) ||
             !std::isfinite(rotation_radians)) return false;
+        const Vec2 previous_position = body->position;
+        const float previous_rotation = body->rotation;
         body->position = position;
         body->rotation = rotation_radians;
-        return update_proxy(*body);
+        if (update_proxy(*body)) return true;
+
+        body->position = previous_position;
+        body->rotation = previous_rotation;
+        return false;
     }
 
     [[nodiscard]] bool set_velocity(
