@@ -450,5 +450,5 @@ jobs:
       - name: Run DMod concurrency test under ThreadSanitizer
         env:
           TSAN_OPTIONS: halt_on_error=1:history_size=7
-        run: ctest --test-dir build-tsan --output-on-failure -R '^dream\.dmod\.native_runtime
+        run: ctest --test-dir build-tsan --output-on-failure -R '^dream\.dmod\.native_runtime$'
 
