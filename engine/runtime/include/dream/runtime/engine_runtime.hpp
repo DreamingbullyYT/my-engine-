@@ -244,7 +244,7 @@ public:
             world::SystemPhase::PreUpdate,
             std::numeric_limits<std::int32_t>::min(),
             [this](world::World& world, const world::SystemContext& context) {
-                last_animation_report_ = animation_runtime_.update(
+                (void)animation_runtime_.update(
                     world, static_cast<double>(context.delta_seconds));
             });
 
@@ -536,8 +536,6 @@ private:
         result.physics3d_error = last_physics3d_error_;
         result.physics3d_contacts = frame_physics3d_contacts_;
         result.physics3d_contact_events = frame_physics3d_events_;
-        if (last_animation_report_.error != animation::AnimationError::None)
-            saturating_add(result.system_failures, std::size_t{1});
         return result;
     }
 
