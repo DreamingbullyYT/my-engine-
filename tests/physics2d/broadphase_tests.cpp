@@ -1,5 +1,7 @@
 #include <dream/physics2d/broadphase.hpp>
 
+#include <algorithm>
+
 #include <cstdlib>
 #include <iostream>
 #include <string_view>
@@ -29,6 +31,11 @@ int main() {
             "Y-separated proxy inserts");
     require(broadphase.size() == 4U, "proxy count tracks inserts");
 
+    const auto aabb_candidates=broadphase.query_aabb(Aabb{{0,0},{2,2}});
+    require(aabb_candidates==std::vector<ColliderProxyId>{10U,20U},
+        "AABB query returns exact 2D candidates in stable ID order");
+    require(broadphase.query_aabb(Aabb{{2,0},{1,1}}).empty(),
+        "invalid AABB query is rejected");
     const auto pairs = broadphase.compute_pairs();
     require(pairs.pairs == std::vector<BroadphasePair>{{10U, 20U}},
             "sweep-and-prune returns only overlapping AABB pairs");
@@ -42,6 +49,10 @@ int main() {
 
     require(broadphase.upsert(30U, Aabb{{2, 0}, {4, 1}}) == BroadphaseError::None,
             "upsert updates an existing proxy");
+    const auto updated_candidates=broadphase.query_aabb(Aabb{{2,0},{3,1}});
+    require(std::find(updated_candidates.begin(),updated_candidates.end(),30U)!=
+                updated_candidates.end(),
+        "updated bounds invalidate and rebuild the AABB index");
     const auto touching_pairs = broadphase.compute_pairs();
     require(touching_pairs.pairs ==
                 std::vector<BroadphasePair>{{10U, 20U}, {10U, 30U}, {20U, 30U}},
