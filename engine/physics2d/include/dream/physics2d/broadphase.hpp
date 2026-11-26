@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
+#include <limits>
 #include <map>
 #include <mutex>
 #include <shared_mutex>
@@ -47,12 +49,15 @@ public:
         if (!bounds.valid()) return BroadphaseError::InvalidBounds;
         std::unique_lock lock(mutex_);
         proxies_.insert_or_assign(id, bounds);
+        index_dirty_=true;
         return BroadphaseError::None;
     }
 
     [[nodiscard]] bool remove(ColliderProxyId id) {
         std::unique_lock lock(mutex_);
-        return proxies_.erase(id) != 0U;
+        const bool removed=proxies_.erase(id)!=0U;
+        index_dirty_=index_dirty_||removed;
+        return removed;
     }
 
     [[nodiscard]] bool contains(ColliderProxyId id) const {
@@ -68,6 +73,9 @@ public:
     void clear() {
         std::unique_lock lock(mutex_);
         proxies_.clear();
+        ordered_.clear();
+        prefix_maximum_x_.clear();
+        index_dirty_=false;
     }
 
     [[nodiscard]] BroadphaseResult compute_pairs() const {
@@ -129,9 +137,60 @@ public:
         return result;
     }
 
+public:
+    // Stable-ID AABB candidate query backed by a cached interval index.
+    // The exclusive lock is held only while rebuilding/reading the index;
+    // exact shape tests are performed by the calling physics world.
+    [[nodiscard]] std::vector<ColliderProxyId> query_aabb(const Aabb& bounds) const {
+        std::vector<ColliderProxyId> result;
+        if(!bounds.valid()) return result;
+        std::unique_lock lock(mutex_);
+        ensure_interval_index_locked();
+
+        const auto first=std::lower_bound(
+            prefix_maximum_x_.begin(),prefix_maximum_x_.end(),bounds.minimum.x);
+        if(first==prefix_maximum_x_.end()) return result;
+        const auto first_index=static_cast<std::size_t>(
+            std::distance(prefix_maximum_x_.begin(),first));
+        for(std::size_t i=first_index;i<ordered_.size();++i) {
+            const auto& proxy=ordered_[i];
+            if(proxy.bounds.minimum.x>bounds.maximum.x) break;
+            if(intersects(bounds,proxy.bounds)) result.push_back(proxy.id);
+        }
+        std::sort(result.begin(),result.end());
+        return result;
+    }
+
 private:
+    struct Proxy final {
+        ColliderProxyId id{0U};
+        Aabb bounds{};
+    };
+
+    void ensure_interval_index_locked() const {
+        if(!index_dirty_) return;
+        ordered_.clear();
+        ordered_.reserve(proxies_.size());
+        for(const auto& [id,bounds]:proxies_) ordered_.push_back({id,bounds});
+        std::sort(ordered_.begin(),ordered_.end(),[](const Proxy& a,const Proxy& b) {
+            if(a.bounds.minimum.x!=b.bounds.minimum.x)
+                return a.bounds.minimum.x<b.bounds.minimum.x;
+            return a.id<b.id;
+        });
+        prefix_maximum_x_.resize(ordered_.size());
+        float maximum_x=-std::numeric_limits<float>::infinity();
+        for(std::size_t i=0U;i<ordered_.size();++i) {
+            maximum_x=std::max(maximum_x,ordered_[i].bounds.maximum.x);
+            prefix_maximum_x_[i]=maximum_x;
+        }
+        index_dirty_=false;
+    }
+
     mutable std::shared_mutex mutex_;
     std::map<ColliderProxyId, Aabb> proxies_;
+    mutable bool index_dirty_{true};
+    mutable std::vector<Proxy> ordered_;
+    mutable std::vector<float> prefix_maximum_x_;
 };
 
 } // namespace dream::physics2d
