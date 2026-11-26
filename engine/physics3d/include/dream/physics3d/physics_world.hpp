@@ -146,6 +146,20 @@ struct PhysicsStepReport3D final {
     }
 };
 
+struct Ray3D final {
+    Vec3 origin{};
+    Vec3 direction{0.0F,0.0F,-1.0F};
+    float maximum_distance{1000.0F};
+};
+
+struct RaycastHit3D final {
+    BodyHandle3D body{};
+    float distance{0.0F};
+    Vec3 point{};
+    Vec3 normal{};
+    bool sensor{false};
+};
+
 // A fixed-step, single-thread-owned 3D rigid-body world. It supports sphere and
 // oriented-box colliders, a deterministic 3D sweep-and-prune broadphase,
 // sequential normal/friction impulses and bounded positional correction.
@@ -247,6 +261,74 @@ public:
     [[nodiscard]] bool set_gravity(Vec3 gravity) noexcept {
         if(!finite(gravity)) return false;
         settings_.gravity=gravity;return true;
+    }
+
+    // Direction is normalized internally; distance is therefore measured in
+    // world units even when the caller provides a non-unit direction.
+    [[nodiscard]] std::optional<RaycastHit3D> raycast(const Ray3D& ray) const noexcept {
+        if(!finite(ray.origin)||!finite(ray.direction)||
+           !std::isfinite(ray.maximum_distance)||ray.maximum_distance<0.0F||
+           length_squared(ray.direction)<=1.0e-12F)return std::nullopt;
+        const Vec3 direction=normalized(ray.direction);
+        std::optional<RaycastHit3D> closest;
+        for(const auto& [index,body]:bodies_) {
+            (void)index;
+            const auto hit=raycast_shape(ray.origin,direction,
+                ray.maximum_distance,world_shape(body));
+            if(!hit)continue;
+            if(!closest||hit->distance<closest->distance||
+               (hit->distance==closest->distance&&
+                body.handle.index()<closest->body.index())) {
+                closest=RaycastHit3D{
+                    body.handle,hit->distance,hit->point,hit->normal,body.sensor};
+            }
+        }
+        return closest;
+    }
+
+    [[nodiscard]] std::vector<RaycastHit3D> raycast_all(const Ray3D& ray) const {
+        std::vector<RaycastHit3D> hits;
+        if(!finite(ray.origin)||!finite(ray.direction)||
+           !std::isfinite(ray.maximum_distance)||ray.maximum_distance<0.0F||
+           length_squared(ray.direction)<=1.0e-12F)return hits;
+        const Vec3 direction=normalized(ray.direction);
+        hits.reserve(bodies_.size());
+        for(const auto& [index,body]:bodies_) {
+            (void)index;
+            const auto hit=raycast_shape(ray.origin,direction,
+                ray.maximum_distance,world_shape(body));
+            if(hit)hits.push_back({
+                body.handle,hit->distance,hit->point,hit->normal,body.sensor});
+        }
+        std::sort(hits.begin(),hits.end(),[](const auto& a,const auto& b) {
+            if(a.distance!=b.distance)return a.distance<b.distance;
+            return a.body.index()<b.body.index();
+        });
+        return hits;
+    }
+
+    [[nodiscard]] std::vector<BodyHandle3D> overlap_sphere(
+        Sphere3D query) const {
+        std::vector<BodyHandle3D> overlaps;
+        if(!query.valid())return overlaps;
+        const WorldShape shape=query;
+        for(const auto& [index,body]:bodies_) {
+            (void)index;
+            if(collide_shapes(shape,world_shape(body)))overlaps.push_back(body.handle);
+        }
+        return overlaps;
+    }
+
+    [[nodiscard]] std::vector<BodyHandle3D> overlap_box(
+        OrientedBox3D query) const {
+        std::vector<BodyHandle3D> overlaps;
+        if(!query.valid())return overlaps;
+        const WorldShape shape=query;
+        for(const auto& [index,body]:bodies_) {
+            (void)index;
+            if(collide_shapes(shape,world_shape(body)))overlaps.push_back(body.handle);
+        }
+        return overlaps;
     }
 
     [[nodiscard]] PhysicsStepReport3D update(double delta_seconds) {
@@ -516,6 +598,73 @@ private:
         return (a.mask_bits&b.category_bits)!=0U&&
             (b.mask_bits&a.category_bits)!=0U;
     }
+    struct ShapeRayHit final {
+        float distance{0.0F};
+        Vec3 point{};
+        Vec3 normal{};
+    };
+
+    [[nodiscard]] static std::optional<ShapeRayHit> raycast_shape(
+        Vec3 origin,Vec3 direction,float maximum_distance,
+        const WorldShape& shape) noexcept {
+        return std::visit([&](const auto& value)->std::optional<ShapeRayHit> {
+            using T=std::decay_t<decltype(value)>;
+            if constexpr(std::is_same_v<T,Sphere3D>) {
+                const Vec3 offset=origin-value.center;
+                const float b=dot(offset,direction);
+                const float c=dot(offset,offset)-value.radius*value.radius;
+                const float discriminant=b*b-c;
+                if(discriminant<0.0F)return std::nullopt;
+                const float root=std::sqrt(std::max(0.0F,discriminant));
+                float distance=-b-root;
+                if(distance<0.0F)distance=-b+root;
+                if(distance<0.0F||distance>maximum_distance)return std::nullopt;
+                const Vec3 point=origin+direction*distance;
+                return ShapeRayHit{distance,point,normalized(point-value.center)};
+            } else {
+                const Vec3 relative=origin-value.center;
+                float near_distance=-std::numeric_limits<float>::infinity();
+                float far_distance=std::numeric_limits<float>::infinity();
+                Vec3 near_normal{},far_normal{};
+                const std::array<float,3> extents{
+                    value.half_extents.x,value.half_extents.y,value.half_extents.z};
+                for(std::size_t axis_index=0;axis_index<3U;++axis_index) {
+                    const Vec3 axis=value.axes[axis_index];
+                    const float local_origin=dot(relative,axis);
+                    const float local_direction=dot(direction,axis);
+                    if(std::abs(local_direction)<=1.0e-8F) {
+                        if(local_origin < -extents[axis_index]||
+                           local_origin > extents[axis_index])return std::nullopt;
+                        continue;
+                    }
+                    float first=(-extents[axis_index]-local_origin)/local_direction;
+                    float second=(extents[axis_index]-local_origin)/local_direction;
+                    Vec3 first_normal=-axis,second_normal=axis;
+                    if(first>second) {
+                        std::swap(first,second);
+                        std::swap(first_normal,second_normal);
+                    }
+                    if(first>near_distance) {
+                        near_distance=first;
+                        near_normal=first_normal;
+                    }
+                    if(second<far_distance) {
+                        far_distance=second;
+                        far_normal=second_normal;
+                    }
+                    if(near_distance>far_distance)return std::nullopt;
+                }
+                if(far_distance<0.0F)return std::nullopt;
+                const bool starts_inside=near_distance<0.0F;
+                const float distance=starts_inside?far_distance:near_distance;
+                if(distance<0.0F||distance>maximum_distance)return std::nullopt;
+                const Vec3 point=origin+direction*distance;
+                return ShapeRayHit{
+                    distance,point,starts_inside?far_normal:near_normal};
+            }
+        },shape);
+    }
+
     [[nodiscard]] static std::optional<ContactManifold3D> collide_shapes(
         const WorldShape& a,const WorldShape& b) noexcept {
         return std::visit([](const auto& left,const auto& right)

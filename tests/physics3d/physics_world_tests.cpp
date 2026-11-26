@@ -113,5 +113,50 @@ int main() {
         "negative delta is rejected");
     require(world.update(0.251).error==PhysicsStepError3D::DeltaTooLarge,
         "oversized delta is rejected");
+
+
+    PhysicsWorld3D queries(PhysicsSettings3D{.gravity={0,0,0}});
+    BodyDescription3D query_sphere_desc;
+    query_sphere_desc.type=BodyType3D::Static;
+    query_sphere_desc.position={0,0,0};
+    query_sphere_desc.collider=SphereCollider3D{{},1.0F};
+    const auto query_sphere=queries.create_body(query_sphere_desc);
+    require(static_cast<bool>(query_sphere),"query sphere body creates");
+    const auto sphere_hit=queries.raycast(Ray3D{{0,0,3},{0,0,-2},10});
+    require(sphere_hit&&sphere_hit->body==query_sphere.handle&&
+            near(sphere_hit->distance,2.0F)&&near(sphere_hit->normal.z,1.0F),
+        "raycast normalizes direction and finds the nearest sphere surface");
+    const auto inside_hit=queries.raycast(Ray3D{{0,0,0},{1,0,0},10});
+    require(inside_hit&&near(inside_hit->distance,1.0F)&&
+            near(inside_hit->normal.x,1.0F),
+        "ray starting inside a sphere reports the exit surface");
+    const auto all_hits=queries.raycast_all(Ray3D{{0,0,3},{0,0,-1},10});
+    require(all_hits.size()==1U&&all_hits[0].body==query_sphere.handle,
+        "raycast-all returns stable, distance-sorted hits");
+    const auto sphere_overlaps=queries.overlap_sphere(Sphere3D{{1.5F,0,0},0.75F});
+    require(sphere_overlaps.size()==1U&&sphere_overlaps[0]==query_sphere.handle,
+        "sphere overlap query finds intersecting bodies");
+    const auto box_overlaps=queries.overlap_box(
+        OrientedBox3D{{0,0,0},{0.5F,0.5F,0.5F},{}});
+    require(box_overlaps.size()==1U&&box_overlaps[0]==query_sphere.handle,
+        "oriented-box overlap query finds intersecting spheres");
+    require(!queries.raycast(Ray3D{{0,0,3},{0,0,0},10})&&
+            !queries.raycast(Ray3D{{0,0,3},{0,0,-1},-1}),
+        "invalid ray direction and range are rejected");
+
+    PhysicsWorld3D rotated_queries(PhysicsSettings3D{.gravity={0,0,0}});
+    BodyDescription3D rotated_box_desc;
+    rotated_box_desc.type=BodyType3D::Static;
+    rotated_box_desc.position={0,0,0};
+    constexpr float half_angle=0.382683432365F;
+    rotated_box_desc.collider=BoxCollider3D{
+        {},{1.0F,0.5F,0.5F},{0,half_angle,0,0.923879532511F}};
+    const auto rotated_box=rotated_queries.create_body(rotated_box_desc);
+    require(static_cast<bool>(rotated_box),"rotated query box creates");
+    const auto rotated_hit=rotated_queries.raycast(
+        Ray3D{{0,0,3},{0,0,-1},10});
+    require(rotated_hit&&rotated_hit->body==rotated_box.handle&&
+            near(rotated_hit->distance,2.2929F,0.05F),
+        "raycast intersects an oriented box using its world-space axes");
     return EXIT_SUCCESS;
 }
