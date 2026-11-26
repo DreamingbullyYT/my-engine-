@@ -400,7 +400,9 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     )
 
     add_executable(dream_dmod_native_mod_runtime_tests tests/dmod/native_mod_runtime_tests.cpp)
-    target_link_libraries(dream_dmod_native_mod_runtime_tests PRIVATE DreamEngine::DMod)
+    target_link_libraries(dream_dmod_native_mod_runtime_tests PRIVATE
+        DreamEngine::DMod DreamEngine::Miniz
+    )
     target_compile_features(dream_dmod_native_mod_runtime_tests PRIVATE cxx_std_20)
     target_compile_definitions(dream_dmod_native_mod_runtime_tests PRIVATE
         DREAM_TEST_NATIVE_MOD_PATH="$<TARGET_FILE:dream_dmod_test_native_plugin>"

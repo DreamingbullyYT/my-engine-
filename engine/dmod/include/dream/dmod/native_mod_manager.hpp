@@ -1,6 +1,7 @@
 #pragma once
 #include <dream/dmod/manifest.hpp>
 #include <dream/dmod/native_library.hpp>
+#include <dream/dmod/package_reader.hpp>
 #include <dream/core/version.hpp>
 #include <dream/dmod/native_mod_api.hpp>
 #include <filesystem>
@@ -14,7 +15,7 @@ namespace dream::dmod {
 enum class NativeModError {
     None, InvalidHostApi, InvalidManifest, WrongRuntime, InvalidLibraryPath,
     DuplicateMod, LibraryLoadFailed, EntryPointMissing, InvalidPluginDescriptor,
-    IdentityMismatch, CreationFailed, ModNotFound, ActivationFailed, Shutdown
+    IdentityMismatch, CreationFailed, ModNotFound, ActivationFailed, PackageInstallFailed, Shutdown
 };
 struct NativeModResult final {
     NativeModError error{NativeModError::None};
@@ -47,6 +48,14 @@ public:
     NativeModManager& operator=(const NativeModManager&) = delete;
 
     [[nodiscard]] NativeModResult load(const Manifest&, const std::filesystem::path& installed_library_path);
+    // Installs the declared library from a validated .dmod archive, then loads it.
+    [[nodiscard]] NativeModResult install_and_load(
+        const PackageReader& package, const std::filesystem::path& private_mod_root);
+    // Installs all packages first, then resolves and loads the native dependency graph.
+    [[nodiscard]] NativeModBatchResult install_and_load_all(
+        std::span<const PackageReader* const> packages,
+        const std::filesystem::path& private_mod_root,
+        core::Version engine_api_version);
     // Resolves dependencies, loads in deterministic dependency-first order,
     // and unloads every module added by this call if any load fails.
     [[nodiscard]] NativeModBatchResult load_all(
