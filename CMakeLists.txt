@@ -294,9 +294,8 @@ set_target_properties(dream_core PROPERTIES
 )
 
 if(DREAM_BUILD_EXAMPLES AND NOT ANDROID)
-    if(NOT DREAM_BUILD_TESTS)
-        enable_testing()
-    endif()
+    # enable_testing must precede add_test calls in the examples subdirectory.
+    enable_testing()
     add_subdirectory(examples)
 endif()
 
