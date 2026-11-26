@@ -27,6 +27,10 @@ int main() {
     std::int32_t counter = 0;
     require(host.expose("dream.test.counter", 1, counter), "expose host object");
     NativeModManager manager(host.api());
+    bool unload_on_update = false;
+    require(host.expose("dream.test.manager", 1, manager), "expose manager to trusted native mod");
+    require(host.expose("dream.test.unload_on_update", 1, unload_on_update),
+            "expose native mod self-unload switch");
     require(manager.valid_host_api(), "host ABI valid");
 
     Manifest manifest;
@@ -70,10 +74,12 @@ int main() {
     require(manager.update(0.25), "run update");
     require(counter == 110, "update callback");
     require(!manager.update(-1.0), "reject negative delta");
-    require(static_cast<bool>(manager.disable("test.native")), "disable mod");
-    require(counter == 1110 && !manager.is_enabled("test.native"), "disable callback");
-    require(static_cast<bool>(manager.unload("test.native")), "unload module");
-    require(counter == 11110 && manager.loaded_count() == 0, "destroy before dlclose");
+    unload_on_update = true;
+    require(manager.update(0.25), "run update which requests self-unload");
+    require(!manager.is_loaded("test.native") && manager.loaded_count() == 0,
+            "self-unload is deferred until the native callback returns");
+    require(counter == 11211,
+            "deferred self-unload calls disable and destroy after update returns");
     require(!manager.enable("missing.mod"), "reject unknown module");
     manager.shutdown();
     require(!manager.update(0.01), "reject updates after shutdown");
@@ -121,19 +127,27 @@ int main() {
     std::filesystem::remove_all(install_root);
     std::filesystem::create_directories(install_root);
 
-    counter = 0;
-    NativeModManager installed_manager(host.api());
+    NativeModHost installed_host;
+    std::int32_t installed_counter = 0;
+    bool installed_unload_request = false;
+    require(installed_host.expose("dream.test.counter", 1, installed_counter),
+            "expose package test counter");
+    NativeModManager installed_manager(installed_host.api());
+    require(installed_host.expose("dream.test.manager", 1, installed_manager),
+            "expose package test manager");
+    require(installed_host.expose("dream.test.unload_on_update", 1, installed_unload_request),
+            "expose package test unload flag");
     const auto package_load = installed_manager.install_and_load(*package, install_root);
     require(static_cast<bool>(package_load),
             "install library from .dmod and load it without rebuilding engine");
-    require(counter == 1 && installed_manager.is_loaded("test.native"),
+    require(installed_counter == 1 && installed_manager.is_loaded("test.native"),
             "installed native module can reach live engine host interface");
     require(static_cast<bool>(installed_manager.enable("test.native")),
             "enable installed .dmod module");
     require(installed_manager.update(0.016), "update installed .dmod module");
     require(static_cast<bool>(installed_manager.unload("test.native")),
             "unload installed .dmod module");
-    require(counter == 11110,
+    require(installed_counter == 11110,
             "installed package executes create, enable, update, disable and destroy lifecycle");
     installed_manager.shutdown();
     std::filesystem::remove_all(install_root);
