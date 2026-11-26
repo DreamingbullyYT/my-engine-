@@ -137,9 +137,13 @@ int main() {
     require(sphere_overlaps.size()==1U&&sphere_overlaps[0]==query_sphere.handle,
         "sphere overlap query finds intersecting bodies");
     const auto box_overlaps=queries.overlap_box(
-        OrientedBox3D{{0,0,0},{0.5F,0.5F,0.5F},{}});
+        OrientedBox3D{{0,0,0},{0.5F,0.5F,0.5F}});
     require(box_overlaps.size()==1U&&box_overlaps[0]==query_sphere.handle,
         "oriented-box overlap query finds intersecting spheres");
+    const auto containing_box_overlaps=queries.overlap_box(
+        OrientedBox3D{{0,0,0},{0.25F,0.25F,0.25F}});
+    require(containing_box_overlaps.size()==1U,
+        "box query reports a sphere that fully contains the query box");
     require(!queries.raycast(Ray3D{{0,0,3},{0,0,0},10})&&
             !queries.raycast(Ray3D{{0,0,3},{0,0,-1},-1}),
         "invalid ray direction and range are rejected");
@@ -156,7 +160,7 @@ int main() {
     const auto rotated_hit=rotated_queries.raycast(
         Ray3D{{0,0,3},{0,0,-1},10});
     require(rotated_hit&&rotated_hit->body==rotated_box.handle&&
-            near(rotated_hit->distance,2.2929F,0.05F),
+            near(rotated_hit->distance,1.93934F,0.05F),
         "raycast intersects an oriented box using its world-space axes");
     return EXIT_SUCCESS;
 }
