@@ -189,10 +189,15 @@ bool NativeFileSystem::remove_file(std::string_view path,FileError& error){
 bool NativeFileSystem::list_directory(std::string_view path,
     std::vector<DirectoryEntry>& output,FileError& error)const{
     if(!valid()){error=FileError::Io;return false;}
-    std::vector<std::string> parts;
-    if(!split(path,parts)){error=FileError::InvalidPath;return false;}
     Fd directory;
-    if(!open_dirs(root_fd_,parts,parts.size(),directory,error))return false;
+    if(path.empty()){
+        directory=Fd(::dup(root_fd_));
+        if(directory.value<0){error=from_errno(errno);return false;}
+    }else{
+        std::vector<std::string> parts;
+        if(!split(path,parts)){error=FileError::InvalidPath;return false;}
+        if(!open_dirs(root_fd_,parts,parts.size(),directory,error))return false;
+    }
     const int copy=::dup(directory.value);
     if(copy<0){error=from_errno(errno);return false;}
     DIR* dir=::fdopendir(copy);

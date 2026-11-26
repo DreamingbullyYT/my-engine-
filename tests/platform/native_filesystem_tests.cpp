@@ -65,6 +65,9 @@ int main(){
     assert(!fs.read_file("linked.txt",output,128,error));
     assert(fs.remove_file("linked.txt",error));
     entries.clear();
+    assert(fs.list_directory("",entries,error));
+    assert(entries.size()==1&&entries[0].name=="save"&&entries[0].info.is_directory);
+    entries.clear();
     assert(!fs.list_directory(".",entries,error)&&error==FileError::InvalidPath);
     assert(fs.remove_file("save/world/region/data.bin",error));
     assert(fs.exists("save/world/region/data.bin",exists,error)&&!exists);

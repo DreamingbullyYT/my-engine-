@@ -55,6 +55,7 @@ public:
         std::string_view path, FileError& error) = 0;
     [[nodiscard]] virtual bool remove_file(
         std::string_view path, FileError& error) = 0;
+    // An empty path passed to list_directory enumerates the backend root.
     [[nodiscard]] virtual bool list_directory(
         std::string_view path, std::vector<DirectoryEntry>& output,
         FileError& error) const = 0;
