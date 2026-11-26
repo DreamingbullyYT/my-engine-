@@ -130,6 +130,14 @@ add_library(dream_dmod STATIC
 )
 add_library(DreamEngine::DMod ALIAS dream_dmod)
 
+add_library(dream_audio INTERFACE)
+add_library(DreamEngine::Audio ALIAS dream_audio)
+target_include_directories(dream_audio INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/audio/include>
+)
+target_compile_features(dream_audio INTERFACE cxx_std_20)
+target_link_libraries(dream_audio INTERFACE DreamEngine::Core)
+
 add_library(dream_render INTERFACE)
 add_library(DreamEngine::Render ALIAS dream_render)
 target_include_directories(dream_render INTERFACE
@@ -317,6 +325,12 @@ if(DREAM_BUILD_TESTS AND NOT ANDROID)
     target_compile_features(dream_assets_dependency_graph_tests PRIVATE cxx_std_20)
     set_target_properties(dream_assets_dependency_graph_tests PROPERTIES CXX_EXTENSIONS OFF)
     add_test(NAME dream.assets.dependency_graph COMMAND dream_assets_dependency_graph_tests)
+
+    add_executable(dream_audio_mixer_tests tests/audio/audio_mixer_tests.cpp)
+    target_link_libraries(dream_audio_mixer_tests PRIVATE DreamEngine::Audio)
+    target_compile_features(dream_audio_mixer_tests PRIVATE cxx_std_20)
+    set_target_properties(dream_audio_mixer_tests PROPERTIES CXX_EXTENSIONS OFF)
+    add_test(NAME dream.audio.mixer COMMAND dream_audio_mixer_tests)
 
     add_executable(dream_runtime_tests tests/runtime/engine_runtime_tests.cpp)
     target_link_libraries(dream_runtime_tests PRIVATE DreamEngine::Runtime)
