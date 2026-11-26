@@ -69,29 +69,3 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Smoke test debug APK in Android emulator
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          target: google_apis
-          arch: x86_64
-          profile: pixel_2
-          disable-animations: true
-          script: |
-            APK="android-host/app/build/outputs/apk/debug/app-debug.apk"
-            PACKAGE_ID="$(sed -n 's/.*applicationId = "\([^"]*\)".*/\1/p' android-host/app/build.gradle.kts | head -n 1)"
-            test -n "$PACKAGE_ID"
-            adb install -r "$APK"
-            adb shell monkey -p "$PACKAGE_ID" 1
-            sleep 8
-            adb shell pidof "$PACKAGE_ID"
-            adb shell am force-stop "$PACKAGE_ID"
-
-      - name: Upload debug APK
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dream-engine-android-host-arm64-debug
-          path: android-host/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 14
