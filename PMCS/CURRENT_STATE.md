@@ -148,3 +148,10 @@ This is an accepted design decision, not an implementation claim. The initial M1
 - CodeGraphContext workflow run #145 passed: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46042222729.
 - Actual GDScript map for source commit 2f2171cb8198771aadfc188ebfacf83122e5826c contains 2 files, 6 functions, and 0 syntax-error files. The map resolves _ready() and _on_test_touch_pressed() calls to _update_touch_count().
 - See PMCS/CODE_MEMORY.md, PMCS/CODE_MAP.md, and PMCS/GDSCRIPT_CODE_MAP.md. Native CodeGraphContext indexing is skipped until native/source files in its supported language set exist.
+
+## 2026-11-27 — main-only development policy
+The user explicitly instructed that all future work be done directly on `main`, with no feature branches or routine pull requests. This is now mandatory for implementation, fixes, docs, tests, and workflows. Make small tested commits on main and update PMCS alongside meaningful changes.
+
+One-time transition exception: M2 was already implemented on branch `m2/gdextension-proof` and PR #1 was opened before this instruction. Wait for all required M2 CI checks to pass, then merge that existing PR into main. Do not merge while checks are pending or failing, and do not bypass checks. After the M2 transition, all work stays on main.
+
+At the time this policy was recorded, M2 Actions run 46050048878 was still compiling the Linux and Android Dream Runtime libraries. The test/import and APK export steps had not yet run. M2 is not verified until CI completes successfully; Android device loading remains unverified until the user tests the APK.
