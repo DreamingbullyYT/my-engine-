@@ -64,3 +64,17 @@ Consequences:
 - Make stations and colony ships modular and extensible through the game host and mod API.
 - Their survival and operation depend on real installed systems, resources, and logistics; no free power, supplies, or guaranteed safety.
 - These are design requirements only; no implementation is implied.
+
+
+## D-013 — Autonomous mobile-colony fleets and permission-gated planetary expansion
+Status: ACCEPTED — 2026-11-27.
+
+A mobile colony ship/megaship has its own mayor and can develop as a mobile settlement. Its administration may design, select, and construct any ship types for which it has the required designs, technology, shipyard capability, workforce, materials, components, energy, fuel, and time. Its fleet choices are driven by its needs and plans; this is not free or instantaneous ship creation.
+
+After the civilization has explored roughly 5–6 star systems, a mobile-colony mayor may ask the player for permission to begin autonomous expansion to additional planets. The threshold is a progression/balance target, not a reason to bypass discovery, travel, or logistics. The player must explicitly approve this expansion policy; the mayor does not silently colonize new worlds before permission.
+
+Automatic planetary colonization is restricted to worlds assessed as genuinely habitable for the colony's current biology/technology and available infrastructure. The assessment must account for surface or atmospheric conditions, temperature, pressure, atmosphere, gravity, radiation, water, resources, and other relevant hazards. The Sun is never a colonization target; Mercury is not an ordinary habitable colony target; Venus's surface and gas-giant interiors are not ordinary habitable targets. Specialized floating habitats in suitable atmospheric layers (for example, Venus's upper clouds), orbital habitats, and settlements on suitable moons are separate engineered settlement cases, not proof that the planet itself is ordinarily habitable.
+
+The mayor must verify that an expedition can be supplied and sustained: population, transport capacity, ships, life support, food, water, power, construction materials, communications/logistics, and a viable landing or habitat plan. Colonies founded this way receive their own local governance and remain subject to the same economic, physical, and survival constraints as player-founded colonies. The player can inspect reports and history, change or revoke permissions, and intervene.
+
+This decision extends D-011 and D-012. It is a design requirement only; no implementation is implied.
