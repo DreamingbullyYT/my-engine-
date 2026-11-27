@@ -45,6 +45,19 @@ public:
         void *(*query_interface)(void *, const char *, uint32_t) noexcept = nullptr;
     };
 
+    struct NativeModExportsV1 {
+        uint32_t struct_size = 0;
+        uint32_t abi_version = NATIVE_ABI_V1;
+        const char *mod_id = nullptr;
+        void *(*create)(const NativeHostApiV1 *) noexcept = nullptr;
+        uint8_t (*enable)(void *) noexcept = nullptr;
+        void (*disable)(void *) noexcept = nullptr;
+        void (*update)(void *, double) noexcept = nullptr;
+        void (*unload)(void *) noexcept = nullptr;
+    };
+
+    using NativeModEntryPointV1 = const NativeModExportsV1 *(*)() noexcept;
+
 private:
     struct ModInstance;
     struct HookEntry;
@@ -106,6 +119,7 @@ public:
     bool unload_mod(const String &mod_id);
     bool enable_mod(const String &mod_id);
     bool disable_mod(const String &mod_id);
+    void update_mods(double delta);
     PackedStringArray get_loaded_mods() const;
     int32_t get_hook_count() const;
 
