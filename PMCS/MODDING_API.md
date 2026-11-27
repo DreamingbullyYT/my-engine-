@@ -88,3 +88,16 @@ Expose extensible registries and runtime interfaces for:
 The API should let mods add modules, components, station types, and mobile habitats without modifying Godot source or rebuilding the host for ordinary GDScript content mods. A station or colony ship must only provide capabilities supported by its installed modules and available resources. Docking, population capacity, power, food, life support, and propulsion must be modeled as explicit capabilities/constraints.
 
 Do not collapse all these entities into a cosmetic satellite category. Satellites, stations, and mobile colonies have different gameplay roles and lifecycle needs.
+
+## Autonomous mobile-colony expansion API (planned host API)
+Expose mod-extensible contracts for:
+- Mobile-colony mayor fleet preferences, ship-design selection, construction requests, and shipyard/production capability checks.
+- Exploration progress and the configurable expansion-permission prompt after approximately 5–6 explored star systems.
+- Explicit player permission to autonomously found new planetary colonies, including inspection and revocation.
+- Habitability assessment and world classification. Ordinary automatic colonization must exclude the Sun, Mercury, Venus's surface, and gas-giant interiors. Mods may add specialized settlement capabilities such as floating atmospheric habitats, orbital habitats, or moon settlements.
+- Expedition feasibility: population, transport, life support, food, water, power, materials, landing/habitat systems, and logistics.
+- Colony-founding events, new-colony governance initialization, and auditable reports.
+
+Suggested registry/event surface (names provisional until implemented): ship_design, shipyard_capability, habitat_environment, habitability_profile, colony_expansion_policy, star_system_explored, expansion_permission_requested, expansion_permission_changed, habitable_world_assessed, colonization_expedition_planned, colonization_expedition_failed, and autonomous_colony_founded.
+
+The host must not imply that a planet is habitable merely because a mod registers it. The base evaluator and any modded evaluator must expose reasons, hazards, missing capabilities, and required technology. All construction and colonization consume real resources and obey travel/physics constraints.
