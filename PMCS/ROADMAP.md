@@ -42,10 +42,11 @@ Status: initial loader and on-device diagnostic UI implemented on main; CI compi
 Exit: an external GDScript stored outside the APK executes on device and calls the host runtime.
 
 ## M4 — DMod manager
-- [ ] Define and validate mod.json schema and .dmod ZIP format.
-- [ ] Safely inspect/extract package contents; reject path traversal and oversized entries.
-- [ ] Resolve dependencies, versions, conflicts, duplicate IDs, and deterministic load order.
-- [ ] Install/enable/disable a script mod without APK rebuild.
+Status: initial package manager and diagnostic UI implemented on main; Android ARM64 APK export verified (artifact ID 15230941586); physical-device validation pending.
+- [x] Define and validate mod.json schema and .dmod ZIP format.
+- [x] Inspect/extract package contents; reject path traversal and enforce configured archive/entry limits (decompression-bomb hardening remains incomplete).
+- [x] Resolve exact-version dependencies, detect dependency cycles, reject duplicate archive paths, and load dependencies deterministically.
+- [x] Install/enable/disable a sample script mod without APK rebuild (device execution pending).
 Exit: sample `.dmod` installed and executed on device; external package import and robust hostile-archive handling must be proven before calling the manager production-ready.
 
 ## M5 — Core API
