@@ -9,6 +9,7 @@
 - `PMCS/` — architecture, decisions, requirements, build policy, and agent instructions.
 - `.github/workflows/codegraphcontext.yml` — installs CodeGraphContext 0.5.1, detects source files, indexes when source exists, exports a portable graph bundle, and publishes this readable map.
 - `.cgcignore` — excludes build output, generated artifacts, and local secrets from indexing.
+- GitHub Actions dependencies are pinned to immutable action revisions. The initial workflow attempt exposed an invalid checkout revision; the revision was corrected before the next validation run.
 
 ## Planned source areas (not created)
 | Area | Responsibility | Expected language |
