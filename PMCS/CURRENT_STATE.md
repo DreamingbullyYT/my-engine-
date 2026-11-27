@@ -121,3 +121,7 @@ Consistency fixes:
 Implementation status is unchanged: documentation-only repository; M1 official Godot Android build and M2 GDExtension proof remain planned, not complete. No APK, runtime, terrain, station, or gameplay code was added.
 
 M1 clarification: the default path is the standard official Godot Android export pipeline using the official release and export templates. No custom Godot fork or routine source compilation is required. Any pristine upstream source build must have a concrete documented reason.
+
+
+## 2026-11-27 — development start authorized
+The user approved moving from planning into implementation. The next task is M1 in PMCS/ROADMAP.md: establish the official, unmodified Godot Android export baseline and produce the first minimal APK through GitHub Actions. This is an authorization/next-step record only; M1 has **not** yet been built or device-tested. The active branch remains documentation-only until implementation commits are made.
