@@ -210,18 +210,22 @@ func enable_mod(mod_id: String) -> bool:
 		if not _manifests.has(dependency_id):
 			var dependency_manifest := MODS_DIR.path_join(dependency_id).path_join("mod.json")
 			if not FileAccess.file_exists(dependency_manifest):
+				_loading.erase(mod_id)
 				_finish(false, "Missing dependency %s required by %s" % [dependency_id, mod_id])
 				return false
 			var dependency_file := FileAccess.open(dependency_manifest, FileAccess.READ)
 			if dependency_file == null:
+				_loading.erase(mod_id)
 				return false
 			var dependency_data: Variant = JSON.parse_string(dependency_file.get_as_text())
 			dependency_file.close()
 			if not dependency_data is Dictionary:
+				_loading.erase(mod_id)
 				return false
 			_manifests[dependency_id] = dependency_data
 		var required_version := String(manifest["dependencies"][dependency_id])
 		if String(_manifests[dependency_id].get("version", "")) != required_version:
+			_loading.erase(mod_id)
 			_finish(false, "Dependency version mismatch: %s requires %s" % [dependency_id, required_version])
 			return false
 		if not enable_mod(String(dependency_id)):
