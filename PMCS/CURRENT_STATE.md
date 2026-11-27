@@ -38,7 +38,7 @@ Repository: DreamingbullyYT/my-engine-
 - `.dmod` is a ZIP archive with root `mod.json`, a GDScript entry path, API version 1, semantic numeric version, and exact-version dependency declarations.
 - Implemented package size/entry-count limits, path traversal and unsafe-path rejection, duplicate-path rejection, manifest validation, staged extraction, and atomic staging-to-install directory rename.
 - Implemented dependency loading in sorted order, exact version checks, dependency-cycle detection, script compilation, entry instantiation, enable/disable lifecycle hooks, and visible result reporting.
-- Boot screen can generate an internal sample `.dmod`, install it, and execute its entrypoint. This proves the package pipeline without needing a new APK for the mod itself once device-validated.
+- Boot screen can generate an internal sample `.dmod`, install it, execute its entrypoint, and disable it. The controls are inside a scrollable mobile panel. This proves the package pipeline without needing a new APK for the mod itself once device-validated.
 - Limitations: Android system file-picker import is not implemented yet; the current UI generates a sample archive internally. `ZIPReader.read_file()` decompresses an entire entry before GDScript can inspect its resulting size, so post-read size caps do not fully prevent a malicious ZIP decompression bomb. Do not describe this parser as hardened against hostile packages until pre-decompression size checks or a bounded native ZIP reader are added.
 - **M4 status: INITIAL IMPLEMENTATION COMMITTED; Android build and device execution PENDING.**
 
