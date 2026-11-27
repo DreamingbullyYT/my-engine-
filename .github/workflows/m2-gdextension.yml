@@ -29,6 +29,8 @@ on:
       - "**/*.json"
       - "**/*.cfg"
       - ".github/workflows/m2-gdextension.yml"
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -119,7 +121,7 @@ jobs:
             "templates/android_source.zip" \
             -d "$temporary"
           cp "$temporary/templates/"* "$destination/"
-          printf '%s\\n' "$GODOT_VERSION_DIR" > "$destination/version.txt"
+          printf '%s\n' "$GODOT_VERSION_DIR" > "$destination/version.txt"
 
           test -s "$destination/android_debug.apk"
           test -s "$destination/android_release.apk"
@@ -191,7 +193,7 @@ jobs:
           unzip -Z1 build/android/dream-engine-debug.apk | grep -F "lib/arm64-v8a/libgodot_android.so"
           {
             echo "Commit: $GITHUB_SHA"
-            echo "Godot: $(" "$GODOT_BIN" --version)"
+            echo "Godot: $("$GODOT_BIN" --version)"
             echo "Target: Android arm64-v8a"
             echo "Native extension: DreamRuntimeProbe"
             echo "Package: com.dreamingbully.dreamengine"
