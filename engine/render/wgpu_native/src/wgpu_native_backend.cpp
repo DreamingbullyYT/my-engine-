@@ -160,7 +160,7 @@ bool WgpuNativeBackend::initialize(
     wgpuSetLogLevel(WGPULogLevel_Warn);
 
     WGPUInstanceExtras extras{};
-    extras.chain.sType = WGPUSType_InstanceExtras;
+    extras.chain.sType = static_cast<WGPUSType>(WGPUSType_InstanceExtras);
     extras.backends = WGPUInstanceBackend_Vulkan | WGPUInstanceBackend_GL;
     extras.flags = WGPUInstanceFlag_Validation;
 
