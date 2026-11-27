@@ -96,6 +96,8 @@ uint8_t DreamModRuntime::native_call_next(void *p_context) noexcept {
     return 1;
 }
 
+DreamModRuntime::DreamModRuntime() = default;
+
 DreamModRuntime *DreamModRuntime::singleton = nullptr;
 
 DreamModRuntime *DreamModRuntime::get_singleton() {
@@ -221,7 +223,7 @@ void DreamModRuntime::push_variant(lua_State *state, const Variant &value, int d
         } break;
         case Variant::OBJECT: {
             Object *object = value;
-            lua_pushinteger(state, object != nullptr ? static_cast<lua_Integer>(object->get_instance_id()) : 0);
+            lua_pushinteger(state, object != nullptr ? static_cast<lua_Integer>(static_cast<uint64_t>(object->get_instance_id())) : 0);
         } break;
         default:
             lua_pushnil(state);
@@ -764,7 +766,7 @@ bool DreamModRuntime::load_mod(const String &package_path) {
     mods.push_back(std::move(mod));
 
     if (needs_native) {
-        if (DirAccess::make_dir_recursive("user://dream_mod_cache") != OK) {
+        if (DirAccess::make_dir_recursive_absolute(ProjectSettings::get_singleton()->globalize_path("user://dream_mod_cache")) != OK) {
             ERR_PRINT("DreamMods: cannot create native module cache directory.");
             unload_mod(id);
             return false;
