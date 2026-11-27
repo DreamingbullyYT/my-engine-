@@ -18,15 +18,15 @@ Repository: DreamingbullyYT/my-engine-
 
 Branch: `m2/gdextension-proof`
 
-Added, not yet CI-verified:
+Added; native compilation has succeeded in Actions, while APK export is being validated:
 - A separate `native/dream_runtime` C++ GDExtension module with one probe Node, registration/entry-point split across focused source files, and a Godot 4.7 API target.
 - Official `godot-cpp 10.0.0-stable` pinned to commit `507ed9d840c01a3c5b2a39af8bb4000bfac30bf5`; no Godot source modifications.
 - Reproducible SCons build helper for Linux x86_64 smoke tests and Android arm64-v8a.
-- A GDScript smoke test that instantiates the native class, checks a native string, and checks `20 + 22 = 42`.
+- A GDScript diagnostic smoke test that can instantiate the native class, check a native string, and check `20 + 22 = 42`; CI no longer runs this test.
 - Boot-screen status reporting so the Android APK visibly reports whether the native extension loaded.
-- Separate M2 workflow and updated Android build workflow. Their first CI result is still pending.
+- Separate M2 workflow configured for native compilation and Android APK export only; runtime testing is reserved for the user's phone.
 
-Do not mark M2 verified until Actions proves native initialization, GDScript-to-C++ calls, shutdown, Android arm64 compilation, and APK export. Physical Android loading remains a separate user-device check.
+Do not mark M2 complete until native compilation and APK export succeed in Actions and the user confirms native extension loading on the physical Android device. CI does not execute runtime smoke tests.
 
 ## Current implementation matrix
 
@@ -34,9 +34,9 @@ Do not mark M2 verified until Actions proves native initialization, GDScript-to-
 |---|---|---|
 | Official Godot project and Android export | CI VERIFIED; DEVICE TEST PENDING | M1 run #5 and artifact 15220028245 |
 | Boot UI and Android lifecycle host | PARTIAL | `app/`, `core/app_lifecycle.gd`, `ui/screens/` |
-| Dream Runtime C++ GDExtension | IMPLEMENTED ON M2 BRANCH; CI PENDING | `native/dream_runtime/` |
-| GDScript-to-native smoke test | IMPLEMENTED ON M2 BRANCH; CI PENDING | `tests/native_extension_smoke.gd` |
-| Android ARM64 native load | NOT VERIFIED | Requires M2 CI and physical-device validation |
+| Dream Runtime C++ GDExtension | IMPLEMENTED ON M2 BRANCH; COMPILE VERIFIED, APK EXPORT PENDING | `native/dream_runtime/` |
+| GDScript-to-native diagnostic smoke test | IMPLEMENTED; DEVICE VALIDATION PENDING | `tests/native_extension_smoke.gd` |
+| Android ARM64 native load | NOT VERIFIED | Requires physical-device validation |
 | External GDScript runtime loading | NOT VERIFIED | M3 |
 | .dmod manager/runtime and stable game API | NOT IMPLEMENTED | M4–M5 |
 | Gameplay systems | NOT IMPLEMENTED | v1 scope in D-020 and GAMEPLAY/physics/infrastructure specs |
@@ -44,8 +44,8 @@ Do not mark M2 verified until Actions proves native initialization, GDScript-to-
 
 ## Next actions
 
-1. Complete M2 CI; fix compile, load, or export failures before expanding the native runtime.
-2. Produce an M2 ARM64 APK and have the user confirm the on-device native status.
+1. Complete M2 compile and APK export CI; fix build/package failures before expanding the native runtime.
+2. Have the user install the APK and confirm the on-device native status.
 3. Keep the M1 device test recorded separately; do not infer it from M2.
 4. Proceed to M3 only after the external GDScript loading proof is designed and tested.
 5. Update PMCS and generated code maps against the exact successful source commit.
