@@ -224,3 +224,7 @@ Scripturile pot citi/scrie fișiere accesibile aplicației și pot face orice pe
 - Evaluarea locuibilității trebuie să explice condițiile și riscurile. Soarele, Mercur, suprafața lui Venus și interiorul giganților gazoși nu sunt ținte planetare obișnuite. Habitatele plutitoare atmosferice, stațiile orbitale și așezările pe luni sunt tipuri distincte de infrastructură specializată.
 - Planificatorul verifică populația, transportul, suportul vital, hrana, apa, energia, materialele, aterizarea/habitatul și aprovizionarea pe termen lung.
 - Evenimente/registre propuse: star_system_explored, expansion_permission_requested, expansion_permission_changed, habitable_world_assessed, colonization_expedition_planned, colonization_expedition_failed, autonomous_colony_founded, ship_design și shipyard_capability.
+
+
+## Host API additions for reference-guided systems (planned)
+Expose mod-extensible definitions and runtime contracts for citizen needs/traits/skills, job roles, building footprints and connection networks, production recipes, service coverage, research prerequisites, policies, factions, events, spacecraft part properties/attachment nodes, propulsion and propellant, staging actions, flight environments, maneuver plans, celestial body parameters, survey instruments, procedural generation, station module connection types, simulation fidelity tiers, save migrations, and performance diagnostics. These additions extend the registries and event surface already listed above; exact API signatures must be versioned and tested before release.
