@@ -239,9 +239,8 @@ if(DREAM_BUILD_WGPU_NATIVE_BACKEND)
     add_library(dream_wgpu_native_android SHARED IMPORTED GLOBAL)
     set_target_properties(dream_wgpu_native_android PROPERTIES
         IMPORTED_LOCATION "${WGPU_NATIVE_LIBRARY}"
-        # libwgpu_native.so has no SONAME. Without this property the linker
-        # records the CI build path as DT_NEEDED and dlopen fails on devices.
-        IMPORTED_NO_SONAME TRUE
+        # The Android workflow normalizes the verified upstream library with
+        # DT_SONAME=libwgpu_native.so before configuring this imported target.
         INTERFACE_INCLUDE_DIRECTORIES "${WGPU_NATIVE_INCLUDE_DIR}"
     )
 
