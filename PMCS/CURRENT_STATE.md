@@ -116,19 +116,19 @@ Consistency fixes:
 - TEXTURES.md now includes 10 modular station/megaship visual assets; the stated total is 341.
 - MOBILE_UX.md records D-021 instead of leaving flight assistance and language selection open.
 
-Implementation status is unchanged: documentation-only repository; M1 official Godot Android build and M2 GDExtension proof remain planned, not complete. No APK, runtime, terrain, station, or gameplay code was added.
+At the time of this consistency review the repository was documentation-only. That snapshot was superseded by the M1 source and CI build recorded below. No gameplay systems, Dream Runtime, terrain, station, or colony simulation were implemented by that documentation review.
 
 M1 clarification: the default path is the standard official Godot Android export pipeline using the official release and export templates. No custom Godot fork or routine source compilation is required. Any pristine upstream source build must have a concrete documented reason.
 
 
 ## 2026-11-27 — development start authorized
-The user approved moving from planning into implementation. The next task is M1 in PMCS/ROADMAP.md: establish the official, unmodified Godot Android export baseline and produce the first minimal APK through GitHub Actions. This is an authorization/next-step record only; M1 has **not** yet been built or device-tested. The active branch remains documentation-only until implementation commits are made.
+The user approved moving from planning into implementation. The next task is M1 in PMCS/ROADMAP.md: establish the official, unmodified Godot Android export baseline and produce the first minimal APK through GitHub Actions. This was an authorization/next-step record at the time it was written. M1 source and CI export evidence were added later and are recorded below; physical-device testing remains pending.
 
 
 ## 2026-11-27 accepted modular architecture — D-022
 D-022 requires a modular-by-default implementation: cohesive domain modules, explicit contracts, single ownership of authoritative state, no circular dependencies, no giant all-purpose managers/catch-all scripts, UI/rendering separated from gameplay authority, focused tests, and module-specific PMCS memory as systems become substantial. The detailed catalog and rules are in PMCS/MODULES.md and PMCS/ARCHITECTURE.md.
 
-This is an accepted design decision, not an implementation claim. The active source baseline remains documentation-only. M1 remains the first implementation milestone; future modules must be introduced with real vertical slices rather than empty scaffolding.
+This is an accepted design decision, not an implementation claim. The initial M1 foundation now exists; future modules must still be introduced with real vertical slices rather than empty scaffolding.
 
 
 ## 2026-11-27 — M1 first Android build verified in CI
@@ -138,6 +138,7 @@ This is an accepted design decision, not an implementation claim. The active sou
 - M1 workflow run #3 succeeded: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46041536847.
 - APK: Android arm64-v8a, package com.dreamingbully.dreamengine, 28,255,149 bytes. CI verified package metadata and presence of lib/arm64-v8a/libgodot_android.so.
 - Artifact ID 15220900635; download: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46041536847/artifacts/15220900635. Artifact retention ends 2026-12-27.
+- Signing limitation: the workflow creates a temporary debug keystore per run. Until a stable debug-signing secret is configured, a later APK may not install as an update over a prior debug build; uninstall the previous package before installing a newer build.
 - **Status:** M1 CI/build portion VERIFIED. Physical-device launch, visible UI, touch, and pause/resume remain PENDING user validation. No gameplay systems or Dream Runtime were implemented in this M1 slice.
 
 
