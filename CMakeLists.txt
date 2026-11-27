@@ -217,7 +217,7 @@ if(DREAM_BUILD_WGPU_NATIVE_BACKEND)
         message(FATAL_ERROR "DREAM_BUILD_WGPU_NATIVE_BACKEND is only available for Android builds")
     endif()
 
-    if(NOT DEFINED WGPU_NATIVE_ROOT OR "\${WGPU_NATIVE_ROOT}" STREQUAL "")
+    if(NOT DEFINED WGPU_NATIVE_ROOT OR "${WGPU_NATIVE_ROOT}" STREQUAL "")
         if(DEFINED ENV{WGPU_NATIVE_ROOT} AND NOT "$ENV{WGPU_NATIVE_ROOT}" STREQUAL "")
             set(WGPU_NATIVE_ROOT "$ENV{WGPU_NATIVE_ROOT}" CACHE PATH "wgpu-native Android package root" FORCE)
         else()
@@ -225,21 +225,21 @@ if(DREAM_BUILD_WGPU_NATIVE_BACKEND)
         endif()
     endif()
 
-    set(WGPU_NATIVE_INCLUDE_DIR "\${WGPU_NATIVE_ROOT}/include/webgpu")
-    set(WGPU_NATIVE_LIBRARY "\${WGPU_NATIVE_ROOT}/lib/libwgpu_native.so")
+    set(WGPU_NATIVE_INCLUDE_DIR "${WGPU_NATIVE_ROOT}/include/webgpu")
+    set(WGPU_NATIVE_LIBRARY "${WGPU_NATIVE_ROOT}/lib/libwgpu_native.so")
     foreach(required_file IN ITEMS
-        "\${WGPU_NATIVE_INCLUDE_DIR}/webgpu.h"
-        "\${WGPU_NATIVE_INCLUDE_DIR}/wgpu.h"
-        "\${WGPU_NATIVE_LIBRARY}")
-        if(NOT EXISTS "\${required_file}")
-            message(FATAL_ERROR "Required wgpu-native package file is missing: \${required_file}")
+        "${WGPU_NATIVE_INCLUDE_DIR}/webgpu.h"
+        "${WGPU_NATIVE_INCLUDE_DIR}/wgpu.h"
+        "${WGPU_NATIVE_LIBRARY}")
+        if(NOT EXISTS "${required_file}")
+            message(FATAL_ERROR "Required wgpu-native package file is missing: ${required_file}")
         endif()
     endforeach()
 
     add_library(dream_wgpu_native_android SHARED IMPORTED GLOBAL)
     set_target_properties(dream_wgpu_native_android PROPERTIES
-        IMPORTED_LOCATION "\${WGPU_NATIVE_LIBRARY}"
-        INTERFACE_INCLUDE_DIRECTORIES "\${WGPU_NATIVE_INCLUDE_DIR}"
+        IMPORTED_LOCATION "${WGPU_NATIVE_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${WGPU_NATIVE_INCLUDE_DIR}"
     )
 
     find_library(ANDROID_VULKAN_LIB vulkan REQUIRED)
@@ -254,19 +254,19 @@ if(DREAM_BUILD_WGPU_NATIVE_BACKEND)
     add_library(DreamEngine::RenderWgpuNative ALIAS dream_render_wgpu_native)
     target_include_directories(dream_render_wgpu_native
         PUBLIC
-            $<BUILD_INTERFACE:\${CMAKE_CURRENT_SOURCE_DIR}/engine/render/wgpu_native/include>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/render/wgpu_native/include>
     )
     target_compile_features(dream_render_wgpu_native PUBLIC cxx_std_20)
     target_link_libraries(dream_render_wgpu_native
         PUBLIC DreamEngine::Render
         PRIVATE
             dream_wgpu_native_android
-            \${ANDROID_VULKAN_LIB}
-            \${ANDROID_EGL_LIB}
-            \${ANDROID_GLES_LIB}
-            \${ANDROID_SYSTEM_LIB}
-            \${ANDROID_LOG_LIB}
-            \${CMAKE_DL_LIBS}
+            ${ANDROID_VULKAN_LIB}
+            ${ANDROID_EGL_LIB}
+            ${ANDROID_GLES_LIB}
+            ${ANDROID_SYSTEM_LIB}
+            ${ANDROID_LOG_LIB}
+            ${CMAKE_DL_LIBS}
     )
     set_target_properties(dream_render_wgpu_native PROPERTIES
         CXX_EXTENSIONS OFF
