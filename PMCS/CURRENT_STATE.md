@@ -82,3 +82,7 @@ Updated CODE_MEMORY.md to record successful workflow run #18 as the latest CodeG
 
 ## 2026-11-27 accepted mobile onboarding decision — D-015
 The default first-launch path is a guided tutorial, then a free sandbox. The tutorial is practical, progressive, skippable, and replayable later. Skipping it gives immediate access to the same sandbox and does not lock advanced systems or content. After the tutorial, there is no mandatory campaign. Exact lesson sequence remains to be designed. Documentation only; no source code or gameplay implementation was added.
+
+
+## 2026-11-27 accepted performance/rendering design — D-016
+Accepted D-016 establishes adaptive hybrid building rendering and pixel-scale citizen visual LOD. Buildings remain logical entities while static visuals can be baked into dynamically sized sector caches and combined at distance; dynamic effects and selection data remain separate. Building animation/detail adapts gradually, with automatic and player-controlled quality preferences; selecting a distant building temporarily promotes only its visual detail. Citizens remain persistent individual simulation records; their pixel sprites and visible movement are simplified with distance and disappear only below the visual readability threshold. No gameplay state is deleted or aggregated merely because sprites are not drawn. Numeric thresholds and budgets remain unchosen pending Android ARM64 profiling. Documentation only; no source code or runtime behavior was implemented.
