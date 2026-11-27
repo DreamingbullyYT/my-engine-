@@ -57,6 +57,8 @@ Underground colonies use a hybrid representation:
 - Preserve authoritative resources, structures, access routes, and colony state when visual detail is reduced.
 - Keep terrain collision and navigation consistent with excavation changes; cache textures must never be the source of truth for movement or hit-testing.
 
-Mining deposits and extracted resources remain gameplay data with real costs, quantities, and logistics. Surface/planetary excavation and asteroid mining are related resource activities but distinct world systems. Exact geology, structural stability, cave-ins, support requirements, excavation tools, and underground environmental simulation remain open specifications.
+Mining deposits and extracted resources remain gameplay data with real costs, quantities, and logistics. Surface/planetary excavation and asteroid mining are related resource activities but distinct world systems.
 
-Measure local rebuild latency, collision/navigation update cost, memory, save size, and frame time on Android ARM64. Do not set numeric terrain chunk sizes, excavation resolution, or underground LOD thresholds before profiling. See D-017 in DECISIONS.md.
+Initial excavation rules are intentionally simple (D-018): ordinary tunnels and chambers remain stable without cave-in or structural-strength simulation; there are no required support beams, pillars, reinforcement structures, or automatically generated support decorations; and all terrain follows the same basic excavation rule without complex material-specific hardness simulation. Material/deposit differences still determine what resources may be found and extracted. These exclusions reduce CPU work and implementation complexity.
+
+Measure local rebuild latency, collision/navigation update cost, memory, save size, and frame time on Android ARM64. Do not set numeric terrain chunk sizes, excavation resolution, or underground LOD thresholds before profiling. See D-017 and D-018 in DECISIONS.md.
