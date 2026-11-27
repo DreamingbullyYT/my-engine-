@@ -11,7 +11,7 @@ This directory is the durable memory for humans and AI agents. It prevents repea
 1. CURRENT_STATE.md — verified repository state.
 2. VISION.md — goals and non-goals.
 3. ARCHITECTURE.md — system boundaries and data flow.
-4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), D-012 (modular orbital settlements/mobile colony ships), D-013 (mobile-colony fleet autonomy and permission-gated expansion), D-014 (reference-guided colony and flight design), D-015 (guided tutorial followed by free sandbox), and D-016 (adaptive hybrid rendering and citizen visual LOD), and D-017 (hybrid excavatable terrain and underground colonies), and D-018 (simplified underground stability and excavation rules).
+4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), D-012 (modular orbital settlements/mobile colony ships), D-013 (mobile-colony fleet autonomy and permission-gated expansion), D-014 (reference-guided colony and flight design), D-015 (guided tutorial followed by free sandbox), and D-016 (adaptive hybrid rendering and citizen visual LOD), D-017 (hybrid excavatable terrain and underground colonies), D-018 (simplified underground stability and excavation rules), D-019 (polar-cell underground terrain), D-020 (first playable v1 scope), and D-021 (flight-assistance and language defaults).
 5. MODDING_API.md — .dmod package and GDScript API requirements.
 6. GAMEPLAY.md — citizens, colony economy, buildings, research, policies, and needs.
 7. ROCKETS_AND_PHYSICS.md — part-based vehicles, propulsion, orbital and atmospheric flight.
@@ -94,3 +94,6 @@ For every meaningful change:
 D-018 keeps the initial underground system lightweight: ordinary tunnels remain stable without cave-in simulation, no structural supports or automatic support decorations are generated, and all terrain uses the same basic excavation rule. Materials may still differ in their resource deposits. See D-017 and D-018 in DECISIONS.md.
 
 2026-11-27: D-018 accepts stable-by-default tunnels, no support structures or automatic support decorations, and uniform basic excavation without complex material-hardness simulation. Resource deposits may still differ by material. Documentation only; no terrain implementation.
+
+
+2026-11-27: D-019 resolves underground terrain as persistent polar-coordinate cells with connected tunnel topology and no fixed 12-layer limit. D-020 defines the first playable v1 scope; interstellar travel and megaships are postponed to v2+. D-021 accepts flight assistance by default and automatic Romanian/English locale selection with settings override. Documentation only; no source code or runtime behavior was added.
