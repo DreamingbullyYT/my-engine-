@@ -67,14 +67,14 @@ theme_override_font_sizes/font_size = 30
 text = "DREAM ENGINE"
 horizontal_alignment = 1
 
-[node name="Subtitle" type="Label" parent="Panel/Content"]
+[node name="Subtitle" type="Label" parent="Panel/Scroll/Content"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.72, 0.91, 1)
 theme_override_font_sizes/font_size = 16
 text = "M2 · Native C++ + M3 · External GDScript + M4 · .dmod"
 horizontal_alignment = 1
 
-[node name="EngineVersion" type="Label" parent="Panel/Content"]
+[node name="EngineVersion" type="Label" parent="Panel/Scroll/Content"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.78, 0.88, 1)
@@ -82,7 +82,7 @@ theme_override_font_sizes/font_size = 13
 text = "Godot version · Android ARM64"
 horizontal_alignment = 1
 
-[node name="NativeStatus" type="Label" parent="Panel/Content"]
+[node name="NativeStatus" type="Label" parent="Panel/Scroll/Content"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.88, 0.70, 1)
@@ -90,10 +90,10 @@ theme_override_font_sizes/font_size = 13
 text = "Dream Runtime: checking..."
 horizontal_alignment = 1
 
-[node name="Separator" type="HSeparator" parent="Panel/Content"]
+[node name="Separator" type="HSeparator" parent="Panel/Scroll/Content"]
 layout_mode = 2
 
-[node name="TouchCount" type="Label" parent="Panel/Content"]
+[node name="TouchCount" type="Label" parent="Panel/Scroll/Content"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
@@ -101,14 +101,14 @@ theme_override_font_sizes/font_size = 18
 text = "Touch events: 0"
 horizontal_alignment = 1
 
-[node name="TestTouchButton" type="Button" parent="Panel/Content"]
+[node name="TestTouchButton" type="Button" parent="Panel/Scroll/Content"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 16
 text = "Test touch input"
 
-[node name="ExternalStatus" type="Label" parent="Panel/Content"]
+[node name="ExternalStatus" type="Label" parent="Panel/Scroll/Content"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.82, 0.96, 1)
@@ -117,14 +117,14 @@ text = "External GDScript: not tested"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="TestExternalScriptButton" type="Button" parent="Panel/Content"]
+[node name="TestExternalScriptButton" type="Button" parent="Panel/Scroll/Content"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 16
 text = "Test external GDScript (M3)"
 
-[node name="PackageStatus" type="Label" parent="Panel/Content"]
+[node name="PackageStatus" type="Label" parent="Panel/Scroll/Content"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.82, 0.96, 1)
@@ -133,21 +133,21 @@ text = "M4 .dmod: not tested"
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="InstallSampleModButton" type="Button" parent="Panel/Content"]
+[node name="InstallSampleModButton" type="Button" parent="Panel/Scroll/Content"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 16
 text = "Install and run sample .dmod (M4)"
 
-[node name="DisableSampleModButton" type="Button" parent="Panel/Content"]
+[node name="DisableSampleModButton" type="Button" parent="Panel/Scroll/Content"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 15
 text = "Disable sample .dmod"
 
-[node name="Status" type="Label" parent="Panel/Content"]
+[node name="Status" type="Label" parent="Panel/Scroll/Content"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.63, 0.78, 0.91, 1)
@@ -157,6 +157,6 @@ horizontal_alignment = 1
 autowrap_mode = 2
 
 [connection signal="pressed" from="Panel/Scroll/Content/TestTouchButton" to="." method="_on_test_touch_pressed"]
-[connection signal="pressed" from="Panel/Content/TestExternalScriptButton" to="." method="_on_test_external_script_pressed"]
-[connection signal="pressed" from="Panel/Content/InstallSampleModButton" to="." method="_on_install_sample_mod_pressed"]
-[connection signal="pressed" from="Panel/Content/DisableSampleModButton" to="." method="_on_disable_sample_mod_pressed"]
+[connection signal="pressed" from="Panel/Scroll/Content/TestExternalScriptButton" to="." method="_on_test_external_script_pressed"]
+[connection signal="pressed" from="Panel/Scroll/Content/InstallSampleModButton" to="." method="_on_install_sample_mod_pressed"]
+[connection signal="pressed" from="Panel/Scroll/Content/DisableSampleModButton" to="." method="_on_disable_sample_mod_pressed"]
