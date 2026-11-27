@@ -137,6 +137,8 @@ jobs:
           test -x "$ANDROID_HOME/build-tools/$ANDROID_BUILD_TOOLS/aapt"
           test -s "$HOME/.local/share/godot/export_templates/$GODOT_VERSION_DIR/android_debug.apk"
           test -d "$ANDROID_NDK_ROOT"
+          "$ANDROID_HOME/platform-tools/adb" start-server
+          "$ANDROID_HOME/platform-tools/adb" devices
           echo "Android SDK: $ANDROID_HOME"
           echo "Android NDK: $ANDROID_NDK_ROOT"
 
