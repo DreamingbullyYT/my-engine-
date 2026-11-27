@@ -215,3 +215,12 @@ Scripturile pot citi/scrie fișiere accesibile aplicației și pot face orice pe
 3. `example_override` — schimbă formula fericirii și tracțiunea.
 4. `example_textures` — pachet de texturi care înlocuiește jocul de bază.
 5. `example_body` — planetă nouă cu resurse proprii.
+
+### 5.3 Contracte pentru flote autonome și colonizare cu permisiune
+
+- O navă-colonie are propriul primar și poate planifica nave de tipuri diferite în funcție de necesități. Construirea cere proiecte/deblocări, șantier naval, forță de muncă, materiale, componente, energie, combustibil și timp.
+- După aproximativ 5–6 sisteme solare explorate, primarul poate cere permisiunea jucătorului pentru colonizare autonomă. Pragul trebuie să fie configurabil pentru echilibrare.
+- Colonizarea automată nu pornește fără aprobarea explicită a jucătorului; permisiunea poate fi inspectată, modificată sau revocată.
+- Evaluarea locuibilității trebuie să explice condițiile și riscurile. Soarele, Mercur, suprafața lui Venus și interiorul giganților gazoși nu sunt ținte planetare obișnuite. Habitatele plutitoare atmosferice, stațiile orbitale și așezările pe luni sunt tipuri distincte de infrastructură specializată.
+- Planificatorul verifică populația, transportul, suportul vital, hrana, apa, energia, materialele, aterizarea/habitatul și aprovizionarea pe termen lung.
+- Evenimente/registre propuse: star_system_explored, expansion_permission_requested, expansion_permission_changed, habitable_world_assessed, colonization_expedition_planned, colonization_expedition_failed, autonomous_colony_founded, ship_design și shipyard_capability.
