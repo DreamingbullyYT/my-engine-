@@ -11,13 +11,16 @@ This directory is the durable memory for humans and AI agents. It prevents repea
 1. CURRENT_STATE.md — verified repository state.
 2. VISION.md — goals and non-goals.
 3. ARCHITECTURE.md — system boundaries and data flow.
-4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods).
+4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), and D-012 (modular orbital settlements/mobile colony ships).
 5. MODDING_API.md — .dmod package and GDScript API requirements.
 6. ROADMAP.md — implementation sequence and exit gates.
 7. BUILD_AND_TEST.md — CI and validation policy.
 8. AI_RULES.md — mandatory agent workflow.
 9. CODE_MAP.md — generated/evidence-backed source map, currently no engine source.
 10. CODE_MEMORY.md — CodeGraphContext indexing strategy and verified CI smoke-test results.
+
+## Current game-design clarifications
+The colony remains central. A mayor begins as an adviser and progressively takes on routine management as player oversight decreases; colonies can still fail or be destroyed. Space settlements include functional satellites, large modular orbital stations, and mobile colony ships that can act as planetless colonies. See D-011 and D-012.
 
 ## Core modding decision
 Ordinary .dmod mods use GDScript, JSON, scenes, and assets. Lua is not part of the planned runtime. Mods are trusted code with direct Godot/game access by design; there is no script sandbox. See D-010 and MODDING_API.md.
@@ -63,3 +66,5 @@ For every meaningful change:
 ## Change log
 2026-11-27: Initial PMCS created after both source branches were intentionally emptied. Implementation status is not carried forward from historical chat context.
 2026-11-27: D-010 accepted GDScript as the primary .dmod scripting language; PMCS architecture, API, roadmap, and status aligned. Documentation only; no runtime implementation.
+
+2026-11-27: D-011 and D-012 record gradual mayor autonomy and modular orbital settlements/mobile colony ships. Documentation only; no gameplay implementation.
