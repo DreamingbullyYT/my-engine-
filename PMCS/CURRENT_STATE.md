@@ -209,3 +209,13 @@ This update is authoritative over older checklist/status text above where they c
 The migration branch adds the upstream source submodule, a minimal Android validation project and an Actions pipeline intended to compile Godot's ARM64 Android debug template from source, export an installable APK and compare the packaged native library to the source-built library.
 
 **Not yet verified:** the new Actions workflow is running; APK creation and device rendering remain pending. The older C++ engine, GameActivity host and wgpu backend are preserved unchanged as reference/legacy material. They are no longer the selected base for new runtime work while this migration is being validated.
+
+
+## Authoritative Godot 4.7.2 migration update — 2026-11-27
+
+- User-confirmed Android smoke test: Dream Engine splash/UI visible, Godot 4.7.2 label visible, touch input works (25 presses), FPS counter reports 59 FPS.
+- GitHub Actions run 45961531542 passed: pinned Godot 4.7.2 source-built Android ARM64 template and APK export succeeded.
+- Accepted source layout: vendor every upstream source file directly under `third_party/godot/`, not as a Git submodule. Exact source SHA: `ed1daf0bf001b61586d9930840f2f1394092c079`; `third_party/GODOT_SOURCE_COMMIT` is the audit marker.
+- `.github/workflows/vendor-godot-source.yml` performs the one-time gitlink conversion and triggers the ARM64 source build. `.github/workflows/godot-android-source.yml` now expects regular tracked source files and checks the marker.
+- Next implementation focus: native Dream Engine module compiled into Godot, a versioned in-process C++ mod ABI, and real hook call sites for frame/physics/scene/render/resource lifecycles. The native runtime is intentionally unsandboxed by user decision.
+- Not yet verified: deep hooks, runtime native .dmod loading, engine-object access from mods, full renderer/physics/audio correctness, and lifecycle behavior beyond the reported touch/render smoke test. Do not mark those complete.
