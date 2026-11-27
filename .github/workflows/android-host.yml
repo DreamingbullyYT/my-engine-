@@ -98,13 +98,18 @@ jobs:
           done
           test "$DEX_HAS_MARKER" -eq 1
           unzip -p "$APK" lib/arm64-v8a/libdream_engine_android_host.so > "$RUNNER_TEMP/host.so"
-          readelf -d "$RUNNER_TEMP/host.so" | grep NEEDED
+          NEEDED="$(readelf -d "$RUNNER_TEMP/host.so" | grep "(NEEDED)" || true)"
+          echo "$NEEDED"
+          test -n "$NEEDED"
           # DT_NEEDED must be bare library names, never absolute build paths.
-          if readelf -d "$RUNNER_TEMP/host.so" | grep NEEDED | grep -q '/'; then
+          if printf '%s\\n' "$NEEDED" | grep -q '/'; then
             echo "::error::libdream_engine_android_host.so has an absolute-path DT_NEEDED entry"
             exit 1
           fi
-          readelf -d "$RUNNER_TEMP/host.so" | grep NEEDED | grep -q "\\[libwgpu_native.so\\]"
+          if ! printf '%s\\n' "$NEEDED" | grep -Fq '[libwgpu_native.so]'; then
+            echo "::error::libdream_engine_android_host.so does not declare libwgpu_native.so in DT_NEEDED"
+            exit 1
+          fi
           unzip -p "$APK" lib/arm64-v8a/libdream_engine_android_host.so | strings | grep -q "android_main entered"
           unzip -p "$APK" lib/arm64-v8a/libdream_engine_android_host.so | strings | grep -q "wgpu-native"
 
