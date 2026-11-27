@@ -15,7 +15,7 @@ Etichete: **[cercetat]** = din surse publice. **[de la tine]** = decis de tine. 
 | Platformă | **Android-first, ARM64**; build și teste CI în GitHub Actions, validare pe telefonul utilizatorului **[de la tine]** |
 | Motor | Godot 4.7, GDScript (C++ doar dacă un punct fierbinte o cere) |
 | Modding | **Ca la Minecraft: scripturi, acces la absolut tot** **[de la tine]** |
-| Livrare | **Tot jocul într-un singur run** **[de la tine]** |
+| Livrare | **Joc complet, nu prototip**; dezvoltare incrementală în etape testabile, fără a elimina sistemele agreate **[clarificare a planului]** |
 | Dușmani | mai târziu, nu în prima versiune **[de la tine]** |
 | Piloți NPC | **Both**: coloniști la bord, piloți la distanță și sisteme autonome pentru vehicule fără echipaj **[de la tine]** |
 | Autopilot NPC | misiuni complete, cu aceeași fizică orbitală, combustibil și limite ca navele jucătorului **[de la tine]** |
