@@ -1,3 +1,5 @@
+> **Current direction override — 2026-11-27:** The active engine base is Godot 4.7.2-stable source, pinned as `third_party/godot`. Read [GODOT_MIGRATION.md](GODOT_MIGRATION.md) first. The standalone C++ implementation and GameActivity/wgpu host described below are preserved legacy/reference code; do not continue adding parallel engine subsystems unless a migration need is identified. The Godot source-build workflow must be verified before claiming success. Existing requirements for CI-first Android ARM64 builds and unrestricted trusted native mods remain active; GDExtension alone is not assumed to expose private Godot internals.
+
 # AI Handoff
 
 ## Project

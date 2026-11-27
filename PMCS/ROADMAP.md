@@ -173,3 +173,28 @@ The native mod manager now serializes its public state and callback-lifetime ope
 - [ ] Rebuild the previous 2D/UI/3D host demo on wgpu after the above capabilities exist. The active wgpu diagnostic host is not feature-equivalent to the prior bgfx demo.
 
 The bgfx backend and its existing 2D/3D code remain optional engine-side implementation/reference paths. The current Android app explicitly disables bgfx and links `DreamEngine::RenderWgpuNative`; do not silently restore bgfx as the Android renderer. The native dependency choice is settled for this Android milestone, but future desktop backends and cross-platform packaging remain open to separate evidence.
+
+## Godot migration — active direction (2026-11-27)
+
+The upstream Godot source is now the selected foundation. The former P0–P4 standalone-engine checklist describes the preserved C++ prototype and must not be interpreted as the active engine completion plan.
+
+### G0 — Source and Android bootstrap
+- [x] Pin upstream Godot 4.7.2-stable commit as a submodule.
+- [x] Add an Android ARM64 source-build workflow and a minimal Android export project.
+- [ ] Verify source checkout, SCons build, Gradle template generation and APK export in Actions.
+- [ ] Install the APK on the user's phone and verify first frame, touch input, resume and rotation.
+
+### G1 — Dream Engine Godot foundation
+- [ ] Audit Godot's scene tree, rendering, physics, input, resource, audio and Android integration against game requirements.
+- [ ] Define a narrow Dream-specific C++ module/patch layer; avoid duplicating Godot systems.
+- [ ] Establish the native extension ABI/version contract and deep internal hook/replace points.
+- [ ] Rebuild the DMod manager around trusted in-process Godot native modules/extensions.
+- [ ] Add source-build CI for desktop editor/tools and Android ARM64 runtime.
+
+### G2 — Game and production systems
+- [ ] Port game-facing systems into Godot scenes/resources/scripts or C++ modules as appropriate.
+- [ ] Add deterministic save/load, diagnostics, profiling and regression tests for project-specific behavior.
+- [ ] Verify performance and memory on the target phone.
+- [ ] Retire old standalone engine components only after their replacements are validated.
+
+Status: G0 is IN_PROGRESS until the new workflow and physical-device checks pass.

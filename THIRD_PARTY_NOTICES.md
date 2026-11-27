@@ -17,3 +17,13 @@ Dream Engine's root project license remains MIT. The following separately licens
 - License: BSD 3-Clause; copy retained in [LICENSE](third_party/webgpu-headers/LICENSE).
 
 The Android host uses wgpu-native as a prebuilt native dependency through its C API. Dream Engine's own implementation and public engine interfaces remain C++20. This file records direct package/header notices; consult the upstream projects for complete transitive dependency attribution.
+
+## Godot Engine
+
+- Project: https://github.com/godotengine/godot
+- Version: `4.7.2-stable`
+- Pinned source commit: `ed1daf0bf001b61586d9930840f2f1394092c079`
+- Integration: Git submodule at `third_party/godot`; the Android ARM64 runtime template is compiled from this source in GitHub Actions.
+- License: MIT. Preserve the upstream `LICENSE.txt` and all notices contained in the Godot source tree and generated distributions. Godot's bundled third-party components retain their own licenses; consult upstream notices before redistributing modified engine builds.
+
+The root Dream Engine license remains MIT. This notice does not replace the license files or attribution notices shipped by Godot and its dependencies.

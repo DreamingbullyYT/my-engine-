@@ -132,3 +132,9 @@ The Android host now binds the backend-neutral `RenderDevice` to `dream::render:
 The Android CMake option is `DREAM_BUILD_WGPU_NATIVE_BACKEND` and consumes the verified package root through `WGPU_NATIVE_ROOT`. The app CMake enables this backend and disables bgfx. The bgfx engine module remains optional and may still be used by other targets; it is not the active Android renderer.
 
 **Current capability boundary:** only clear/present is implemented. `supports_2d`, `supports_3d` and instancing remain false; no GPU texture, mesh or material resources are created; draw packets are rejected. The magenta clear frame is a diagnostic to validate surface presentation, not a game scene. Add the WGSL shader/pipeline and resource layers incrementally without leaking wgpu handles into engine-facing APIs.
+
+## Active target architecture — Godot 4.7.2 migration
+
+Godot 4.7.2-stable source is the active engine foundation. Godot should own the scene tree, resource system, rendering, physics, input, audio and Android platform/runtime integration where its facilities meet requirements. Dream-specific engine internals belong in small C++ modules/patches; game content belongs in Godot projects and resources. Do not maintain a second copy of a system that Godot already provides unless a documented requirement proves it necessary.
+
+The prior `engine/` modules, AndroidX GameActivity adapter and wgpu-native host remain preserved reference code during migration. They are not yet deleted or represented as ported. Trusted in-process native mod support remains a requirement and needs an explicit GDExtension plus internal module/hook design.

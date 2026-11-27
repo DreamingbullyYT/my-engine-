@@ -58,3 +58,9 @@ The reusable engine provides generic core services, platform adapters, rendering
 - Pin and verify the release archive with SHA-256 in the workflow. Preserve the upstream wgpu-native MIT/Apache-2.0 notices and the WebGPU native headers BSD-3-Clause notice under `third_party/`; do not replace the repository's root MIT license.
 - First verified milestone is Android surface/device creation and clear/present only. 2D and 3D capabilities must remain disabled until their WGSL pipelines, resources, validation and lifecycle behavior are implemented and tested.
 - Android CI proves arm64 compilation and APK packaging, not physical GPU correctness. Phone validation remains an explicit gate.
+
+## Godot source migration — accepted 2026-11-27
+
+The active engine foundation is upstream Godot 4.7.2-stable source, pinned at commit `ed1daf0bf001b61586d9930840f2f1394092c079` in `third_party/godot`. This supersedes the former standalone-engine-from-scratch plan. The existing `engine/` and `android-host/` remain preserved as legacy/reference until the Godot source build and physical phone test are verified.
+
+See [GODOT_MIGRATION.md](GODOT_MIGRATION.md) for the active plan. The prior DMod requirement for trusted unrestricted native in-process mods remains, but its Godot implementation must be designed explicitly: GDExtension is not assumed to expose every private Godot internal.

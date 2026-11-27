@@ -198,3 +198,14 @@ This update is authoritative over older checklist/status text above where they c
 - **Explicit limitation:** the current backend reports `supports_2d=false` and `supports_3d=false`; it accepts empty draw lists and only clears/presents. Texture/mesh/material upload, WGSL 2D/3D pipelines, depth buffers and GPU resource restoration are not implemented in this backend yet. bgfx remains optional in CMake but is disabled in the active Android host.
 - **Not yet verified:** installing/running this APK on the user's phone and seeing the magenta frame. A successful CI run is not physical-device proof. The first phone check should confirm magenta presentation; if still black, capture Logcat tag `DreamEngineWgpu`, `DreamEngineBoot` and `DreamEngine` plus `logs/engine.log` if available.
 - **Next implementation order:** (1) phone validation of surface creation/presentation; (2) WGSL 2D textured/sprite pipeline and GPU upload/lifetime; (3) WGSL 3D mesh/material/depth pipeline; (4) device-loss and surface recreation/resource restoration tests; (5) wider device/GPU validation.
+
+## Godot migration state — 2026-11-27
+
+**Active migration branch:** `godot-4.7.2-migration`
+**Pinned source:** `third_party/godot`, upstream Godot 4.7.2-stable commit `ed1daf0bf001b61586d9930840f2f1394092c079`.
+**Bootstrap project:** `godot-project/`.
+**Build workflow:** `.github/workflows/godot-android-source.yml`.
+
+The migration branch adds the upstream source submodule, a minimal Android validation project and an Actions pipeline intended to compile Godot's ARM64 Android debug template from source, export an installable APK and compare the packaged native library to the source-built library.
+
+**Not yet verified:** the new Actions workflow is running; APK creation and device rendering remain pending. The older C++ engine, GameActivity host and wgpu backend are preserved unchanged as reference/legacy material. They are no longer the selected base for new runtime work while this migration is being validated.

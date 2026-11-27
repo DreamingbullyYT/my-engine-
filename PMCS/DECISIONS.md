@@ -114,3 +114,32 @@
 - Vulkan and GL backends are enabled; Android Vulkan is the primary target and GL/GLES remains best-effort.
 - The dependency carries MIT/Apache-2.0 notices; the pinned WebGPU native headers submodule carries BSD-3-Clause. Preserve notices in `third_party/`; do not change the repository root MIT license.
 - Android CI proves cross-compilation and APK packaging, not physical GPU correctness. The user must verify visible output on a phone.
+
+## ADR-0016 — Adopt Godot 4.7.2-stable as the engine foundation
+**Status:** ACCEPTED — migration in progress (2026-11-27)
+
+**Decision:** Use upstream Godot 4.7.2-stable source as the new foundation for the general-purpose Dream Engine. Pin tag `4.7.2-stable` to commit `ed1daf0bf001b61586d9930840f2f1394092c079` as a Git submodule at `third_party/godot`.
+
+**Reason:** Explicit user approval to use the Godot source rather than continue reimplementing mature engine foundations independently.
+
+**Consequences:**
+- Godot becomes the active runtime foundation; its scene/resource/input/physics/render/platform systems are preferred over parallel duplicates.
+- C++ remains the default language for engine internals and native extensions; GDScript may be used for game/project scripts.
+- Preserve the former `engine/` implementation and Android host as reference until replacements are built and tested.
+- Build the Android source template for arm64-v8a through GitHub Actions. CI is not physical-device proof.
+- Preserve Godot's MIT license and all third-party notices.
+- The old wgpu-native Android backend is not the active renderer for the Godot runtime; keep it as legacy/reference code.
+
+The previous ADR-0003 restriction against adopting a complete engine unchanged is superseded by this explicit user decision. Earlier C++-first and Android/CI requirements remain compatible.
+
+## ADR-0017 — Preserve unrestricted native mod support during the Godot migration
+**Status:** ACCEPTED REQUIREMENT; implementation design pending
+
+**Decision:** Retain the prior DMod requirement for trusted native in-process code with no sandbox/capability boundary. Evaluate GDExtension for supported public interfaces and a maintained Godot module/patch layer for deep internal hook/replace/mixin points.
+
+**Consequences:**
+- Do not claim GDExtension by itself grants access to every private Godot internal.
+- Do not add a sandbox to the native mod path.
+- Keep native mod authoring/building off the user's phone; distribute prebuilt ABI-specific libraries.
+- Native mods can crash, corrupt engine/game state or use app-permitted OS resources. Only trusted mods should be loaded.
+- Define ABI/version policy and real hook insertion points before marking the DMod migration implemented.

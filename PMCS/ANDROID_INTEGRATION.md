@@ -165,3 +165,7 @@ The current native loop initializes EngineRuntime when a GameActivity surface is
 This APK is deliberately a presentation diagnostic, not yet the previous demo. The active backend currently has no 2D/3D draw capabilities, WGSL pipelines, GPU resource uploads or material system. Do not use the old bgfx/ESSL shader instructions above as instructions for the current host; those sections describe the superseded bgfx implementation. The next steps are real-device presentation validation, then wgpu 2D and 3D pipelines.
 
 Build/package evidence: [Android APK workflow run 91](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45949435994). Full engine CI: [run 479](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45949436000). Both passed on source milestone `95f57b5807a022b94017fbf42f43758f11a1c575`; physical-device validation remains pending.
+
+## Godot migration note — 2026-11-27
+
+This guide documents the legacy standalone Dream Engine GameActivity adapter/host. The active migration target now uses Godot 4.7.2's own Android platform port and generated Android export templates. Do not treat this GameActivity adapter as the Android host for the Godot runtime. Keep it as reference until the source-built Godot APK is verified on the user's phone.
