@@ -63,7 +63,7 @@ horizontal_alignment = 1
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.72, 0.91, 1)
 theme_override_font_sizes/font_size = 16
-text = "M2 · Native GDExtension + M3 · External GDScript"
+text = "M2 · Native C++ + M3 · External GDScript + M4 · .dmod"
 horizontal_alignment = 1
 
 [node name="EngineVersion" type="Label" parent="Panel/Content"]
@@ -116,6 +116,22 @@ size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 16
 text = "Test external GDScript (M3)"
 
+[node name="PackageStatus" type="Label" parent="Panel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.82, 0.96, 1)
+theme_override_font_sizes/font_size = 13
+text = "M4 .dmod: not tested"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="InstallSampleModButton" type="Button" parent="Panel/Content"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 16
+text = "Install and run sample .dmod (M4)"
+
 [node name="Status" type="Label" parent="Panel/Content"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -127,3 +143,4 @@ autowrap_mode = 2
 
 [connection signal="pressed" from="Panel/Content/TestTouchButton" to="." method="_on_test_touch_pressed"]
 [connection signal="pressed" from="Panel/Content/TestExternalScriptButton" to="." method="_on_test_external_script_pressed"]
+[connection signal="pressed" from="Panel/Content/InstallSampleModButton" to="." method="_on_install_sample_mod_pressed"]
