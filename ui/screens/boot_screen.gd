@@ -7,6 +7,7 @@ var _touch_count: int = 0
 @onready var _touch_count_label: Label = %TouchCount
 @onready var _status_label: Label = %Status
 @onready var _external_status: Label = %ExternalStatus
+@onready var _package_status: Label = %PackageStatus
 
 
 func _ready() -> void:
@@ -18,6 +19,7 @@ func _ready() -> void:
     AppLifecycle.application_paused.connect(_on_application_paused)
     AppLifecycle.application_resumed.connect(_on_application_resumed)
     ModRuntime.probe_finished.connect(_on_external_probe_finished)
+	ModPackageManager.package_finished.connect(_on_package_finished)
 
 
 func _check_native_runtime() -> void:
@@ -64,6 +66,16 @@ func _on_external_probe_finished(success: bool, message: String) -> void:
         _status_label.text = "M3 external script executed successfully."
     else:
         _status_label.text = "M3 external script test failed. Check the log."
+
+
+func _on_install_sample_mod_pressed() -> void:
+	_package_status.text = "M4 .dmod: installing..."
+	ModPackageManager.create_and_run_sample()
+
+
+func _on_package_finished(success: bool, message: String) -> void:
+	_package_status.text = message
+	_status_label.text = message
 
 
 func _on_application_paused() -> void:
