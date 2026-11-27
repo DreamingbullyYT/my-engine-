@@ -138,3 +138,10 @@ The Android CMake option is `DREAM_BUILD_WGPU_NATIVE_BACKEND` and consumes the v
 Godot 4.7.2-stable source is the active engine foundation. Godot should own the scene tree, resource system, rendering, physics, input, audio and Android platform/runtime integration where its facilities meet requirements. Dream-specific engine internals belong in small C++ modules/patches; game content belongs in Godot projects and resources. Do not maintain a second copy of a system that Godot already provides unless a documented requirement proves it necessary.
 
 The prior `engine/` modules, AndroidX GameActivity adapter and wgpu-native host remain preserved reference code during migration. They are not yet deleted or represented as ported. Trusted in-process native mod support remains a requirement and needs an explicit GDExtension plus internal module/hook design.
+
+
+## Godot foundation and native in-process mod layer — accepted 2026-11-27
+
+Godot 4.7.2-stable at upstream commit `ed1daf0bf001b61586d9930840f2f1394092c079` is the engine foundation. Source must be present as normal tracked files under `third_party/godot/`, never as a submodule. Dream Engine-specific native integration is implemented as a built-in C++ Godot module and minimal engine call-site patches, not by replacing Godot's mature subsystems or exposing only GDExtension's public API.
+
+The native mod ABI is append-only and versioned. Trusted prebuilt shared libraries load in-process, without a sandbox, and may access raw live engine interfaces. Hook stages are `Before`, `Around`, `Replace`, and `After`; every claimed hook must have an actual engine dispatch site. The initial lifecycle targets are frame/update, fixed physics step, scene/node lifecycle, render submission, and resource load/decode/register. Mod ownership must be tracked for hooks, callbacks, resources and jobs, and shutdown must complete before library unload. Android mods are prebuilt for arm64-v8a; no on-device compilation or APK rebuild is required for installation.
