@@ -5,7 +5,7 @@ All milestones are PLANNED until evidence is recorded in CURRENT_STATE.md.
 ## M0 — Clean baseline and PMCS
 - [x] Empty source branches intentionally on 2026-11-27.
 - [x] Resolve scripting-language decision: GDScript is primary for .dmod (D-010).
-- [ ] Review and finalize PMCS.
+- [ ] Review and finalize PMCS, including GAMEPLAY.md, ROCKETS_AND_PHYSICS.md, UNIVERSE.md, AUTOMATION.md, SPACE_INFRASTRUCTURE.md, SPACE_EXPANSION.md, and PERFORMANCE_AND_SIMULATION.md.
 - [ ] Confirm repository name and branch strategy.
 Exit: clean baseline and reviewed project memory.
 
@@ -54,6 +54,7 @@ Exit: samples work without Godot source modifications or APK rebuild.
 
 ## M7 — Multiplayer
 - [ ] Define session/authority contract.
+- [ ] Define save compatibility and deterministic simulation contract for modded content.
 - [ ] Mod-defined messages and schema validation.
 - [ ] Sync a mod-owned entity between two clients.
 - [ ] Test mismatch, disconnect, malformed packets, authority violations.
@@ -61,6 +62,7 @@ Exit: two real clients connect and synchronize the sample mod.
 
 ## M8 — Production hardening
 - [ ] Profiling, diagnostics, compatibility matrix, modder SDK.
+- [ ] Establish measured Android ARM64 budgets for citizens, buildings, vehicles, world bodies, memory, and frame/simulation time.
 - [ ] Security and Android policy review.
 - [ ] Release and migration policy.
 
