@@ -59,6 +59,10 @@ private:
     uint32_t dispatch_depth = 0;
 
     static int lua_register_hook(lua_State *state);
+    static int lua_object_is_valid(lua_State *state);
+    static int lua_object_get(lua_State *state);
+    static int lua_object_set(lua_State *state);
+    static int lua_object_call(lua_State *state);
     static int lua_call_next(lua_State *state);
     static uint8_t native_call_next(void *context) noexcept;
     static void sync_dictionary_to_lua_table(lua_State *state, int table_ref, const Dictionary &dictionary);
