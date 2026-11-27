@@ -43,4 +43,4 @@ Parts can overheat, exceed pressure/structural limits, run out of propellant, lo
 NPC flight planning uses craft capabilities and the same physics. Mission feasibility reports explain missing delta-v, propellant, control authority, communication, docking hardware, landing capability, or crew support. Player takeover is always possible; the plan is recalculated from current state.
 
 ## Accessibility and controls
-Provide touch-friendly construction, part selection, staging, throttle, attitude control, map navigation, and maneuver editing. Offer configurable assistance/realism settings without changing the underlying conservation/resource rules.
+Provide touch-friendly construction, part selection, staging, throttle, attitude control, map navigation, and maneuver editing. Offer configurable assistance/realism settings without changing the underlying conservation/resource rules. Beginner-facing flight should offer recommended craft, suggested maneuvers, and assisted controls; advanced telemetry and manual controls remain accessible immediately on demand. See MOBILE_UX.md.
