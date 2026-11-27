@@ -46,7 +46,7 @@ void uncaptured_error_callback(
 
 struct AdapterRequest final {
     bool completed{false};
-    WGPURequestAdapterStatus status{WGPURequestAdapterStatus_Unknown};
+    WGPURequestAdapterStatus status{static_cast<WGPURequestAdapterStatus>(0)};
     WGPUAdapter adapter{nullptr};
     std::string message;
 };
@@ -64,7 +64,7 @@ void adapter_request_callback(
 
 struct DeviceRequest final {
     bool completed{false};
-    WGPURequestDeviceStatus status{WGPURequestDeviceStatus_Unknown};
+    WGPURequestDeviceStatus status{static_cast<WGPURequestDeviceStatus>(0)};
     WGPUDevice device{nullptr};
     std::string message;
 };
@@ -216,6 +216,7 @@ bool WgpuNativeBackend::initialize(
     WGPUAdapterInfo adapter_info = WGPU_ADAPTER_INFO_INIT;
     const WGPUStatus info_status =
         wgpuAdapterGetInfo(state_->adapter, &adapter_info);
+    const WGPUBackendType selected_backend = adapter_info.backendType;
     if (info_status == WGPUStatus_Success) {
         const std::string description = message_string(adapter_info.description);
         const std::string vendor = message_string(adapter_info.vendor);
@@ -302,7 +303,7 @@ bool WgpuNativeBackend::initialize(
 
     const std::string ready =
         "wgpu-native surface configured; backend=" +
-        std::to_string(static_cast<unsigned>(adapter_info.backendType)) +
+        std::to_string(static_cast<unsigned>(selected_backend)) +
         "; extent=" + std::to_string(surface.pixel_extent.width) + "x" +
         std::to_string(surface.pixel_extent.height) +
         "; draw capabilities=none (clear/present milestone)";
