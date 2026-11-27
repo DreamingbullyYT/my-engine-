@@ -1,0 +1,13 @@
+diff --git a/third_party/godot/main/main.cpp b/third_party/godot/main/main.cpp
+--- a/third_party/godot/main/main.cpp
++++ b/third_party/godot/main/main.cpp
+@@ -5150,6 +5150,9 @@
+ 	uint64_t process_begin = OS::get_singleton()->get_ticks_usec();
+ 
+ 	GodotProfileZoneGrouped(_profile_zone, "process");
++	if (DreamModRuntime::get_singleton() != nullptr) {
++		DreamModRuntime::get_singleton()->update_mods(process_step * time_scale);
++	}
+ 	Dictionary dream_process_context;
+ 	dream_process_context["delta"] = process_step * time_scale;
+ 	dream_process_context["exit"] = false;
