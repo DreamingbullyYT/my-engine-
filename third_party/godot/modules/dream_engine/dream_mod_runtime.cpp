@@ -625,7 +625,7 @@ bool DreamModRuntime::load_mod(const String &package_path) {
         return false;
     }
 
-    PackedByteArray manifest_bytes = zip->read_file("manifest.json", true);
+    PackedByteArray manifest_bytes = zip->read_file("manifest.json", true, 64 * 1024);
     if (manifest_bytes.is_empty() || manifest_bytes.size() > 64 * 1024) {
         zip->close();
         ERR_PRINT("DreamMods: manifest.json is missing or larger than 64 KiB.");
@@ -652,7 +652,7 @@ bool DreamModRuntime::load_mod(const String &package_path) {
         return false;
     }
 
-    PackedByteArray source = zip->read_file(entry_script, true);
+    PackedByteArray source = zip->read_file(entry_script, true, 4 * 1024 * 1024);
     zip->close();
     if (source.is_empty() || source.size() > 4 * 1024 * 1024) {
         ERR_PRINT("DreamMods: entry script missing or larger than 4 MiB.");
