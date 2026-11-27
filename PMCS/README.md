@@ -11,21 +11,22 @@ This directory is the durable memory for humans and AI agents. It prevents repea
 1. CURRENT_STATE.md — verified repository state.
 2. VISION.md — goals and non-goals.
 3. ARCHITECTURE.md — system boundaries and data flow.
-4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), D-012 (modular orbital settlements/mobile colony ships), D-013 (mobile-colony fleet autonomy and permission-gated expansion), D-014 (reference-guided colony and flight design), D-015 (guided tutorial followed by free sandbox), and D-016 (adaptive hybrid rendering and citizen visual LOD), D-017 (hybrid excavatable terrain and underground colonies), D-018 (simplified underground stability and excavation rules), D-019 (polar-cell underground terrain), D-020 (first playable v1 scope), and D-021 (flight-assistance and language defaults).
-5. MODDING_API.md — .dmod package and GDScript API requirements.
-6. GAMEPLAY.md — citizens, colony economy, buildings, research, policies, and needs.
-7. ROCKETS_AND_PHYSICS.md — part-based vehicles, propulsion, orbital and atmospheric flight.
-8. UNIVERSE.md — stars, worlds, discovery, asteroids, and interstellar travel.
-9. AUTOMATION.md — mayors, NPC pilots, fleets, cargo, and remote simulation.
-10. SPACE_INFRASTRUCTURE.md — satellites, stations, megaships, and habitats.
-11. SPACE_EXPANSION.md — mobile-colony fleet expansion and habitability rules.
-12. PERFORMANCE_AND_SIMULATION.md — simulation tiers, saves, Android lifecycle, and budgets.
-13. MOBILE_UX.md — progressive complexity, touch-first UX, onboarding, and accessibility; first-launch flow accepted in D-015, other details still planned.
-14. ROADMAP.md — implementation sequence and exit gates.
-15. BUILD_AND_TEST.md — CI and validation policy.
-16. AI_RULES.md — mandatory agent workflow.
-17. CODE_MAP.md — generated/evidence-backed source map, currently no engine source.
-18. CODE_MEMORY.md — CodeGraphContext indexing strategy and verified CI smoke-test results.
+4. MODULES.md — game-module catalog, ownership, dependency rules, and modularity requirements.
+5. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), D-012 (modular orbital settlements/mobile colony ships), D-013 (mobile-colony fleet autonomy and permission-gated expansion), D-014 (reference-guided colony and flight design), D-015 (guided tutorial followed by free sandbox), D-016 (adaptive hybrid rendering and citizen visual LOD), D-017 (hybrid excavatable terrain and underground colonies), D-018 (simplified underground stability and excavation rules), D-019 (polar-cell underground terrain), D-020 (first playable v1 scope), D-021 (flight-assistance and language defaults), and D-022 (modular-by-default architecture).
+6. MODDING_API.md — .dmod package and GDScript API requirements.
+7. GAMEPLAY.md — citizens, colony economy, buildings, research, policies, and needs.
+8. ROCKETS_AND_PHYSICS.md — part-based vehicles, propulsion, orbital and atmospheric flight.
+9. UNIVERSE.md — stars, worlds, discovery, asteroids, and interstellar travel.
+10. AUTOMATION.md — mayors, NPC pilots, fleets, cargo, and remote simulation.
+11. SPACE_INFRASTRUCTURE.md — satellites, stations, megaships, and habitats.
+12. SPACE_EXPANSION.md — mobile-colony fleet expansion and habitability rules.
+13. PERFORMANCE_AND_SIMULATION.md — simulation tiers, saves, Android lifecycle, and budgets.
+14. MOBILE_UX.md — progressive complexity, touch-first UX, onboarding, and accessibility; first-launch flow accepted in D-015, other details still planned.
+15. ROADMAP.md — implementation sequence and exit gates.
+16. BUILD_AND_TEST.md — CI and validation policy.
+17. AI_RULES.md — mandatory agent workflow.
+18. CODE_MAP.md — generated/evidence-backed source map, currently no engine source.
+19. CODE_MEMORY.md — CodeGraphContext indexing strategy and verified CI smoke-test results.
 
 ## Reference-guided design baseline
 D-014 adapts colony-management principles from The Final Earth 2 and part-based orbital-flight principles from Spaceflight Simulator. It does not authorize copying code, art, names, distinctive UI, or exact balance values. See GAMEPLAY.md and ROCKETS_AND_PHYSICS.md.
@@ -69,6 +70,7 @@ For every meaningful change:
 - CURRENT_STATE.md — exact current state.
 - VISION.md — product goals.
 - ARCHITECTURE.md — intended components and data flow.
+- MODULES.md — concrete game-module catalog and modularity rules.
 - DECISIONS.md — accepted decisions.
 - MODDING_API.md — mod package and API requirements.
 - ROADMAP.md — implementation milestones.
@@ -96,6 +98,4 @@ D-018 keeps the initial underground system lightweight: ordinary tunnels remain 
 2026-11-27: D-018 accepts stable-by-default tunnels, no support structures or automatic support decorations, and uniform basic excavation without complex material-hardness simulation. Resource deposits may still differ by material. Documentation only; no terrain implementation.
 
 
-2026-11-27: D-019 resolves underground terrain as persistent polar-coordinate cells with connected tunnel topology and no fixed 12-layer limit. D-020 defines the first playable v1 scope; interstellar travel and megaships are postponed to v2+. D-021 accepts flight assistance by default and automatic Romanian/English locale selection with settings override. Documentation only; no source code or runtime behavior was added.
-
-19. MODULES.md — concrete game-module catalog, source layout, dependency rules, and modularity acceptance criteria.
+2026-11-27: D-019 resolves underground terrain as persistent polar-coordinate cells with connected tunnel topology and no fixed 12-layer limit. D-020 defines the first playable v1 scope; interstellar travel and megaships are postponed to v2+. D-021 accepts flight assistance by default and automatic Romanian/English locale selection with settings override. D-022 requires modular-by-default game architecture with explicit module ownership, contracts, tests, and no giant all-purpose managers. Documentation only; no source code or runtime behavior was added.
