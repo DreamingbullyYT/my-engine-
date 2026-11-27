@@ -7,7 +7,6 @@ The first playable v1 is a coherent local-system game slice: one starting planet
 
 Interstellar travel, additional star systems, multi-system autonomous fleets/colonization, and full-scale mobile-colony megaships are v2+ work. They remain in the long-term design; do not make them prerequisites for v1. Keep M1 (official Godot Android baseline) and M2 (separate GDExtension proof) as distinct early gates. M1 must not require a custom Godot source build; M2 proves the separate C++ extension can load without modifying Godot.
 
-
 ## M0 — Clean baseline and PMCS
 - [x] Empty source branches intentionally on 2026-11-27.
 - [x] Resolve scripting-language decision: GDScript is primary for .dmod (D-010).
@@ -17,16 +16,22 @@ Exit: clean baseline and reviewed project memory.
 
 ## M1 — Official Godot Android baseline
 - [x] Set up the official, unmodified Godot 4.7.2-stable editor and official Android export templates/toolchain in GitHub Actions (verified in run #5); no custom Godot fork.
-- [x] Produce a minimal installable APK from the standard Android export pipeline (run #5; 28,431,521 bytes; Android arm64-v8a library and package ID validated). Use official prebuilt release/templates; no source compilation was needed.
+- [x] Produce a minimal installable APK from the standard Android export pipeline (run #5; 28,431,521 bytes; Android arm64-v8a library and package ID validated). No Godot source compilation was needed.
 - [ ] User to validate on physical Android device: launch, visible rendering, touch button/counter, pause/resume, and readable UI. The test button's pressed signal is connected in the exported scene.
 Exit: user confirms physical-device test.
 
 ## M2 — GDExtension proof
-- [ ] Build an independent minimal C++ GDExtension.
-- [ ] Load it in Android ARM64 build.
-- [ ] Call a native method from a Godot script.
-- [ ] Verify initialization/shutdown logs.
-Exit: repeatable on-device load test without Godot source edits.
+Status: implementation in progress on branch `m2/gdextension-proof`; CI and device gates remain open.
+- [x] Add an independent, minimal C++ GDExtension module with separate entry, registration, and probe-class files.
+- [x] Pin official godot-cpp and target the Godot 4.7 API without modifying Godot source.
+- [x] Add a GDScript smoke test for native class registration, string return, and arithmetic call.
+- [x] Add a visible boot-screen status for the native probe.
+- [ ] Build Linux x86_64 and run the headless GDScript-to-C++ smoke test in Actions.
+- [ ] Cross-compile the extension for Android arm64-v8a.
+- [ ] Export an Android ARM64 APK containing the extension.
+- [ ] Verify initialization and shutdown logs in CI.
+- [ ] User to confirm that the Android APK loads the extension on the physical phone.
+Exit: repeatable Android ARM64 build; Linux test proves the API call path; physical device confirms Android loading. CI success alone does not close the device gate.
 
 ## M3 — GDScript runtime-loading proof
 - [ ] Verify dynamic GDScript source loading/compilation using official Godot APIs.
@@ -73,7 +78,6 @@ Exit: two real clients connect and synchronize the sample mod.
 - [ ] Release and migration policy.
 
 Do not jump to multiplayer or advanced hooks before M1-M4 are proven. Prefer small vertical slices that compile, run, and can be tested.
-
 
 ## Development start authorization — 2026-11-27
 The project is approved to move from design/planning into implementation. This records authorization to begin; it does **not** claim that implementation or device validation has already happened.
