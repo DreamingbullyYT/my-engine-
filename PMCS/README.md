@@ -11,14 +11,23 @@ This directory is the durable memory for humans and AI agents. It prevents repea
 1. CURRENT_STATE.md — verified repository state.
 2. VISION.md — goals and non-goals.
 3. ARCHITECTURE.md — system boundaries and data flow.
-4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), D-012 (modular orbital settlements/mobile colony ships), and D-013 (mobile-colony fleet autonomy and permission-gated expansion).
+4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), D-012 (modular orbital settlements/mobile colony ships), D-013 (mobile-colony fleet autonomy and permission-gated expansion), and D-014 (reference-guided colony and flight design).
 5. MODDING_API.md — .dmod package and GDScript API requirements.
-6. SPACE_EXPANSION.md — mobile-colony fleets, habitability rules, and autonomous expansion.
-7. ROADMAP.md — implementation sequence and exit gates.
-8. BUILD_AND_TEST.md — CI and validation policy.
-9. AI_RULES.md — mandatory agent workflow.
-10. CODE_MAP.md — generated/evidence-backed source map, currently no engine source.
-11. CODE_MEMORY.md — CodeGraphContext indexing strategy and verified CI smoke-test results.
+6. GAMEPLAY.md — citizens, colony economy, buildings, research, policies, and needs.
+7. ROCKETS_AND_PHYSICS.md — part-based vehicles, propulsion, orbital and atmospheric flight.
+8. UNIVERSE.md — stars, worlds, discovery, asteroids, and interstellar travel.
+9. AUTOMATION.md — mayors, NPC pilots, fleets, cargo, and remote simulation.
+10. SPACE_INFRASTRUCTURE.md — satellites, stations, megaships, and habitats.
+11. SPACE_EXPANSION.md — mobile-colony fleet expansion and habitability rules.
+12. PERFORMANCE_AND_SIMULATION.md — simulation tiers, saves, Android lifecycle, and budgets.
+13. ROADMAP.md — implementation sequence and exit gates.
+14. BUILD_AND_TEST.md — CI and validation policy.
+15. AI_RULES.md — mandatory agent workflow.
+16. CODE_MAP.md — generated/evidence-backed source map, currently no engine source.
+17. CODE_MEMORY.md — CodeGraphContext indexing strategy and verified CI smoke-test results.
+
+## Reference-guided design baseline
+D-014 adapts colony-management principles from The Final Earth 2 and part-based orbital-flight principles from Spaceflight Simulator. It does not authorize copying code, art, names, distinctive UI, or exact balance values. See GAMEPLAY.md and ROCKETS_AND_PHYSICS.md.
 
 ## Current game-design clarifications
 The colony remains central. A mayor begins as an adviser and progressively takes on routine management as player oversight decreases; colonies can still fail or be destroyed. Space settlements include functional satellites, large modular orbital stations, and mobile colony ships that can act as planetless colonies. Mobile-colony mayors can plan fleets and, after player permission at roughly 5–6 explored star systems, autonomously found colonies only on genuinely habitable worlds or through explicitly engineered habitat solutions. See D-011 through D-013.
@@ -70,3 +79,4 @@ For every meaningful change:
 
 2026-11-27: D-011 and D-012 record gradual mayor autonomy and modular orbital settlements/mobile colony ships. Documentation only; no gameplay implementation.
 2026-11-27: D-013 records mobile-colony fleet autonomy and player-approved planetary expansion after roughly 5–6 explored star systems, restricted to genuinely habitable worlds or explicitly engineered habitat alternatives. Documentation only; no gameplay implementation.
+2026-11-27: D-014 establishes reference-guided colony/flight design and creates detailed gameplay, rocket physics, universe, automation, infrastructure, and performance specifications. Documentation only; no gameplay implementation.
