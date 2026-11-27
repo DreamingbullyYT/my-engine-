@@ -36,7 +36,7 @@ diff --git a/third_party/godot/modules/zip/zip_reader.cpp b/third_party/godot/mo
  
  	// Read the file data.
  	PackedByteArray data;
-@@ -171,7 +176,7 @@
+@@ -171,6 +176,6 @@
  	ClassDB::bind_method(D_METHOD("close"), &ZIPReader::close);
  	ClassDB::bind_method(D_METHOD("get_files"), &ZIPReader::get_files);
 -	ClassDB::bind_method(D_METHOD("read_file", "path", "case_sensitive"), &ZIPReader::read_file, DEFVAL(Variant(true)));
