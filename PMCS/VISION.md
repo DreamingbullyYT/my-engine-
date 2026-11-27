@@ -47,3 +47,10 @@ The space layer must include more than small satellites. Distinguish:
 - **Other space settlements:** asteroid bases, orbital habitats, industrial platforms, and shipyards can extend this system.
 
 These are game-specific host systems and should be exposed through extensible host APIs so trusted GDScript mods can add new station modules, habitat types, ship components, population systems, and related mechanics.
+
+## Mobile-colony fleet autonomy and controlled expansion
+A mobile colony is a governed settlement with its own mayor, not just a transport ship. It may plan and build a fleet of different ship types when its technology, designs, shipyard, workforce, resources, energy, fuel, and logistics support them. The mayor chooses ships according to the settlement's actual needs; no ships or materials are created for free.
+
+Planetary expansion is permission-gated. After roughly 5–6 star systems have been explored, the mayor may ask the player whether it may autonomously establish additional colonies. The player must approve before this autonomous colonization begins. Candidate worlds must be genuinely habitable for the civilization's current technology and biology, not merely discoverable. The Sun, Mercury, Venus's surface, and gas-giant interiors are not ordinary habitable colony targets. Specialized floating habitats (such as in Venus's upper clouds), orbital settlements, and suitable moons are distinct engineered options.
+
+Every expedition must pass habitability, capability, supply, and logistics checks. New colonies receive their own governance and remain subject to real resource and survival constraints. The player retains visibility, permission controls, and the ability to intervene.
