@@ -191,7 +191,7 @@ jobs:
           unzip -Z1 build/android/dream-engine-debug.apk | grep -F "lib/arm64-v8a/libgodot_android.so"
           {
             echo "Commit: $GITHUB_SHA"
-            echo "Godot: $(" "$GODOT_BIN" --version)"
+            echo "Godot: $("$GODOT_BIN" --version)"
             echo "Target: Android arm64-v8a"
             echo "Native extension: DreamRuntimeProbe"
             echo "Package: com.dreamingbully.dreamengine"
