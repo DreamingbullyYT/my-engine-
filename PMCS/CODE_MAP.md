@@ -1,8 +1,8 @@
 # CodeGraphContext Code Map
 
 - Status: **NO_SOURCE_CODE_TO_INDEX**
-- Commit: 2349902a1f1fcbbf586ccc081be9f0f99df390fa
-- Generated: 2026-11-27T12:57:28Z
+- Commit: 1c97b1818bdaef3242a01ecde97a68cab0d9fc06
+- Generated: 2026-11-27T13:28:15Z
 
 The active repository tree currently contains project documentation only.
 CodeGraphContext was installed successfully, but indexing is deferred until source files are added.
