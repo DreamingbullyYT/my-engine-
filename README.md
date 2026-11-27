@@ -16,7 +16,9 @@ Android-first game runtime and modding platform based on official, unmodified Go
 - Dream-specific runtime/API lives outside the Godot source tree.
 - Android ARM64 is the primary target.
 - GitHub Actions performs builds and automated tests; the user validates installable artifacts on a physical phone.
-- Ordinary mods use Lua, JSON, scenes, and assets in .dmod packages. Native extensions are optional advanced functionality.
+- Ordinary .dmod mods use GDScript, JSON, scenes, and assets. Lua is not a planned runtime dependency.
+- Dream Runtime remains a separate C++ GDExtension for native integration/performance-sensitive facilities; official Godot source stays untouched.
+- The first playable v1 targets one starting planet, its Moon, nearby asteroids, and a basic orbital station. Interstellar systems and megaships are later v2+ scope.
 - Target NeoForge-like extensibility, not NeoForge binary compatibility.
 
 PMCS is the version-controlled project memory. Update it with every meaningful architecture, status, API, or workflow change.
