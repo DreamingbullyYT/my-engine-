@@ -41,11 +41,17 @@ if ! command -v scons >/dev/null 2>&1; then
 fi
 
 echo "Building Dream Runtime for $PLATFORM/$ARCH with godot-cpp $ACTUAL_COMMIT"
+NDK_ARGS=()
+if [[ "$PLATFORM" == "android" ]]; then
+    NDK_ARGS+=("ndk_version=${ANDROID_NDK_VERSION:-28.1.13356709}")
+fi
+
 scons -C "$EXTENSION_DIR" \
     platform="$PLATFORM" \
     arch="$ARCH" \
     target=template_debug \
     precision=single \
+    "${NDK_ARGS[@]}" \
     -j"$(nproc)"
 
 case "$PLATFORM:$ARCH" in
