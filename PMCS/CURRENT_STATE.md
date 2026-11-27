@@ -93,3 +93,13 @@ Accepted D-016 establishes adaptive hybrid building rendering and pixel-scale ci
 D-017 accepts a hybrid excavatable-terrain design. Planet surfaces use a simple, readable side-view style with minimal vegetation. Players can excavate persistent, traversable tunnels and chambers and establish underground colonies; nearby/relevant spaces receive the fidelity needed for gameplay, while distant or irrelevant details may be simplified. Terrain edits invalidate only affected regions rather than rebuilding an entire planet. Authoritative terrain, collision, excavation topology, resources, and structures remain separate from visual caches.
 
 Asteroid mining remains a distinct system. Structural stability, cave-ins, support materials, detailed geology, and exact excavation mechanics remain open design questions. Numeric terrain resolution and performance budgets await Android ARM64 profiling. Documentation only; no terrain, mining, or underground-colony implementation was added.
+
+
+## 2026-11-27 accepted underground-excavation rules — D-018
+D-018 resolves the initial rules left open by D-017:
+- Ordinary excavated tunnels and chambers are stable by default; no routine cave-in or structural-strength simulation.
+- No required support structures, beams, pillars, reinforcement, or automatically generated support decorations.
+- All terrain uses the same basic excavation rule; no complex material-specific hardness/digging-resistance simulation.
+- Material and deposit differences remain relevant to the resources that can be found and extracted.
+
+These choices intentionally reduce CPU work and implementation complexity. D-017's local terrain updates, persistent traversable underground spaces, authoritative collision/topology/resources, and simplified distant underground detail remain in force. Documentation only; no source code or gameplay implementation was added.
