@@ -29,3 +29,13 @@ Before reporting completion: run relevant tests/builds, inspect final diff, veri
 Maintain a generated code map of files, symbols, dependencies, call relationships, tests, and impact hints alongside PMCS. Evaluate indexing tools for language coverage, license, GitHub Actions compatibility, reproducible output, and whether ChatGPT can actually query the generated index. Do not claim an MCP server is connected unless configured and reachable.
 
 Until then, keep PMCS/CODE_MAP.md updated, add module READMEs for non-obvious subsystems, record public API symbols and paths, and include change-impact notes for cross-module changes.
+
+
+## Mandatory modularity rules — D-022
+15. Follow PMCS/MODULES.md for module ownership, responsibilities, dependency direction, and source organization.
+16. Do not accumulate unrelated logic in a central GameManager/WorldManager or a catch-all script. Bootstrap code may compose dependencies but must not own domain behavior.
+17. Keep domain logic independent of UI and rendering. Rendering must not mutate authoritative simulation state; UI must use declared domain/application interfaces.
+18. Do not create circular module dependencies or duplicate authoritative implementations of shared rules. Use explicit contracts; use events/signals for notifications, not to hide unclear ownership.
+19. Prefer the smallest cohesive module/file change and focused tests. Split a file when it has multiple responsibilities or independent change/test reasons; avoid both giant files and needless one-function-per-file fragmentation. No arbitrary line-count target.
+20. Do not create empty future modules during early milestones. Add modules with the first real vertical slice that needs them.
+21. Once a module becomes substantial, add/update PMCS/modules/<module>.md with ownership, entry points, dependencies, invariants, tests, limitations, and the source commit it describes.
