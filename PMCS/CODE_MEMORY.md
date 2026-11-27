@@ -1,7 +1,7 @@
 # Codebase Memory and Indexing Strategy
 
 Date assessed: 2026-11-27  
-Status: CodeGraphContext CI integration added; first run pending.
+Status: CodeGraphContext CI integration installed and first successful run verified; source indexing is pending source code.
 
 ## Purpose
 Keep a machine-generated structural map of the source tree so coding agents can locate symbols, inspect dependencies, and understand likely change impact without repeatedly rediscovering the whole repository. PMCS remains the authoritative source for intent, decisions, status, and known issues.
@@ -20,6 +20,12 @@ Keep a machine-generated structural map of the source tree so coding agents can 
 
 ## Important ChatGPT boundary
 CodeGraphContext exposes an MCP server, but the MCP setup instructions for ChatGPT Codex do not mean this ordinary ChatGPT conversation can automatically connect to a local or GitHub Actions-hosted MCP process. The GitHub connector lets this assistant inspect committed repository files; it does not automatically invoke a separate MCP server. Therefore the portable, committed Markdown map is the immediately usable bridge. A future remote MCP connection would need a supported, reachable MCP endpoint and explicit client configuration.
+
+## First CI verification
+- Successful workflow run: `45987570118`.
+- CodeGraphContext 0.5.1 installed successfully on the GitHub-hosted Ubuntu runner.
+- Source detection correctly found no implementation source in the active branch; the workflow skipped graph indexing and uploaded the Markdown status artifact.
+- The first generated status report exposed a shell-quoting issue that left commit/time metadata blank. The workflow was corrected; a subsequent run must verify the metadata fix.
 
 ## Current baseline
 The active repository tree is currently specification-only after the intentional source reset. Consequently, the first workflow run should report `NO_SOURCE_CODE_TO_INDEX`. This is expected, not a workflow failure. Actual graph indexing begins when implementation source is committed.
