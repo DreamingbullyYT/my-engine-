@@ -27,3 +27,23 @@ GDScript mods run as trusted code with access to Godot APIs and game autoloads. 
 - No requirement for ordinary mod authors to compile native libraries or rebuild the APK.
 - Lua is not part of the planned mod runtime.
 - A design document or successful compile does not prove a feature is complete.
+
+
+## Colony continuity and civic autonomy — game design requirement
+The colony remains the central long-term purpose of exploration. Spaceflight, mining, trade, satellites, stations, and mobile habitats must feed back into the growth, survival, and development of inhabited communities.
+
+The mayor is not appointed as a full autonomous manager at the start and autonomy is not simply a fixed manual/assisted/autonomous menu. The intended behavior is gradual:
+- Early on, the mayor acts primarily as an adviser: observes the colony, identifies issues, and recommends actions to the player.
+- As the player spends longer periods away or gives a colony less direct attention, the mayor progressively takes more initiative and responsibility for routine decisions.
+- The player can return, inspect the colony's history and reports, and resume direct involvement. The mayor's growing role should reduce repetitive micromanagement, not take ownership of the game away from the player.
+- Autonomy is bounded by real resources, infrastructure, population, production, logistics, and time. The mayor cannot create supplies or guarantee survival.
+- Colonies can still decline and be destroyed through severe shortages, disasters, isolation, conflict, or future enemy attacks. The mayor is not a plot shield or immortality mechanic.
+
+## Space settlements beyond planets
+The space layer must include more than small satellites. Distinguish:
+- **Satellites/probes:** functional orbital craft for communication, observation, science, navigation, and prospecting.
+- **Orbital stations:** large modular structures with docking ports, habitats, power, storage, workshops, laboratories, shipyards, and player-expandable modules.
+- **Mobile colony ships / megaships:** very large vessels that can house a population and sustain a settlement while travelling or remaining in orbit. They can provide a planetless colony, with life support, food production, power, storage, industry, docking, and other modules.
+- **Other space settlements:** asteroid bases, orbital habitats, industrial platforms, and shipyards can extend this system.
+
+These are game-specific host systems and should be exposed through extensible host APIs so trusted GDScript mods can add new station modules, habitat types, ship components, population systems, and related mechanics.
