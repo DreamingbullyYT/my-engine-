@@ -6,6 +6,7 @@ var _touch_count: int = 0
 @onready var _native_status: Label = %NativeStatus
 @onready var _touch_count_label: Label = %TouchCount
 @onready var _status_label: Label = %Status
+@onready var _external_status: Label = %ExternalStatus
 
 
 func _ready() -> void:
@@ -16,6 +17,7 @@ func _ready() -> void:
 
     AppLifecycle.application_paused.connect(_on_application_paused)
     AppLifecycle.application_resumed.connect(_on_application_resumed)
+    ModRuntime.probe_finished.connect(_on_external_probe_finished)
 
 
 func _check_native_runtime() -> void:
@@ -49,6 +51,19 @@ func _on_test_touch_pressed() -> void:
     _touch_count += 1
     _update_touch_count()
     _status_label.text = "Touch input received successfully."
+
+
+func _on_test_external_script_pressed() -> void:
+    _external_status.text = "External GDScript: loading..."
+    ModRuntime.run_external_probe()
+
+
+func _on_external_probe_finished(success: bool, message: String) -> void:
+    _external_status.text = message
+    if success:
+        _status_label.text = "M3 external script executed successfully."
+    else:
+        _status_label.text = "M3 external script test failed. Check the log."
 
 
 func _on_application_paused() -> void:
