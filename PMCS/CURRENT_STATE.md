@@ -213,26 +213,31 @@ This update is authoritative over older checklist/status text above where they c
 - Android source build/export run 45966721024 succeeded from the directly vendored source. It verified APK integrity/signature and byte-compared the packaged ARM64 `libgodot_android.so` with the library built from the vendored source.
 - APK artifact: `dream-engine-godot-4.7.2-android-arm64`, artifact ID `15183628477`, attached to [Actions run 45966721024](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45966721024).
 
-### Accepted DMod direction; implementation not yet present in the Godot runtime
-- A single `.dmod` package supports `lua`, `native`, and `hybrid` modes.
-- Lua-only mods are the ordinary authoring path: package Lua source directly, with no per-mod compiler, bytecode, `.so`, on-device compilation or APK rebuild.
-- Embed Lua 5.4.8 runtime (commit `6e22fedb74cf0c9b6656e9fce8b7331db847c605`) in the Dream Engine Godot C++ module.
-- Lua and native mods share one owner-aware hook-point namespace and the same `Before`, `Around`, `Replace`, and `After` stages.
-- Native/hybrid mods may include prebuilt platform/ABI-specific libraries for unrestricted in-process C++ access. The SDK should automate their build/package layout.
-- Lua callbacks execute only at hook points with a safe documented thread/phase contract. Native hooks remain available for synchronous arbitrary-thread engine internals.
-- The full accepted architecture and example package/API are in [DMOD_LUA_ARCHITECTURE.md](DMOD_LUA_ARCHITECTURE.md).
+### DMod / Lua implementation — in progress, not yet engine-build verified
+- Added third_party/godot/modules/dream_engine/ as a built-in Godot C++ module. It registers a DreamMods singleton.
+- Vendored Lua 5.4.8 source and headers under third_party/lua-5.4.8/, pinned to commit 6e22fedb74cf0c9b6656e9fce8b7331db847c605; its amalgamation is compiled into the Godot module. The exact Lua source files and license are present in the branch.
+- Added per-mod Lua states, source entry execution from .dmod ZIP packages, custom package require(), bounded package member reads and a first dream.objects binding surface.
+- Added one owner-tracked native/Lua hook registry with Before, Around, Replace, After, deterministic priority/registration order and native callback API.
+- Added actual source patch call-sites for main-loop process/physics_process, PhysicsServer2D/3D steps, SceneTree node_added/node_removed, and DMod per-frame update.
+- Added bounded decompression to ZIPReader for package member reads.
+- Added tools/dmod/pack.py, a Python-standard-library packer, plus a Lua starter template and SDK tests. DMod SDK Actions run 45975028280 passed, covering Lua-only packaging without a shared library, traversal rejection, native package library validation and hybrid packaging.
+- The Lua/native Godot runtime source and hook patch set are committed, but Android ARM64 compilation is still awaiting a clean result in https://github.com/DreamingbullyYT/my-engine-/actions/runs/45975987328. Source presence or patch application is not proof of a working APK.
+- The native runtime path includes an initial ABI, dynamic library extraction/load/create/enable/update/unload lifecycle, but dependency resolution, resource/thread ownership, full error containment, and actual native mod execution tests remain incomplete.
+- Lua API is still early: nested data conversion, complete engine service bindings, helper module edge cases, callback lifetime protection, and runtime .dmod smoke testing remain open. Lua callbacks are intended for main-thread hook points only.
+- Rendering/resource/input/audio hook coverage remains incomplete. Current hook call-sites are main loop, physics, and SceneTree node lifecycle; a hook registry does not make every Godot internal automatically replaceable.
+- Accepted architecture and examples are in DMOD_LUA_ARCHITECTURE.md.
 
-### Not yet implemented or verified in the Godot runtime
-- Dream Engine C++ Godot module and its Lua runtime.
-- Shared Lua/native hook dispatcher and actual main-loop/scene/physics/render/resource hook call sites.
-- DMod package/manifest integration, native runtime loader, Lua VM lifecycle and mod-facing engine bindings.
-- Full renderer/physics/audio correctness and app resume/rotation behavior beyond the basic physical-device smoke test.
+### Not yet verified
+- A successful Godot Android ARM64 build with the Dream Engine module and Lua amalgamation.
+- Export/install/runtime loading of a real Lua-only .dmod on Android.
+- Native or hybrid .dmod execution, ABI compatibility and dynamic unloading on Android.
+- Correct hook order/context/error/unload behavior in a running engine.
+- Full renderer/physics/audio correctness and app resume/rotation beyond the earlier bootstrap smoke test.
 
 ### Next implementation order
-1. Add the Dream Engine C++ Godot module and embed the pinned Lua source.
-2. Implement the shared owner-aware hook system and connect real engine call sites.
-3. Add `lua`/`native`/`hybrid` manifest/package loading and safe unload lifecycle.
-4. Add Lua/native DMod samples and tests, then build Android ARM64 through Actions.
-5. Continue physical-device validation for lifecycle, rendering, physics and audio.
-
+1. Get the modified Godot + Lua module through ARM64 SCons compilation.
+2. Add focused C++/Lua hook and lifecycle tests, including around/replace/error/unload and re-entrant behavior.
+3. Package a Lua smoke-test mod in the Godot project and run it inside the modified engine.
+4. Validate the APK on the physical phone.
+5. Expand hook coverage to rendering/resource/input/audio and harden native module ownership/hot reload.
 Do not mark DMod or Lua support implemented until code and reproducible CI/device evidence exist. The older standalone C++ engine and its existing native DMod runtime remain preserved as reference material, not proof that the new Godot runtime already has those capabilities.
