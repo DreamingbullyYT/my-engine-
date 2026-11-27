@@ -36,11 +36,11 @@ public:
     static constexpr uint32_t NATIVE_ABI_V1 = 1;
 
     struct NativeHostApiV1 {
-        uint32_t struct_size = sizeof(NativeHostApiV1);
+        uint32_t struct_size = 0;
         uint32_t abi_version = NATIVE_ABI_V1;
         void *runtime = nullptr;
         uint64_t (*register_hook)(
-                void *, const char *, uint8_t, int32_t,
+                void *, const char *, const char *, uint8_t, int32_t,
                 DreamModNativeHookCallbackV1, void *) noexcept = nullptr;
         void *(*query_interface)(void *, const char *, uint32_t) noexcept = nullptr;
     };
@@ -49,6 +49,7 @@ private:
     struct ModInstance;
     struct HookEntry;
     struct DispatchState;
+    struct NextContext;
 
     static DreamModRuntime *singleton;
     std::vector<std::unique_ptr<ModInstance>> mods;
@@ -59,6 +60,9 @@ private:
 
     static int lua_register_hook(lua_State *state);
     static int lua_call_next(lua_State *state);
+    static uint8_t native_call_next(void *context) noexcept;
+    static void sync_dictionary_to_lua_table(lua_State *state, int table_ref, const Dictionary &dictionary);
+    static void sync_lua_table_to_dictionary(lua_State *state, int table_ref, Dictionary &dictionary);
     static void push_variant(lua_State *state, const Variant &value, int depth = 0);
     static bool read_variant(lua_State *state, int index, Variant &value);
     static void push_dictionary(lua_State *state, const Dictionary &dictionary);
@@ -74,7 +78,7 @@ private:
             const String &owner, const StringName &point, HookStage stage, int32_t priority,
             DreamModNativeHookCallbackV1 callback, void *callback_context) noexcept;
     static uint64_t native_register_hook(
-            void *runtime, const char *point, uint8_t stage, int32_t priority,
+            void *runtime, const char *owner, const char *point, uint8_t stage, int32_t priority,
             DreamModNativeHookCallbackV1 callback, void *callback_context) noexcept;
     static void *native_query_interface(void *runtime, const char *name, uint32_t min_version) noexcept;
 
