@@ -1,5 +1,5 @@
 ; Engine: official Godot 4.7.2-stable
-; M1 foundation only. Gameplay modules are introduced incrementally.
+; M1-M3 validation foundation. Gameplay modules are introduced incrementally.
 
 config_version=5
 
@@ -14,6 +14,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 [autoload]
 
 AppLifecycle="*res://core/app_lifecycle.gd"
+ModRuntime="*res://mods/mod_runtime.gd"
 
 [display]
 
