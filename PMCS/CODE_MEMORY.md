@@ -1,69 +1,85 @@
 # Codebase Memory and Indexing Strategy
 
 Date assessed: 2026-11-27  
-Status: **CodeGraphContext installed and isolated C++/Lua indexing smoke test passed.** Real project indexing is pending engine source.
+Status: **Hybrid code-memory pipeline verified on the first real GDScript source.** CodeGraphContext and the dedicated GDScript indexer both pass their CI smoke tests.
 
 ## Purpose
-Keep a machine-generated structural map of the source tree so coding agents can locate symbols, inspect dependencies, and understand likely change impact without repeatedly rediscovering the whole repository. PMCS remains the authoritative source for intent, decisions, status, and known issues.
+Keep a machine-generated structural map of the source tree so coding agents can locate symbols, inspect supported relationships, and understand likely change impact without repeatedly rediscovering the whole repository. PMCS remains the authoritative source for intent, decisions, status, invariants, and known issues. Source and tests remain authoritative for implemented behavior.
 
-## Selected tool
-- **CodeGraphContext**: https://github.com/CodeGraphContext/CodeGraphContext — MIT-licensed Python CLI + MCP server. Selected for the first experiment because it supports C++, Lua, graph analysis, and portable graph bundles.
-- **CodeGraph**: https://github.com/codegraph-ai/CodeGraph — a separate project previously evaluated. Do not confuse its license, setup, or capabilities with CodeGraphContext.
-- CI installs the pinned PyPI package `codegraphcontext==0.5.1`.
+## Selected tools
+
+### CodeGraphContext
+- Repository: https://github.com/CodeGraphContext/CodeGraphContext
+- Installed package: codegraphcontext 0.5.1.
+- Used for languages and relationships supported by its installed parser set, especially C/C++ and native Dream Runtime code.
+- **Important limitation:** the installed CodeGraphContext language set does not include GDScript. Do not feed .gd files into the supported-source detection and do not claim that its graph understands GDScript.
+
+### Dedicated GDScript structural indexer
+- Grammar package: tree-sitter-gdscript 6.1.0, MIT-licensed.
+- Script: .github/scripts/gdscript_code_map.py.
+- Output: PMCS/GDSCRIPT_CODE_MAP.md.
+- Parses .gd files, records script/nested classes and function names/line numbers, and currently resolves direct calls to functions declared in the same script file.
+- It deliberately reports only syntax-derived facts. It is not a full semantic analyser and does not yet resolve inheritance, dynamic dispatch, resource references, signal connections, autoloads, or cross-file method calls.
+
+### Other evaluated project
+- CodeGraph: https://github.com/codegraph-ai/CodeGraph — a separate project previously evaluated. Do not confuse its license, setup, or capabilities with CodeGraphContext.
 
 ## Integration
-- `.github/workflows/codegraphcontext.yml` installs CodeGraphContext on GitHub Actions.
-- It runs an isolated temporary C++/Lua fixture smoke test on every workflow run. The fixture exists only under the runner temporary directory; it is not committed as engine code.
-- It detects whether actual project source files exist. It does not pretend Markdown-only PMCS is an engine implementation.
-- When actual source exists, it builds a graph, emits a readable `PMCS/CODE_MAP.md`, and exports a portable `.cgc` bundle.
-- The readable map is committed/refreshed on `main`; graph and smoke-test outputs are uploaded as workflow artifacts.
-- `.cgcignore` excludes build output, generated artifacts, local secrets, and other irrelevant material.
-- Workflow artifacts are retained for 30 days. They are not a permanent database service.
+- .github/workflows/codegraphcontext.yml installs the pinned CodeGraphContext and GDScript grammar packages.
+- The workflow retains an isolated C++/Lua fixture smoke test for the CodeGraphContext CLI and graph export. The Lua file is only a parser-tool fixture; it does not change the accepted GDScript-first game/mod scripting decision.
+- A separate isolated GDScript fixture checks that the dedicated parser detects the local call relationship calculate() -> helper().
+- Repository detection excludes .gd from CodeGraphContext's supported-language scan. If no supported native/script source exists, the workflow records that fact rather than pretending a native graph was generated.
+- The dedicated GDScript indexer scans actual .gd project files and emits the separate PMCS/GDSCRIPT_CODE_MAP.md.
+- PMCS/CODE_MAP.md combines the GDScript map with the CodeGraphContext native-language report and records the exact source commit and generation time.
+- The graph bundle and reports are uploaded as Actions artifacts. The GDScript map and combined map are committed/refreshed on main.
+- .cgcignore excludes build output, generated artifacts, local secrets, and other irrelevant material.
+- Actions artifacts are retained for 30 days. They are temporary downloadable evidence, not a permanent database service.
 
-## Verified isolated smoke test
-- Workflow run **#18**: https://github.com/DreamingbullyYT/my-engine-/actions/runs/45989248995 (latest verified successful run, 2026-11-27).
-- Result: **success**. Run #17 below is historical; #18 supersedes it as the latest verification.
-- CodeGraphContext 0.5.1 installed successfully on GitHub-hosted Ubuntu.
-- Temporary fixture: 3 files (C++ source/header + Lua source).
-- Graph statistics: **3 files, 4 functions, 0 classes**.
-- Call analysis verified: `calculate()` calls `helper()` in the C++ fixture.
-- Bundle export succeeded: **14 nodes, 15 edges**.
-- Artifact **15192079735** contains the `.cgc` smoke graph and CLI logs; it is retained until 2026-12-27.
-- The fixture and graph were generated in the runner temp directory, not added to project source.
-- Earlier smoke run #12 failed because the CLI rejected `--summarize` on `cgc index`; this was removed. Run #13 validated the corrected command sequence.
-- The current `PMCS/CODE_MAP.md` still contains an older source commit identifier and is not a current generated map. Since the repository remains documentation-only, do not fabricate a new generated source map; regenerate it when source files exist.
+## Verified CI and source evidence
+
+### M1 Android ARM64 build
+- Workflow run #3: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46041536847.
+- Result: **success** on commit 8880dafc93a0caedffd74783257db015d4e22bee.
+- Official Godot 4.7.2 stable editor and official Android export templates were downloaded and checksum-verified.
+- Project import and headless startup passed.
+- APK export and validation passed: package ID com.dreamingbully.dreamengine, Android arm64-v8a native library present, APK size 28,255,149 bytes.
+- Artifact ID 15220900635; artifact name dream-engine-m1-8880dafc93a0caedffd74783257db015d4e22bee-android-arm64. Expires 2026-12-27.
+- Device launch, visible UI, touch, and pause/resume still require user confirmation. A successful CI export is not a physical-device test.
+
+### Hybrid code-memory workflow
+- Workflow run #129: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46041536809.
+- Result: **success** on commit 8880dafc93a0caedffd74783257db015d4e22bee.
+- CodeGraphContext 0.5.1 installed; its isolated C++/Lua smoke fixture, call analysis, and .cgc export passed.
+- Dedicated GDScript parser smoke fixture passed and verified calculate() -> helper().
+- Actual repository map: **2 GDScript files, 6 functions, 0 syntax-error files**.
+- Detected same-file call edges: _ready() -> _update_touch_count() and _on_test_touch_pressed() -> _update_touch_count().
+- The actual repository currently has no CodeGraphContext-supported C/C++ source, so no real-project .cgc native graph was generated. The C++ graph in this run is from the isolated temporary fixture, not engine source.
+- Artifact ID 15221005238 contains the code map and smoke outputs; it expires 2026-12-27.
+- The combined PMCS/CODE_MAP.md and PMCS/GDSCRIPT_CODE_MAP.md are committed and tied to the indexed source commit.
+
+### Earlier CodeGraphContext validation
+- Earlier successful workflow run #18: https://github.com/DreamingbullyYT/my-engine-/actions/runs/45989248995.
+- It verified package installation, a temporary C++/Lua fixture, calculate() -> helper(), and portable .cgc export.
+- An earlier attempt with cgc index --summarize failed because CodeGraphContext 0.5.1 rejects that option. The current workflow uses cgc index . --force without --summarize; run #129 verifies the corrected command sequence.
 
 ## Important ChatGPT boundary
-CodeGraphContext exposes an MCP server, but this ordinary ChatGPT conversation does not automatically connect to a local or GitHub Actions-hosted MCP process. The GitHub connection lets this assistant inspect committed repository files; it does not automatically invoke a separate MCP server. The committed Markdown map is the portable interface currently usable here. A future remote MCP connection would require a supported, reachable MCP endpoint and explicit client configuration.
+CodeGraphContext exposes an MCP server, but this ordinary ChatGPT conversation does not automatically connect to a local or GitHub Actions-hosted MCP process. The GitHub connection lets this assistant inspect committed repository files and workflow outputs; it does not automatically invoke a separate MCP server. The committed Markdown maps and artifact links are the portable interfaces currently usable here. A future remote MCP setup would require a supported, reachable endpoint and explicit client configuration.
 
-## Current repository baseline
-The active repository tree is still specification-only after the intentional source reset. The smoke test proves that CodeGraphContext can install, parse a controlled C++/Lua fixture, resolve at least one call relationship, and export a graph. It does **not** prove that the real Dream Engine source has been indexed or implemented.
+## Retrieval and maintenance rules
+1. Treat current source and executable tests as the truth for implementation.
+2. Use PMCS/CODE_MAP.md to locate the relevant subsystem, then open the exact current source and tests before editing.
+3. For GDScript, consult PMCS/GDSCRIPT_CODE_MAP.md. Treat its call graph as same-file direct-call navigation only.
+4. For C/C++ and other supported languages, use the CodeGraphContext map/bundle generated from the exact commit.
+5. After a meaningful module change, update its PMCS/modules/<module>.md note when the module is substantial, regenerate the maps, and record the commit/test evidence.
+6. Never use a stale map as authority. The map's indexed source commit must match the source being inspected.
+7. Do not index credentials, local environment files, build output, or vendored dependencies unless explicitly needed.
 
-## Adoption criteria
-- Keep the smoke test in CI so tool regressions are detected.
-- When engine source is added, verify real project indexing and inspect generated statistics and important caller/callee relationships.
-- Keep generated facts tied to the exact commit SHA.
-- Never treat the graph as authoritative over current source or tests; inspect exact source ranges before edits.
-- Do not index credentials, local environment files, build output, or vendored dependencies unless explicitly needed.
+## Current limitations and next improvements
+- Add cross-file GDScript references, preload/load/resource paths, class inheritance, autoload usage, scene/signal connections, and richer call relationships only when they can be resolved accurately.
+- Add native C++ source indexing once Dream Runtime is introduced.
+- Inspect actual parser output for every new GDScript syntax feature used by the project; syntax errors must fail the indexing job rather than silently produce a misleading map.
+- Consider a durable, commit-addressed archive for .cgc bundles if 30-day Actions artifacts prove insufficient. Do not commit large generated binaries to the source tree by default.
+- A live MCP connection is optional; the committed maps are sufficient for the current workflow and must remain usable without MCP.
 
 ## Decision
-**ADOPT AS AN EXPERIMENTAL CI-AIDED INDEXER.** Keep it out of runtime/build dependencies. PMCS + committed `PMCS/CODE_MAP.md` is the portable interface for this ChatGPT environment. Reassess after indexing the first real engine source.
-
-
-## Next evolution: persistent code knowledge for the implementation phase
-The existing CodeGraphContext workflow is the starting system; do not replace it without evidence. The intended code-memory loop is:
-1. **Authoritative source:** current repository code, tests, build configuration, and PMCS decisions. Generated memory must never override these.
-2. **Structural index:** CodeGraphContext graph of files, symbols, and supported call/dependency relationships, generated from the exact commit being indexed.
-3. **Portable agent-readable map:** concise PMCS/CODE_MAP.md with repository/module layout, important entry points, symbol relationships, high-complexity areas, and test locations. Include the indexed commit SHA and generation time.
-4. **Focused module memory:** as real modules appear, maintain small PMCS/modules/*.md notes for architecture, invariants, public interfaces, lifecycle, dependencies, and known pitfalls. Update these alongside code changes; avoid duplicating whole source files.
-5. **Verification trail:** Actions should publish the graph bundle and logs as artifacts, run indexer smoke tests, and ensure the generated map corresponds to the checked-out commit. Current artifact retention is 30 days, so artifacts are temporary evidence, not permanent memory.
-6. **Safe retrieval rule:** before editing, use the map/graph to locate relevant symbols, then inspect the exact current source and tests. After editing, update affected module notes and regenerate the map. Never infer implementation details from stale maps or old commits.
-
-### Gaps to address when source is introduced
-- The current workflow smoke-tests C++ and Lua using an isolated fixture; the accepted game scripting language is GDScript. Add a GDScript indexing capability test before relying on graph coverage for .gd source, and retain C++ coverage for the GDExtension.
-- Confirm which CodeGraphContext outputs are genuinely useful on the real Godot/GDScript/C++ tree; report unsupported relationships rather than implying complete semantic understanding.
-- Consider a durable, commit-addressed archive for .cgc bundles if 30-day Actions artifacts prove insufficient. Do not commit large generated binaries to the source tree by default.
-- The current conversation's GitHub connection can read committed files and Actions metadata; it is not a direct live connection to CodeGraphContext's MCP server. A future remote MCP setup is optional and requires a supported reachable endpoint and explicit connection.
-
-### Current conclusion
-**Keep CodeGraphContext as the experimental CI structural indexer.** Improve it incrementally once real source exists. The practical memory system is the combination of source + tests + PMCS + generated map + graph artifact, not the graph alone.
+**ADOPT A HYBRID CI-AIDED CODE MEMORY SYSTEM.** Use CodeGraphContext for its supported native/script languages and the dedicated Tree-sitter mapper for GDScript. Keep both out of runtime/build dependencies. PMCS + the committed combined/source-specific maps + exact source/tests + downloadable workflow artifacts form the practical memory system. Reassess coverage as real engine modules are added.
