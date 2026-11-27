@@ -124,7 +124,17 @@ Primarul nu începe ca administrator complet și nu trebuie numit obligatoriu de
 - Rapoartele sunt informative, nu sarcini obligatorii. Fără spam repetitiv; jucătorul poate configura frecvența și tipurile de notificări.
 - Exemplu de mesaj: „Nu ai mai vizitat Eos de 86 de zile. Colonia a crescut; primarul a extins cartierele și a identificat o lipsă de metal.”
 
-### 5.6 Transport automat și nave cargo [propunere]
+### 5.6 Autonomia flotelor navelor-colonie și colonizare automată [de la tine]
+
+- O navă-colonie/megaship are propriul primar și poate deveni o așezare mobilă administrată independent.
+- Primarul poate planifica și construi tipuri diferite de nave pentru nevoile coloniei: transport, explorare, minerit, cargo, construcție sau alte roluri disponibile. Construcția este posibilă numai dacă există proiectele/deblocările, șantierul naval, forța de muncă, materialele, componentele, energia, combustibilul și timpul necesare.
+- După explorarea a aproximativ **5–6 sisteme solare**, primarul poate întreba jucătorul dacă îi permite să înceapă colonizarea autonomă a altor lumi. Pragul este o țintă de progresie și echilibrare, configurabilă; nu este o permisiune implicită.
+- Colonizarea autonomă începe numai după aprobarea explicită a jucătorului. Jucătorul poate inspecta rapoartele, schimba sau revoca permisiunea și poate interveni oricând.
+- Sunt eligibile doar planetele evaluate ca **locuibile în mod real** pentru biologia și tehnologia curentă. Evaluarea verifică temperatura, presiunea, atmosfera, gravitația, apa, radiația, resursele și pericolele.
+- Soarele nu poate fi colonizat; Mercur nu este o țintă obișnuită locuibilă; suprafața lui Venus și interiorul giganților gazoși precum Jupiter nu sunt colonii planetare obișnuite. Habitatele plutitoare în straturi atmosferice potrivite (de exemplu, norii superiori ai lui Venus), stațiile orbitale și coloniile pe luni potrivite sunt soluții inginerești separate.
+- Înainte de expediție se verifică populația, navele, capacitatea de transport, suportul vital, hrana, apa, energia, materialele, aterizarea/habitatul și logistica de aprovizionare. Coloniile noi primesc propriul primar și pot eșua în continuare din motive reale.
+
+### 5.7 Transport automat și nave cargo [propunere]
 
 - Rute între colonii, stații, avanposturi și puncte de extracție: origine, destinație, marfă, cantitate, capacitate, încărcare/descărcare, întoarcere și repetare.
 - Navele cargo pot fi pilotate de NPC-uri de la bord sau de la distanță, ori pot folosi sisteme autonome, cu aceleași constrângeri de zbor.
