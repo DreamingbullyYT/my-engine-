@@ -42,3 +42,21 @@ Building visual detail adapts gradually: full animation nearby, reduced animatio
 Citizens are persistent logical individuals, while their visual representation is pixel-scale and distance-aware. Near the camera, show individual moving/animated pixels. As they become smaller, reduce visual movement/animation cadence and detail. Below a readability/visibility threshold, stop drawing individual sprites. Do not delete citizens or erase/merge their identity, population, job, skills, needs, health, or save data. Continue simulation according to the active/nearby/distant simulation tiers above; visual disappearance is not population disappearance.
 
 No numeric sector dimensions, zoom thresholds, update rates, cache sizes, or device budgets are fixed yet. Establish them through profiling on target Android ARM64 hardware. Measure CPU/GPU frame time, draw calls, memory/VRAM, cache rebuild latency, battery, and thermal behavior with representative building counts, citizen populations, zoom levels, and modded content. See D-016 in DECISIONS.md.
+
+
+## Hybrid excavatable terrain and underground colonies — D-017
+
+Terrain visuals follow a simple, readable side-view style over the planet's radial surface. Vegetation is minimal. Keep visual terrain/cache data separate from authoritative terrain geometry, collision, excavation topology, resource deposits, and building placement.
+
+Excavation is local. A dig/mining/build action marks only the affected terrain region and dependent collision/render data dirty; unaffected regions and their valid caches remain intact. Rebuild local visual and collision data safely, preserving the previous valid visual result until replacements are ready where practical. Do not rebuild an entire planet for a local tunnel or chamber edit.
+
+Underground colonies use a hybrid representation:
+- Tunnels and chambers created for player use are persistent logical spaces with stable coordinates and connectivity, and are traversable gameplay areas.
+- Render and simulate nearby/relevant underground spaces at the fidelity required for movement, construction, selection, and interaction.
+- Simplify or aggregate distant, hidden, or irrelevant underground details; do not require per-rock or full-resolution voxel simulation everywhere.
+- Preserve authoritative resources, structures, access routes, and colony state when visual detail is reduced.
+- Keep terrain collision and navigation consistent with excavation changes; cache textures must never be the source of truth for movement or hit-testing.
+
+Mining deposits and extracted resources remain gameplay data with real costs, quantities, and logistics. Surface/planetary excavation and asteroid mining are related resource activities but distinct world systems. Exact geology, structural stability, cave-ins, support requirements, excavation tools, and underground environmental simulation remain open specifications.
+
+Measure local rebuild latency, collision/navigation update cost, memory, save size, and frame time on Android ARM64. Do not set numeric terrain chunk sizes, excavation resolution, or underground LOD thresholds before profiling. See D-017 in DECISIONS.md.
