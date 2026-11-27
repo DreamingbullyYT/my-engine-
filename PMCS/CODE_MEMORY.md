@@ -48,3 +48,22 @@ The active repository tree is still specification-only after the intentional sou
 
 ## Decision
 **ADOPT AS AN EXPERIMENTAL CI-AIDED INDEXER.** Keep it out of runtime/build dependencies. PMCS + committed `PMCS/CODE_MAP.md` is the portable interface for this ChatGPT environment. Reassess after indexing the first real engine source.
+
+
+## Next evolution: persistent code knowledge for the implementation phase
+The existing CodeGraphContext workflow is the starting system; do not replace it without evidence. The intended code-memory loop is:
+1. **Authoritative source:** current repository code, tests, build configuration, and PMCS decisions. Generated memory must never override these.
+2. **Structural index:** CodeGraphContext graph of files, symbols, and supported call/dependency relationships, generated from the exact commit being indexed.
+3. **Portable agent-readable map:** concise PMCS/CODE_MAP.md with repository/module layout, important entry points, symbol relationships, high-complexity areas, and test locations. Include the indexed commit SHA and generation time.
+4. **Focused module memory:** as real modules appear, maintain small PMCS/modules/*.md notes for architecture, invariants, public interfaces, lifecycle, dependencies, and known pitfalls. Update these alongside code changes; avoid duplicating whole source files.
+5. **Verification trail:** Actions should publish the graph bundle and logs as artifacts, run indexer smoke tests, and ensure the generated map corresponds to the checked-out commit. Current artifact retention is 30 days, so artifacts are temporary evidence, not permanent memory.
+6. **Safe retrieval rule:** before editing, use the map/graph to locate relevant symbols, then inspect the exact current source and tests. After editing, update affected module notes and regenerate the map. Never infer implementation details from stale maps or old commits.
+
+### Gaps to address when source is introduced
+- The current workflow smoke-tests C++ and Lua using an isolated fixture; the accepted game scripting language is GDScript. Add a GDScript indexing capability test before relying on graph coverage for .gd source, and retain C++ coverage for the GDExtension.
+- Confirm which CodeGraphContext outputs are genuinely useful on the real Godot/GDScript/C++ tree; report unsupported relationships rather than implying complete semantic understanding.
+- Consider a durable, commit-addressed archive for .cgc bundles if 30-day Actions artifacts prove insufficient. Do not commit large generated binaries to the source tree by default.
+- The current conversation's GitHub connection can read committed files and Actions metadata; it is not a direct live connection to CodeGraphContext's MCP server. A future remote MCP setup is optional and requires a supported reachable endpoint and explicit connection.
+
+### Current conclusion
+**Keep CodeGraphContext as the experimental CI structural indexer.** Improve it incrementally once real source exists. The practical memory system is the combination of source + tests + PMCS + generated map + graph artifact, not the graph alone.
