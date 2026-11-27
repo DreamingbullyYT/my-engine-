@@ -128,7 +128,7 @@ jobs:
       - name: Create status report (no source yet)
         if: steps.source.outputs.present != 'true'
         run: |
-          mkdir -p PMCS
+          mkdir -p .codegraphcontext
           {
             echo "# CodeGraphContext Code Map"
             echo
@@ -139,34 +139,8 @@ jobs:
             echo "No CodeGraphContext-supported source files were detected; GDScript is not supported by this indexer."
             echo "CodeGraphContext indexing is skipped when the repository contains only unsupported source formats."
             echo "This is not evidence that an engine implementation exists."
-          } > PMCS/CODE_MAP.md
+          } > .codegraphcontext/NATIVE_CODE_MAP.md
 
-      - name: Generate dedicated GDScript code map
-        shell: bash
-        run: |
-          set -euo pipefail
-          python .github/scripts/gdscript_code_map.py \
-            --root . \
-            --output PMCS/GDSCRIPT_CODE_MAP.md \
-            --commit "$GITHUB_SHA" \
-            --generated-at "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-
-      - name: Assemble portable code map
-        shell: bash
-        run: |
-          set -euo pipefail
-          {
-            echo "# Dream Engine Code Map"
-            echo
-            echo "- Source commit: $GITHUB_SHA"
-            echo "- Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            echo
-            echo "## GDScript"
-            cat PMCS/GDSCRIPT_CODE_MAP.md
-            echo
-            echo "## CodeGraphContext (supported native/script languages)"
-            cat .codegraphcontext/NATIVE_CODE_MAP.md
-          } > PMCS/CODE_MAP.md
       - name: Index repository
         if: steps.source.outputs.present == 'true'
         run: |
@@ -195,6 +169,32 @@ jobs:
           } > .codegraphcontext/NATIVE_CODE_MAP.md
           cgc bundle export .codegraphcontext/dream-engine.cgc --repo .
 
+      - name: Generate dedicated GDScript code map
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .github/scripts/gdscript_code_map.py \
+            --root . \
+            --output PMCS/GDSCRIPT_CODE_MAP.md \
+            --commit "$GITHUB_SHA" \
+            --generated-at "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+      - name: Assemble portable code map
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "# Dream Engine Code Map"
+            echo
+            echo "- Source commit: $GITHUB_SHA"
+            echo "- Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo
+            echo "## GDScript"
+            cat PMCS/GDSCRIPT_CODE_MAP.md
+            echo
+            echo "## CodeGraphContext (supported native/script languages)"
+            cat .codegraphcontext/NATIVE_CODE_MAP.md
+          } > PMCS/CODE_MAP.md
       - name: Upload graph and readable report
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
         with:
@@ -215,12 +215,12 @@ jobs:
       - name: Commit refreshed code map on main
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          if git diff --quiet -- PMCS/CODE_MAP.md; then
+          if git diff --quiet -- PMCS/CODE_MAP.md PMCS/GDSCRIPT_CODE_MAP.md; then
             echo "Code map is already current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add PMCS/CODE_MAP.md
+          git add PMCS/CODE_MAP.md PMCS/GDSCRIPT_CODE_MAP.md
           git commit -m "docs(pmcs): refresh CodeGraphContext map [skip ci]"
           git push
