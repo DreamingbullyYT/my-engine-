@@ -125,3 +125,9 @@ M1 clarification: the default path is the standard official Godot Android export
 
 ## 2026-11-27 — development start authorized
 The user approved moving from planning into implementation. The next task is M1 in PMCS/ROADMAP.md: establish the official, unmodified Godot Android export baseline and produce the first minimal APK through GitHub Actions. This is an authorization/next-step record only; M1 has **not** yet been built or device-tested. The active branch remains documentation-only until implementation commits are made.
+
+
+## 2026-11-27 accepted modular architecture — D-022
+D-022 requires a modular-by-default implementation: cohesive domain modules, explicit contracts, single ownership of authoritative state, no circular dependencies, no giant all-purpose managers/catch-all scripts, UI/rendering separated from gameplay authority, focused tests, and module-specific PMCS memory as systems become substantial. The detailed catalog and rules are in PMCS/MODULES.md and PMCS/ARCHITECTURE.md.
+
+This is an accepted design decision, not an implementation claim. The active source baseline remains documentation-only. M1 remains the first implementation milestone; future modules must be introduced with real vertical slices rather than empty scaffolding.
