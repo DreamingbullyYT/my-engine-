@@ -176,6 +176,7 @@ api.hooks.after("economy.produce", func(args, result): ...)
 - `api.ui.remove(id)`.
 - Teme: registru `ui_theme`.
 - Toate panourile primesc zone sigure și mărime tactilă minimă din cadru.
+- Interfața modurilor trebuie să respecte principiile mobile din `PMCS/MOBILE_UX.md`: ținte tactile adecvate, informație progresivă și fără controale esențiale bazate exclusiv pe drag precis.
 
 ## 8. Comenzi de consolă
 
