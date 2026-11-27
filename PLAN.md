@@ -13,7 +13,7 @@ Etichete: **[cercetat]** = din surse publice. **[de la tine]** = decis de tine. 
 | Mărimea texturilor | **32x32 pe tile**; clădirile mari = multipli (ex. 3x2 tile = 96x64 px) **[de la tine]** |
 | Texturi | le faci tu; eu generez placeholdere low-poly/flat și îți dau lista completă **[de la tine]** |
 | Platformă | **Android-first, ARM64**; build și teste CI în GitHub Actions, validare pe telefonul utilizatorului **[de la tine]** |
-| Motor | Godot 4.7, GDScript (C++ doar dacă un punct fierbinte o cere) |
+| Motor | Godot 4.7 oficial, nemodificat; GDScript pentru joc și moduri; Dream Runtime separat ca GDExtension C++ (D-001/D-002/D-010) |
 | Modding | **Ca la Minecraft: scripturi, acces la absolut tot** **[de la tine]** |
 | Livrare | **Joc complet, nu prototip**; dezvoltare incrementală în etape testabile, fără a elimina sistemele agreate **[clarificare a planului]** |
 | Dușmani | mai târziu, nu în prima versiune **[de la tine]** |
@@ -44,7 +44,7 @@ Mecanicile nu sunt protejate; codul, grafica, sunetele, numele și interfața su
 
 ### 4.1 Coordonate
 - Poziție = **(unghi θ, altitudine h)**. Planeta-mamă are raza ~40 tile → circa 250 de sloturi pe circumferință (valoare configurabilă, mod-abilă).
-- Clădirile ocupă sloturi contigue pe suprafață și se pot **stivui pe verticală** (platforme, etaje) și **săpa în jos** (adâncime limitată, ex. 12 straturi, tile-urile se îngustează spre centru).
+- Clădirile ocupă sloturi contigue pe suprafață și se pot **stivui pe verticală** (platforme, etaje). Excavarea subterană folosește celule persistente pe coordonate polare locale (sector unghiular + adâncime radială), conectate în tuneluri și camere. Nu există o limită fixă de 12 straturi; rezoluția, dimensiunea sectoarelor și adâncimea maximă se stabilesc prin profilare și limite explicite ale lumii (D-017/D-019).
 - Sprite-ul unei clădiri e desenat drept și rotit tangent la unghiul ei. La rază ≥ 30 tile distorsiunea e mică și acceptabilă.
 - **Cameră**: planeta se rotește sub cameră, cu "sus" mereu în sus pe ecran; zoom out arată globul întreg, ca în vederea de hartă.
 
@@ -141,6 +141,12 @@ Primarul nu începe ca administrator complet și nu trebuie numit obligatoriu de
 - Complexitate inițială medie: rute și livrări fiabile; simularea uzurii detaliate, reparațiilor și echipajelor de mentenanță rămâne pentru mai târziu.
 - Lanț integrat: satelit prospectează asteroidul → instalație minieră extrage → navă cargo transportă minereul la stație → alt transport îl duce la colonie → colonia îl folosește pentru extindere și nave.
 
+## 5.8 Domeniul primei versiuni jucabile (D-020)
+
+Prima versiune jucabilă se limitează la o planetă de start, Luna ei, asteroizi apropiați și o stație orbitală funcțională de bază. Include bucla principală de colonie, construcție/economie/cercetare, prima navă, zbor orbital de bază, explorarea Lunii și minerit/explorare de asteroizi. Stația inițială oferă funcții esențiale simple; modulele avansate se adaugă incremental.
+
+Călătoria interstelară, mai multe sisteme stelare, flotele interstelare autonome, colonizarea multi-sistem și megaships-urile locuibile sunt amânate pentru v2+. Rămân în viziunea completă și în deciziile D-011–D-014; nu sunt eliminate, dar nu blochează v1.
+
 ## 6. Conținut final (lista completă e în `TEXTURES.md`)
 
 Ca să putem livra într-un run, conținutul e înghețat la:
@@ -164,7 +170,7 @@ Simularea e separată de desen; modelele nu știu de ecran; testăm fără ecran
 
 | Modul | Rol |
 | --- | --- |
-| Globul coloniei | coordonate polare, sloturi, clădiri, straturi subterane |
+| Globul coloniei | coordonate polare, sloturi de suprafață, celule subterane pe sectoare unghiulare/adâncime radială, tuneluri conectate |
 | Cetățeni | agenți în tablouri de date, joburi, fericire, nivel de detaliu după zoom |
 | Economie | resurse, producție, lanțuri, cercetare, politici |
 | Constructor rachete | piese, masă, centru de greutate, etaje, simetrie |
@@ -190,7 +196,7 @@ Puncte tehnice: precizie dublă în cod propriu pentru poziții mari; orbite = m
 - Utilizatorul validează APK-ul pe telefon: lansare, randare, touch, notch/zone sigure, pauză/reluare, performanță, baterie și utilizabilitatea interfeței.
 - Nu presupunem existența unui PC local; orice test automat trebuie să poată rula în CI.
 
-## 10. Foaie de parcurs (într-un singur run, în ordinea construirii)
+## 10. Foaie de parcurs (etape incrementale și verificabile)
 
 1. Fundație: proiect, coordonate polare, registre, încărcător de moduri, modul `base`, salvare.
 2. Colonia: globul, clădiri, cetățeni, resurse, fericire, cercetare, politici și primar cu autonomie graduală conform D-011.
