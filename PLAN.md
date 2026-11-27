@@ -17,13 +17,18 @@ Etichete: **[cercetat]** = din surse publice. **[de la tine]** = decis de tine. 
 | Modding | **Ca la Minecraft: scripturi, acces la absolut tot** **[de la tine]** |
 | Livrare | **Tot jocul într-un singur run** **[de la tine]** |
 | Dușmani | mai târziu, nu în prima versiune **[de la tine]** |
+| Piloți NPC | **Both**: coloniști la bord, piloți la distanță și sisteme autonome pentru vehicule fără echipaj **[de la tine]** |
+| Autopilot NPC | misiuni complete, cu aceeași fizică orbitală, combustibil și limite ca navele jucătorului **[de la tine]** |
+| Guvernarea coloniilor | primar local și autonomie configurabilă; colonia continuă să funcționeze fără micro-management constant **[de la tine]** |
 | Nume joc | nedecis |
 
 ## 1. Viziunea
 
 Construiești o colonie pe o planetă mică și rotundă, cercetezi tehnologii, construiești rachete din piese, zbori cu fizică orbitală reală spre alte lumi, aduci resurse și fondezi colonii noi. Tot conținutul e modificabil prin scripturi și date.
 
-Șase stâlpi: **Colonia**, **Racheta**, **Legătura** (cercetare ⇄ piese ⇄ resurse), **Frumusețea**, **Modurile**, **Mai târziu** (dușmani).
+Stâlpi: **Colonia și oamenii** (centrul experienței), **Racheta și explorarea**, **Legătura** (cercetare ⇄ piese ⇄ resurse), **Automatizarea** (primari, piloți NPC și logistică), **Sateliții și infrastructura spațială**, **Modurile**, **Mai târziu** (dușmani).
+
+Colonizarea rămâne nucleul jocului pe tot parcursul progresiei. Explorarea spațiului trebuie să furnizeze resurse, informații, infrastructură și oportunități pentru colonii; nu înlocuiește construirea și administrarea lor. Automatizarea reduce micro-managementul, dar nu elimină populația, economia, nevoile și consecințele deciziilor.
 
 ## 2. Proprietate intelectuală
 
@@ -69,6 +74,52 @@ Adăugiri proprii: rachetă = resurse reale, misiuni și contracte, evenimente (
 - **Avanpost minier**: rafinărie locală pe asteroid, fără drum înapoi (opțional).
 - Totul prin registre și hook-uri, deci modurile pot adăuga tipuri de asteroizi, mărfuri și reguli de piață.
 
+
+### 5.2 Sateliți modulari [de la tine]
+
+- Sateliții se construiesc din piese: structură/bus, panouri solare, baterii, antene, propulsoare, rezervoare, camere, senzori și încărcături științifice sau de navigație.
+- Sateliții au orbită reală și funcționează în limitele energiei, combustibilului, orientării, comunicațiilor și echipamentelor instalate.
+- Roluri posibile: comunicații, observație, meteorologie, navigație, prospectare de asteroizi și cercetare.
+- Acoperirea și utilitatea depind de orbită, poziție, linia de vizibilitate, putere și echipamentul instalat; nu sunt bonusuri globale decorative.
+- Sateliții pot sprijini coloniile și rețeaua logistică, de exemplu prin comunicații pentru controlul de la distanță și date pentru prospectare.
+
+### 5.3 Piloți NPC și autopilot realist [de la tine]
+
+- Există trei forme compatibile: **pilot-colonist la bord**, **pilot-colonist la distanță** și **control autonom** pentru sonde/vehicule fără echipaj. Decizia pentru piloții NPC este BOTH.
+- Un colonist pilot trebuie să existe fizic la bordul navei. Pilotul la distanță trebuie să aibă legătură de comunicații funcțională; întreruperea comunicației poate limita sau opri comenzile la distanță, în funcție de echipamente și proceduri.
+- Orice navă poate primi un pilot NPC dacă interfața sa de control este compatibilă. Nu impunem o piesă specială obligatorie de autopilot. Navele modificate pot expune o interfață de control compatibilă.
+- NPC-urile pot executa misiuni complete: lansare, inserție orbitală, transferuri, corecții, andocare și aterizare.
+- Se folosesc aceleași legi fizice și aceleași constrângeri ca pentru jucător: masă, tracțiune, combustibil, delta-v, orientare, control, comunicații și capabilități de andocare/aterizare. Fără teleportare sau combustibil gratuit.
+- Înainte de plecare, plannerul evaluează misiunea ca **fezabilă**, **fezabilă cu risc** sau **imposibilă**, explicând lipsurile și riscurile. Un NPC poate refuza sau eșua dacă nava nu poate îndeplini misiunea.
+- Jucătorul poate prelua controlul oricând. La predarea controlului către NPC, planul se recalculează din starea fizică actuală a navei.
+
+### 5.4 Primari și autonomie locală [de la tine]
+
+Fiecare colonie poate avea un primar (și, la scară mai mare, un consiliu) care administrează dezvoltarea locală. Primarul este un agent real al simulării, nu un bonus decorativ și nu înlocuiește cetățenii.
+
+- **Moduri de administrare:** manual (jucătorul decide), asistat (primarul propune, jucătorul aprobă) și autonom (primarul decide în limitele politicilor stabilite).
+- **Responsabilități:** extindere și construcții, priorități economice, rezerve, servicii pentru populație, locuri de muncă, cercetare și solicitări de transport.
+- **Politici configurabile:** creștere, industrie, cercetare, bunăstare, conservarea resurselor, nivelul rezervelor și ce cheltuieli necesită aprobare.
+- **Limite reale:** primarul nu creează resurse, nu ignoră costurile, capacitatea de producție, populația, infrastructura sau timpul de construcție. Poate lua decizii imperfecte și trebuie să raporteze lipsurile.
+- **Colonia nu intră automat în colaps doar fiindcă jucătorul nu o vizitează.** Primarul încearcă să păstreze serviciile esențiale și să adapteze producția. Crizele, dezastrele, izolarea sau lipsa reală de resurse pot avea totuși consecințe.
+- **Coloniștii rămân importanți:** au nevoi, fericire, locuri de muncă, locuințe, trăsături și contribuie la producție. Primarul coordonează colonia, nu o substituie.
+- Jucătorul poate schimba oricând modul de administrare, politicile și poate prelua controlul direct.
+
+### 5.5 Timpul coloniilor îndepărtate și rapoarte de revenire [propunere]
+
+- Coloniile active pe ecran folosesc simularea detaliată. Coloniile îndepărtate folosesc simulare economică agregată, dar păstrează aceleași reguli, costuri, stocuri, populație și limite de producție.
+- Timpul jocului avansează când jucătorul explorează în altă parte. Avansarea timpului real cât aplicația este închisă rămâne o setare de design separată; nu trebuie să creeze obligația de conectare zilnică sau pierderi punitive.
+- La revenire sau la consultarea hărții, jucătorul poate primi un raport: timp trecut în joc, schimbări de populație, clădiri, economie, evenimente și mesajul primarului.
+- Rapoartele sunt informative, nu sarcini obligatorii. Fără spam repetitiv; jucătorul poate configura frecvența și tipurile de notificări.
+- Exemplu de mesaj: „Nu ai mai vizitat Eos de 86 de zile. Colonia a crescut; primarul a extins cartierele și a identificat o lipsă de metal.”
+
+### 5.6 Transport automat și nave cargo [propunere]
+
+- Rute între colonii, stații, avanposturi și puncte de extracție: origine, destinație, marfă, cantitate, capacitate, încărcare/descărcare, întoarcere și repetare.
+- Navele cargo pot fi pilotate de NPC-uri de la bord sau de la distanță, ori pot folosi sisteme autonome, cu aceleași constrângeri de zbor.
+- Complexitate inițială medie: rute și livrări fiabile; simularea uzurii detaliate, reparațiilor și echipajelor de mentenanță rămâne pentru mai târziu.
+- Lanț integrat: satelit prospectează asteroidul → instalație minieră extrage → navă cargo transportă minereul la stație → alt transport îl duce la colonie → colonia îl folosește pentru extindere și nave.
+
 ## 6. Conținut final (lista completă e în `TEXTURES.md`)
 
 Ca să putem livra într-un run, conținutul e înghețat la:
@@ -100,6 +151,11 @@ Simularea e separată de desen; modelele nu știu de ecran; testăm fără ecran
 | Motor orbital | corpuri, sfere de influență, Kepler pe șine, warp |
 | Univers | corpuri, resurse, pericole, hartă |
 | Misiuni și evenimente | contracte, recompense, evenimente aleatorii |
+| Guvernare locală | primari, consilii, politici, bugete și autonomie pe colonie |
+| Simulare la distanță | progres economic agregat pentru colonii și nave îndepărtate |
+| Sateliți | construcție modulară, orbită, energie, comunicații și senzori |
+| Planificare de zbor | misiuni NPC, evaluarea fezabilității, control manual/asistat/autonom |
+| Logistică și flotă | rute cargo, încărcare/descărcare, livrări și managementul navelor |
 | UI și sunet | interfață tactilă, zone sigure, muzică |
 | Salvare | JSON versionat, notează modurile folosite; mod lipsă = marcaje, nu salvare stricată |
 | Modding | încărcător, registre, evenimente, suprascrieri, manager de moduri |
@@ -116,13 +172,16 @@ Puncte tehnice: precizie dublă în cod propriu pentru poziții mari; orbite = m
 ## 10. Foaie de parcurs (într-un singur run, în ordinea construirii)
 
 1. Fundație: proiect, coordonate polare, registre, încărcător de moduri, modul `base`, salvare.
-2. Colonia: globul, clădiri, cetățeni, resurse, fericire, cercetare, politici.
+2. Colonia: globul, clădiri, cetățeni, resurse, fericire, cercetare, politici și primar (manual/asistat/autonom).
 3. Racheta: constructor, zbor, aterizare.
 4. Orbite: motor orbital, hartă, warp, corpuri.
 5. Legătura: platformă, costuri reale, misiuni, evenimente, avanposturi, asteroizi, piață și credite.
-6. UI, sunet, texturi placeholder, tutorial, localizare (EN + RO).
-7. Modding complet: manager în joc, exemple de moduri, documentație.
-8. Teste, export Android, lista "ce merge / ce nu".
+6. Sateliți modulari și infrastructură orbitală.
+7. Planificator de zbor și piloți NPC (la bord, la distanță, autonomi), cu verificări de fezabilitate.
+8. Logistică cargo și simularea coloniilor îndepărtate; rapoarte de revenire.
+9. UI, sunet, texturi placeholder, tutorial, localizare (EN + RO).
+10. Modding complet: manager în joc, exemple de moduri, documentație.
+11. Teste, export Android, lista "ce merge / ce nu".
 
 Dușmani, provocări zilnice și alte moduri: **mai târziu**.
 
