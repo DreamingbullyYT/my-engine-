@@ -6,6 +6,7 @@ on:
       - "android-host/**"
       - "engine/**"
       - "CMakeLists.txt"
+      - "PMCS/**"
       - ".github/workflows/android-host.yml"
   pull_request:
     paths:
@@ -30,37 +31,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Checkout pinned bgfx sources
+      - name: Download pinned wgpu-native Android ARM64 release
+        env:
+          WGPU_NATIVE_VERSION: v29.0.1.1
+          WGPU_NATIVE_SHA256: 721741f1b05a20c1738166bedf7a5efb2ba4b382da689526d3fc33de22bdd573
         run: |
-          git clone --filter=blob:none https://github.com/bkaradzic/bgfx.cmake.git /tmp/bgfx.cmake
-          git -C /tmp/bgfx.cmake fetch --depth 1 origin c07b70ddc18d84538a460d6b022b6bb22d0e0950
-          git -C /tmp/bgfx.cmake checkout --detach FETCH_HEAD
-
-          git clone --filter=blob:none https://github.com/bkaradzic/bgfx.git /tmp/bgfx
-          git -C /tmp/bgfx fetch --depth 1 origin 3fe177f616c712a84a39e597a404ac5fdc04a3f7
-          git -C /tmp/bgfx checkout --detach FETCH_HEAD
-
-          git clone --filter=blob:none https://github.com/bkaradzic/bx.git /tmp/bx
-          git -C /tmp/bx fetch --depth 1 origin b8ee10a606ae41db9fdd1dbb2bb4d1e565f9a7b7
-          git -C /tmp/bx checkout --detach FETCH_HEAD
-
-          git clone --filter=blob:none https://github.com/bkaradzic/bimg.git /tmp/bimg
-          git -C /tmp/bimg fetch --depth 1 origin 38ceda5c7778228f976f75900623fb5923b49107
-          git -C /tmp/bimg checkout --detach FETCH_HEAD
-
-          echo "BGFX_CMAKE_SOURCE_DIR=/tmp/bgfx.cmake" >> "$GITHUB_ENV"
-          echo "BGFX_DIR=/tmp/bgfx" >> "$GITHUB_ENV"
-          echo "BX_DIR=/tmp/bx" >> "$GITHUB_ENV"
-          echo "BIMG_DIR=/tmp/bimg" >> "$GITHUB_ENV"
-
-      - name: Verify pinned precompiled GLES 3 shader assets
-        run: |
-          cd android-host/app/src/main/assets/shaders
-          sha256sum --check SHA256SUMS
-          test -s vs_sprite_essl300.bin
-          test -s fs_sprite_essl300.bin
-          test -s vs_mesh_essl300.bin
-          test -s fs_mesh_essl300.bin
+          set -euo pipefail
+          archive="$RUNNER_TEMP/wgpu-android-aarch64-release.zip"
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "https://github.com/gfx-rs/wgpu-native/releases/download/$WGPU_NATIVE_VERSION/wgpu-android-aarch64-release.zip" \
+            --output "$archive"
+          echo "$WGPU_NATIVE_SHA256  $archive" | sha256sum --check -
+          mkdir -p "$RUNNER_TEMP/wgpu-native"
+          unzip -q "$archive" -d "$RUNNER_TEMP/wgpu-native"
+          test -s "$RUNNER_TEMP/wgpu-native/include/webgpu/webgpu.h"
+          test -s "$RUNNER_TEMP/wgpu-native/include/webgpu/wgpu.h"
+          test -s "$RUNNER_TEMP/wgpu-native/lib/libwgpu_native.so"
+          echo "WGPU_NATIVE_ROOT=$RUNNER_TEMP/wgpu-native" >> "$GITHUB_ENV"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -83,19 +70,18 @@ jobs:
         with:
           gradle-version: "9.6.0"
 
-      - name: Assemble debug APK with EngineRuntime and bgfx
+      - name: Assemble debug APK with EngineRuntime and wgpu-native
         working-directory: android-host
         env:
           CMAKE_BUILD_PARALLEL_LEVEL: "1"
         run: gradle --no-daemon --no-build-cache --max-workers=1 --stacktrace :app:clean :app:assembleDebug
 
-      - name: Verify APK contains ARM64 engine, renderer, shaders and startup diagnostics
+      - name: Verify APK contains ARM64 engine, wgpu-native and startup diagnostics
         run: |
           APK="android-host/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libdream_engine_android_host.so"
-          unzip -l "$APK" | grep -q "assets/shaders/vs_sprite_essl300.bin"
-          unzip -l "$APK" | grep -q "assets/shaders/vs_mesh_essl300.bin"
+          unzip -l "$APK" | grep -q "lib/arm64-v8a/libwgpu_native.so"
 
           # Verify the packaged DEX includes the current Java startup diagnostics.
           DEX_HAS_MARKER=0
@@ -107,6 +93,7 @@ jobs:
           done
           test "$DEX_HAS_MARKER" -eq 1
           unzip -p "$APK" lib/arm64-v8a/libdream_engine_android_host.so | strings | grep -q "android_main entered"
+          unzip -p "$APK" lib/arm64-v8a/libdream_engine_android_host.so | strings | grep -q "wgpu-native"
 
       - name: Upload installable debug APK
         uses: actions/upload-artifact@v4
