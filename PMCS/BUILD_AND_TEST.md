@@ -35,7 +35,15 @@
 - User device test must confirm the boot-screen native status says `Native C++: OK · 20 + 22 = 42`.
 - A successful compile and APK export do not prove the Android loader works; the user validates loading and runtime behavior on the actual device.
 
-## GDScript mod validation
+## External GDScript runtime validation (M3)
+- `mods/mod_runtime.gd` is an autoload and owns the external script diagnostic.
+- The diagnostic creates `user://mods/`, writes a sample GDScript to app-private storage, reads it back, compiles it using `GDScript.reload()`, instantiates the script, and invokes its entry method.
+- The sample calls back into the host runtime and emits an explicit success signal; parse/file errors are reported with context.
+- The boot screen exposes a manual M3 button and visible status. CI only compiles/exports the APK; the user confirms execution on the phone.
+- This proves the Godot runtime-loading path when device-tested; it does not yet prove Android file-picker import or arbitrary third-party .dmod packages.
+- Mods are trusted code, not sandboxed.
+
+## GDScript mod and DMod validation (M4)
 - Verify script source can be loaded/compiled at runtime in the exact exported Godot configuration.
 - Test app-private `user://mods/` access and Android file-picker import.
 - Test `.dmod` ZIP validation, path traversal rejection, resource limits, dependency ordering, and error attribution.
@@ -52,5 +60,5 @@ The Android build workflow must run when Godot project code, scenes, resources, 
 ## Branch and integration policy — 2026-11-27
 - The user requires all future project work to happen directly on `main`; do not create feature branches or ordinary PRs.
 - Make small commits to `main`, with focused tests and PMCS updates. Inspect latest main before each change.
-- One-time transition exception: the M2 GDExtension PR already open on 2026-11-27 is to be merged after all required CI checks pass. Do not merge with pending/failing checks; do not bypass protections. If blocked, report the exact blocker.
+- The one-time M2 transition PR #1 was merged after all required CI checks passed. Do not bypass protections.
 - The user's physical Android test remains distinct from CI and must still be recorded separately.
