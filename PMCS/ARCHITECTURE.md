@@ -44,6 +44,16 @@ Status: intended design only; not implemented in the current baseline.
 ### Host integration
 The game deliberately exposes useful integration points/autoloads for world access, entity spawning, input, saves, UI, audio, physics, and session networking. New gameplay systems are possible only when the host provides the required primitives.
 
+## Game-host simulation requirements (planned)
+For the colony/space game host, keep these systems as explicit, testable services rather than hard-coding them into UI:
+- Colony governance service: tracks player oversight/absence, mayor advice, graduated delegation, policy constraints, decisions, and an auditable action history.
+- Colony simulation: supports detailed simulation for active locations and aggregated progression for remote colonies while preserving resource and population constraints.
+- Space settlement service: distinguishes satellites, orbital stations, and mobile colony ships. Stations and colony ships are modular, saveable entities with docking, power, life-support, storage, population, and expansion interfaces as applicable.
+- Shared entity/vehicle interfaces: NPC pilots and modded craft use declared capabilities and the same physical constraints as player-controlled craft.
+- Threat and failure systems must be able to cause genuine loss. Governance may mitigate risk but must not silently make colonies invulnerable.
+
+These are proposed game-host boundaries, not implemented engine modules.
+
 ## Hook model
 Before, Around/Wrap, Replace/Override, and After. Each hook needs a stable target ID, documented argument/result contract, priority/order, owner ID, error handling, and recursion protection. Replacement is opt-in per target.
 
