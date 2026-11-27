@@ -16,8 +16,8 @@ Interstellar travel, additional star systems, multi-system autonomous fleets/col
 Exit: clean baseline and reviewed project memory.
 
 ## M1 — Official Godot Android baseline
-- [ ] Build official unmodified Godot for Android ARM64 in GitHub Actions.
-- [ ] Produce a minimal installable APK.
+- [ ] Set up the official, unmodified Godot 4.7 release and matching official Android export templates/toolchain in GitHub Actions; do not build a custom Godot fork.
+- [ ] Produce a minimal installable APK from the standard Android export pipeline. Use official prebuilt release/templates where available; compiling pristine upstream source is a fallback only if a documented requirement makes it necessary.
 - [ ] Validate launch, visible rendering, touch, pause/resume, readable UI, and core onboarding flow on device.
 Exit: user confirms physical-device test.
 
