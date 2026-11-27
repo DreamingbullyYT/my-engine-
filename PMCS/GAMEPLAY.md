@@ -54,3 +54,8 @@ Every critical system needs readable status, capacity, input/output, worker, pow
 
 ## Modding
 All core content and rules should be data-driven and extensible through the Dream Mod API. Mods can add citizen traits/jobs/needs, buildings, resources, recipes, policies, research, events, factions, and entire systems. See MODDING_API.md.
+
+
+## Citizen visual representation and distance LOD — D-016
+
+Citizens are persistent simulated individuals, but their on-screen representation is deliberately simple: pixel-scale people. Their visual movement and animation are reduced progressively as the camera moves away. At close range, individual pixel people can move and animate; at medium/far range, visual movement/animation updates become less frequent and details are simplified; when an individual is too small to be meaningfully visible, its sprite is no longer drawn. This does not remove the citizen from the simulation or save: identity, population membership, job, skills, needs, health, happiness, and other authoritative state remain intact. Off-screen citizens likewise stop consuming visual animation work, while their simulation continues at the appropriate simulation tier. See PERFORMANCE_AND_SIMULATION.md and D-016.
