@@ -101,3 +101,26 @@ Consequences:
 - After the tutorial, the player enters the same free sandbox experience available to players who skip it.
 - Tutorial progress and completion should be saved per game/profile as appropriate, without making tutorial completion a prerequisite for sandbox access.
 - This is a design decision only; no tutorial implementation is implied.
+
+
+## D-016 — Adaptive hybrid rendering and visual LOD for colonies
+Status: ACCEPTED — 2026-11-27.
+
+Buildings use a hybrid, distance-aware rendering system. The world keeps stable logical sectors and coordinates; rendering cache regions may change size dynamically according to zoom, visible density, and measured device constraints. At close range, buildings are rendered individually. At medium and far range, static building visuals may be baked into sector caches, with multiple sectors combined into larger caches where useful. Dynamic components (for example lights, doors, machinery, smoke, particles, damage indicators, and other animated effects) remain separate where needed. Selection and interaction always use authoritative building data/geometry, never pixels from a baked texture.
+
+Cache updates are localized: changes mark affected regions dirty, rapid edits are batched, and only affected cache regions are rebuilt. A previous valid cache remains visible until its replacement is ready. Cache generation and GPU resource upload must respect Godot's thread-safety requirements; background work may prepare data, while GPU operations occur on the appropriate rendering thread. Cache memory is budgeted and evictable; multiple visual LODs and smooth transitions avoid popping/flicker. Exact sector sizes, zoom thresholds, cache dimensions, and numeric budgets remain profiling-driven, not fixed by this decision.
+
+Building animation and visual detail adapt gradually with distance and performance. Close buildings can show full animation and effects; medium-distance buildings use reduced animation/effects; distant buildings use minimal or no animation; off-screen buildings do not spend resources on visual animation. Animation state/time must remain coherent when detail is reduced and later restored. The player can choose an automatic mode or manually select quality/performance preferences. Automatic adaptation may use zoom, visible workload, frame-time/performance signals, and reliable device thermal/resource signals when available. Selection temporarily promotes the selected distant building's visual detail without promoting the whole planet. These visual settings must never change building functionality, production, economy, physics, or simulation time.
+
+Citizens remain persistent logical individuals in the simulation. Their visual representation is pixel-scale and uses distance-aware visual LOD: near the camera they may be drawn as individual moving/animated pixels; with increasing distance, movement/animation update cadence and visual detail are reduced; once individuals are too small to be meaningfully distinguished, their sprites are no longer drawn. This is a rendering decision only: citizens are not deleted, merged destructively, or removed from population, jobs, needs, health, skills, identity, or save data merely because they are not visible. Their simulation continues at the appropriate active/nearby/distant simulation tier defined by the performance specification.
+
+Rationale: preserve a lively, inspectable colony while reducing draw calls, animation work, texture rebuild cost, GPU memory pressure, and battery use on Android. Keep rendering caches strictly separate from authoritative gameplay state.
+
+Consequences and validation:
+- Keep source building assets/resources, logical building records, and baked visual caches separate.
+- Keep dynamic overlays and interaction/selection data independent of baked static textures.
+- Prevent cache thrashing with batching, stable logical partitioning, cache reuse, eviction, and hysteresis around LOD transitions.
+- Provide safe fallback to individual/simple rendering if cache generation fails or a modded asset cannot be baked.
+- Modded buildings must be able to declare static and dynamic visual components or opt out of baking when required; their gameplay behavior remains independent of rendering LOD.
+- Profile CPU, GPU, draw calls, frame time, memory/VRAM, rebuild latency, battery, and thermal behavior on target Android ARM64 devices before setting numeric thresholds or claiming performance targets.
+- This is a design decision only; no rendering, citizen simulation, or gameplay implementation is implied.
