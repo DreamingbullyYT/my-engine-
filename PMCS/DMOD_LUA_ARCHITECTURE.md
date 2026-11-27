@@ -37,7 +37,7 @@ Manifest runtime modes:
 
 Example Lua manifest:
 
-\u0060\u0060\u0060json
+```json
 {
   "format_version": 1,
   "id": "author.example-mod",
@@ -46,7 +46,7 @@ Example Lua manifest:
   "runtime": "lua",
   "entry_script": "scripts/main.lua"
 }
-\u0060\u0060\u0060
+```
 
 A native/hybrid manifest also declares `native_library: "native/android-arm64-v8a/libexample.so"`; use `runtime: "native"` or `runtime: "hybrid"`. The Godot runtime currently reads these fields from `manifest.json`.
 
