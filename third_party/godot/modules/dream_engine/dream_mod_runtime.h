@@ -133,4 +133,3 @@ public:
             DreamModNativeOriginalV1 original = nullptr, void *original_context = nullptr);
 };
 
-VARIANT_ENUM_CAST(DreamModRuntime::HookStage)
