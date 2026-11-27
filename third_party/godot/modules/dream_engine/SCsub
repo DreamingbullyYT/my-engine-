@@ -1,0 +1,14 @@
+#!/usr/bin/env python
+from misc.utility.scons_hints import *
+
+Import("env")
+Import("env_modules")
+
+env_dream = env_modules.Clone()
+env_dream.Prepend(CPPPATH=["#third_party/lua-5.4.8"])
+
+module_obj = []
+env_dream.add_source_files(module_obj, "*.cpp")
+env_dream.add_source_files(module_obj, "#third_party/lua-5.4.8/onelua.c")
+
+env.modules_sources += module_obj
