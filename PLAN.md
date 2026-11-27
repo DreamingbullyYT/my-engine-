@@ -12,14 +12,14 @@ Etichete: **[cercetat]** = din surse publice. **[de la tine]** = decis de tine. 
 | Forma lumii | **Glob rotund** (planetă văzută din lateral, 2D), clădiri radiale **[de la tine]** |
 | Mărimea texturilor | **32x32 pe tile**; clădirile mari = multipli (ex. 3x2 tile = 96x64 px) **[de la tine]** |
 | Texturi | le faci tu; eu generez placeholdere low-poly/flat și îți dau lista completă **[de la tine]** |
-| Platformă | **Doar Android**; dezvoltare și teste pe PC (headless, în sandbox-ul meu) **[de la tine]** |
+| Platformă | **Android-first, ARM64**; build și teste CI în GitHub Actions, validare pe telefonul utilizatorului **[de la tine]** |
 | Motor | Godot 4.7, GDScript (C++ doar dacă un punct fierbinte o cere) |
 | Modding | **Ca la Minecraft: scripturi, acces la absolut tot** **[de la tine]** |
 | Livrare | **Tot jocul într-un singur run** **[de la tine]** |
 | Dușmani | mai târziu, nu în prima versiune **[de la tine]** |
 | Piloți NPC | **Both**: coloniști la bord, piloți la distanță și sisteme autonome pentru vehicule fără echipaj **[de la tine]** |
 | Autopilot NPC | misiuni complete, cu aceeași fizică orbitală, combustibil și limite ca navele jucătorului **[de la tine]** |
-| Guvernarea coloniilor | primar local și autonomie configurabilă; colonia continuă să funcționeze fără micro-management constant **[de la tine]** |
+| Guvernarea coloniilor | primarul începe ca sfătuitor și preia gradual responsabilități în funcție de atenția jucătorului; fără trei moduri fixe **[de la tine]** |
 | Nume joc | nedecis |
 
 ## 1. Viziunea
@@ -36,9 +36,9 @@ Mecanicile nu sunt protejate; codul, grafica, sunetele, numele și interfața su
 
 ## 3. Referințe de design [cercetat, rezumat]
 
-**The Final Earth 2** (city builder vertical 2D): resurse (lemn, piatră, mâncare, cunoștințe, piese, metale, cipuri, grafen, combustibil); cetățeni simulați care își găsesc joburi; **fericirea** schimbă viteza de lucru (0,25x la 0 până la 2,0x la 100, 2,5x cu festivaluri) și vine din 5 surse: casă, sens, distracție, educație, sănătate; case cu compromisuri; arbore de deblocare; îmbunătățiri pe clădire; politici (City Hall); festivaluri; facțiuni. Slăbiciuni: repetitiv, lume mică și statică.
+**The Final Earth 2** (referință de design pentru simularea coloniilor; adaptare, nu copiere): resurse (lemn, piatră, mâncare, cunoștințe, piese, metale, cipuri, grafen, combustibil); cetățeni simulați care își găsesc joburi; **fericirea** schimbă viteza de lucru (0,25x la 0 până la 2,0x la 100, 2,5x cu festivaluri) și vine din 5 surse: casă, sens, distracție, educație, sănătate; case cu compromisuri; arbore de deblocare; îmbunătățiri pe clădire; politici (City Hall); festivaluri; facțiuni. Slăbiciuni: repetitiv, lume mică și statică.
 
-**Spaceflight Simulator** (rachete 2D): construire din piese, fizică orbitală reală, hartă + time warp, reintrare cu încălzire, parașute, andocare, transfer de combustibil, undo și revenire. Slăbiciuni: fără scop economic, nimic nu se întoarce în bază.
+**Spaceflight Simulator** (referință de design pentru construcția și zborul navelor; adaptare, nu copiere): construire din piese, fizică orbitală reală, hartă + time warp, reintrare cu încălzire, parașute, andocare, transfer de combustibil, undo și revenire. Slăbiciuni: fără scop economic, nimic nu se întoarce în bază.
 
 ## 4. Lumea pe glob [propunere, adaptat la alegerea ta]
 
@@ -219,3 +219,16 @@ Dușmani, provocări zilnice și alte moduri: **mai târziu**.
 1. Numele jocului (poate rămâne `TBD` până la export).
 2. Final deschis: refacerea Pământului sau o casă nouă? (default: sandbox fără final obligatoriu)
 3. Monetizare: fără (default).
+
+
+## Specificații detaliate PMCS (D-014)
+Pentru regulile complete, PLAN.md se citește împreună cu documentele PMCS dedicate:
+- `PMCS/GAMEPLAY.md`: cetățeni, nevoi, fericire, joburi, clădiri, economie, cercetare și politici.
+- `PMCS/ROCKETS_AND_PHYSICS.md`: piese modulare, propulsie, combustibil, staging, orbite, atmosferă, andocare și aterizare.
+- `PMCS/UNIVERSE.md`: stele, planete, luni, asteroizi, descoperire și călătorii interstelare.
+- `PMCS/AUTOMATION.md`: primari, piloți NPC, flote, cargo și simulare la distanță.
+- `PMCS/SPACE_INFRASTRUCTURE.md`: sateliți, stații, megaships și habitate.
+- `PMCS/SPACE_EXPANSION.md`: extindere autonomă și locuibilitate.
+- `PMCS/PERFORMANCE_AND_SIMULATION.md`: niveluri de simulare, salvări, timp și Android.
+
+Politica de timp de bază: ceasul jocului se oprește când aplicația este închisă; time warp este controlat de jucător în timpul jocului. Aceasta evită progresia offline punitivă.
