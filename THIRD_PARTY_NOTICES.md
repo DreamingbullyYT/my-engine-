@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-Dream Engine's root project license remains MIT. The following separately licensed upstream components are bundled or used by the Android wgpu-native build. Keep their notices with source and binary distributions.
+Dream Engine's root project license remains MIT. The following separately licensed upstream components are bundled or used by Dream Engine. Some entries describe preserved legacy/reference components. Keep their notices with source and binary distributions.
 
 ## wgpu-native
 
@@ -23,7 +23,16 @@ The Android host uses wgpu-native as a prebuilt native dependency through its C 
 - Project: https://github.com/godotengine/godot
 - Version: `4.7.2-stable`
 - Pinned source commit: `ed1daf0bf001b61586d9930840f2f1394092c079`
-- Integration: Git submodule at `third_party/godot`; the Android ARM64 runtime template is compiled from this source in GitHub Actions.
+- Integration: upstream source vendored as ordinary tracked files under `third_party/godot/` (not a Git submodule); the Android ARM64 runtime template is compiled from this source in GitHub Actions.
 - License: MIT. Preserve the upstream `LICENSE.txt` and all notices contained in the Godot source tree and generated distributions. Godot's bundled third-party components retain their own licenses; consult upstream notices before redistributing modified engine builds.
 
 The root Dream Engine license remains MIT. This notice does not replace the license files or attribution notices shipped by Godot and its dependencies.
+
+## Lua
+
+- Project: https://www.lua.org/
+- Source mirror: https://github.com/lua/lua
+- Version: `5.4.8` (`v5.4.8`)
+- Exact source commit: `6e22fedb74cf0c9b6656e9fce8b7331db847c605`
+- Integration: source files are vendored under `third_party/lua-5.4.8/` and compiled into the Dream Engine Godot module through `onelua.c`.
+- License: MIT; copy retained in [LICENSE](third_party/lua-5.4.8/LICENSE).
