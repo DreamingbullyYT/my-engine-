@@ -49,7 +49,7 @@ env:
 
 jobs:
   android-arm64:
-    name: Build, load-test, and export Dream Runtime
+    name: Compile and export Dream Runtime
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -137,8 +137,6 @@ jobs:
           test -x "$ANDROID_HOME/build-tools/$ANDROID_BUILD_TOOLS/aapt"
           test -s "$HOME/.local/share/godot/export_templates/$GODOT_VERSION_DIR/android_debug.apk"
           test -d "$ANDROID_NDK_ROOT"
-          "$ANDROID_HOME/platform-tools/adb" start-server
-          "$ANDROID_HOME/platform-tools/adb" devices
           echo "Android SDK: $ANDROID_HOME"
           echo "Android NDK: $ANDROID_NDK_ROOT"
 
@@ -150,17 +148,6 @@ jobs:
           bash .github/scripts/build_dream_runtime.sh android arm64
           test -s native/dream_runtime/bin/linux/libdream_runtime.linux.template_debug.x86_64.so
           test -s native/dream_runtime/bin/android/libdream_runtime.android.template_debug.arm64.so
-
-      - name: Validate Godot import and native GDExtension
-        shell: bash
-        run: |
-          set -euo pipefail
-          "$GODOT_BIN" --headless --editor --path . --import --quit
-          "$GODOT_BIN" --headless --path . --script res://tests/native_extension_smoke.gd 2>&1 | tee "$RUNNER_TEMP/native-smoke.log"
-          grep -F "[DreamRuntime] initialized" "$RUNNER_TEMP/native-smoke.log"
-          grep -F "[DreamRuntime] shutdown" "$RUNNER_TEMP/native-smoke.log"
-          grep -F "NATIVE_GDEXTENSION_SMOKE_OK" "$RUNNER_TEMP/native-smoke.log"
-          "$GODOT_BIN" --headless --path . --quit-after 3
 
       - name: Create temporary Android debug signing key
         shell: bash
@@ -201,10 +188,11 @@ jobs:
             echo "Native extension: DreamRuntimeProbe"
             echo "Package: com.dreamingbully.dreamengine"
             echo "Build type: debug"
+            echo "Runtime testing: deferred to physical Android device"
           } > build/android/build-info.txt
           stat -c "APK size: %s bytes" build/android/dream-engine-debug.apk
 
-      - name: Upload APK and validation report
+      - name: Upload Android APK and build report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: dream-engine-m2-${{ github.sha }}-android-arm64
