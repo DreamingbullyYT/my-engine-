@@ -119,7 +119,7 @@ jobs:
             "templates/android_source.zip" \
             -d "$temporary"
           cp "$temporary/templates/"* "$destination/"
-          printf '%s\\n' "$GODOT_VERSION_DIR" > "$destination/version.txt"
+          printf '%s\n' "$GODOT_VERSION_DIR" > "$destination/version.txt"
 
           test -s "$destination/android_debug.apk"
           test -s "$destination/android_release.apk"
