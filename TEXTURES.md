@@ -6,7 +6,7 @@
 - Desenezi clădirile **drepte, cu baza jos**; jocul le rotește după unghiul de pe glob.
 - Opțional pe orice clădire: `<id>_night.png` (aceeași mărime, cu ferestrele aprinse). Dacă lipsește, se folosește imaginea normală.
 - Spritesheet-uri: cadre egale, pe orizontală, de la stânga la dreapta.
-- Total: **≈ 331 de fișiere**. Poți începe cu cele marcate ★ (esențiale pentru primele minute de joc).
+- Total: **≈ 341 de fișiere**. Poți începe cu cele marcate ★ (esențiale pentru primele minute de joc).
 
 ---
 
@@ -255,6 +255,23 @@ Cele marcate "9-slice" au colțuri de 8 px, centrul se întinde.
 ## N. Efecte — `textures/effects/` — 14 (+ flăcările din J)
 
 `particle_dot` (8x8), `particle_spark` (8x8), `particle_smoke_sheet` (64x16, 4 cadre), `explosion_sheet` (192x32, 6 cadre), `dust_puff_sheet` (96x16, 6 cadre), `heart_float` (16x16), `confetti_a` (8x8), `confetti_b` (8x8), `confetti_c` (8x8), `firework_sheet` (192x32, 6 cadre), `reentry_glow` (64x64), `rain_drop` (4x8), `snow_flake` (8x8), `meteor_trail` (32x64).
+
+## P. Module de stație orbitală și megaship — `textures/station/` — 10
+
+Modulele sunt piese vizuale independente, conectate prin puncte de atașare standardizate. Aceleași definiții de modul pot fi folosite în stații și, la scară mai mare, în megaships. Pentru v1 sunt necesare doar modulele de bază pentru o stație simplă; restul pot fi introduse ulterior.
+
+| Id | px | Descriere |
+| --- | --- | --- |
+| station_hub | 64x64 | nod central cu porturi de conectare |
+| station_habitat | 64x64 | modul presurizat pentru echipaj/locuitori |
+| station_docking | 64x64 | modul cu port de andocare |
+| station_cargo | 64x64 | modul de depozitare marfă |
+| station_power | 64x64 | modul cu generatoare și baterii |
+| station_solar | 128x32 | aripă de panouri solare |
+| station_life_support | 64x64 | reciclare apă/aer și suport vital |
+| station_lab | 64x64 | laborator/echipament științific |
+| station_greenhouse | 64x64 | seră presurizată pentru hrană |
+| station_engine | 64x64 | modul de propulsie și control orbital |
 
 ## O. Aplicație (Android) — `textures/app/` — 5
 
