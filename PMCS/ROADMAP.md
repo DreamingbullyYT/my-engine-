@@ -47,6 +47,8 @@ Exit: integration tests and sample mods exercise every public contract.
 - [ ] Inventory/crafting sample.
 - [ ] Vehicle/physics sample.
 - [ ] Demonstrate a system absent from the original host game.
+- [ ] Validate game-host integration contracts with examples for colony governance (advice → graduated delegation), NPC pilots, modular orbital stations, and mobile colony habitats.
+- [ ] Ensure host APIs allow modded station/habitat modules and do not hard-code only the base game's content.
 Exit: samples work without Godot source modifications or APK rebuild.
 
 ## M7 — Multiplayer
