@@ -22,7 +22,7 @@ diff --git a/third_party/godot/modules/zip/zip_reader.cpp b/third_party/godot/mo
  	ERR_FAIL_COND_V_MSG(fa.is_null(), PackedByteArray(), "ZIPReader must be opened before use.");
  
  	int err = UNZ_OK;
-@@ -103,7 +103,12 @@
+@@ -103,8 +103,12 @@
  	// Read the file info.
  	unz_file_info info;
  	err = unzGetCurrentFileInfo(uzf, &info, nullptr, 0, nullptr, 0, nullptr, 0);
