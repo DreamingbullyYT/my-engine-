@@ -66,3 +66,7 @@ Accepted decision D-013:
 - Expeditions must pass habitability, capability, supply, and logistics checks; founded colonies receive their own governance and remain vulnerable to real failures.
 
 Documentation/design only. No source code or gameplay implementation was added.
+
+
+## 2026-11-27 design review update — D-014
+The user directed that unspecified gameplay systems be completed using The Final Earth 2 and Spaceflight Simulator as design references. Added detailed planned specifications: GAMEPLAY.md, ROCKETS_AND_PHYSICS.md, UNIVERSE.md, AUTOMATION.md, SPACE_INFRASTRUCTURE.md, and PERFORMANCE_AND_SIMULATION.md. Existing SPACE_EXPANSION.md remains the dedicated expansion specification. D-014 records reference-guided adaptation without copying protected expression. Baseline time policy: game clock pauses when the app is closed; time warp is player-controlled in-game. All remain design-only; no source code or gameplay implementation was added.
