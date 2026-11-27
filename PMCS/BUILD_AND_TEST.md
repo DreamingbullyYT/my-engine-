@@ -46,8 +46,8 @@
 ## GDScript mod and DMod validation (M4)
 - Verify script source can be loaded/compiled at runtime in the exact exported Godot configuration.
 - Test app-private `user://mods/` access and Android file-picker import.
-- Test `.dmod` ZIP validation, path traversal rejection, resource limits, dependency ordering, and error attribution.
-- Confirm mods can be installed and executed without rebuilding the APK.
+- Test `.dmod` ZIP validation, path traversal rejection, configured resource caps, duplicate paths, dependency ordering/cycles, and error attribution.\n- ZIPReader.read_file() materializes a decompressed entry as a PackedByteArray; size checks performed afterward are not a complete defense against decompression bombs. Production hardening requires central-directory size preflight or a bounded native ZIP reader.
+- Confirm mods can be installed and executed without rebuilding the APK. Current M4 proof UI creates a sample `.dmod` internally; Android system file-picker import remains outstanding.
 - Verify disabling a mod prevents its entrypoint from executing.
 - Do not claim script mods are sandboxed; the design is trusted-code execution.
 
