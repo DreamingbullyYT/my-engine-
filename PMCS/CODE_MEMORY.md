@@ -21,8 +21,8 @@ Keep a machine-generated structural map of the source tree so coding agents can 
 - Workflow artifacts are retained for 30 days. They are not a permanent database service.
 
 ## Verified isolated smoke test
-- Workflow run **#17**: https://github.com/DreamingbullyYT/my-engine-/actions/runs/45989117795 (final verified run with smoke-test outputs uploaded).
-- Result: **success**.
+- Workflow run **#18**: https://github.com/DreamingbullyYT/my-engine-/actions/runs/45989248995 (latest verified successful run, 2026-11-27).
+- Result: **success**. Run #17 below is historical; #18 supersedes it as the latest verification.
 - CodeGraphContext 0.5.1 installed successfully on GitHub-hosted Ubuntu.
 - Temporary fixture: 3 files (C++ source/header + Lua source).
 - Graph statistics: **3 files, 4 functions, 0 classes**.
@@ -30,7 +30,8 @@ Keep a machine-generated structural map of the source tree so coding agents can 
 - Bundle export succeeded: **14 nodes, 15 edges**.
 - Artifact **15192079735** contains the `.cgc` smoke graph and CLI logs; it is retained until 2026-12-27.
 - The fixture and graph were generated in the runner temp directory, not added to project source.
-- Earlier smoke run #12 failed because the CLI rejected `--summarize` on `cgc index`; this was removed. Run #13 validates the corrected command sequence.
+- Earlier smoke run #12 failed because the CLI rejected `--summarize` on `cgc index`; this was removed. Run #13 validated the corrected command sequence.
+- The current `PMCS/CODE_MAP.md` still contains an older source commit identifier and is not a current generated map. Since the repository remains documentation-only, do not fabricate a new generated source map; regenerate it when source files exist.
 
 ## Important ChatGPT boundary
 CodeGraphContext exposes an MCP server, but this ordinary ChatGPT conversation does not automatically connect to a local or GitHub Actions-hosted MCP process. The GitHub connection lets this assistant inspect committed repository files; it does not automatically invoke a separate MCP server. The committed Markdown map is the portable interface currently usable here. A future remote MCP connection would require a supported, reachable MCP endpoint and explicit client configuration.
