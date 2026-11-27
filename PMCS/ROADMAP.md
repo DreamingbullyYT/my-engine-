@@ -16,9 +16,9 @@ Interstellar travel, additional star systems, multi-system autonomous fleets/col
 Exit: clean baseline and reviewed project memory.
 
 ## M1 — Official Godot Android baseline
-- [ ] Set up the official, unmodified Godot 4.7 release and matching official Android export templates/toolchain in GitHub Actions; do not build a custom Godot fork.
-- [ ] Produce a minimal installable APK from the standard Android export pipeline. Use official prebuilt release/templates where available; compiling pristine upstream source is a fallback only if a documented requirement makes it necessary.
-- [ ] Validate launch, visible rendering, touch, pause/resume, readable UI, and core onboarding flow on device.
+- [x] Set up the official, unmodified Godot 4.7.2-stable editor and official Android export templates/toolchain in GitHub Actions (verified in run #3); no custom Godot fork.
+- [x] Produce a minimal installable APK from the standard Android export pipeline (run #3; 28,255,149 bytes; Android arm64-v8a library and package ID validated). Use official prebuilt release/templates; no source compilation was needed.
+- [ ] User to validate on physical Android device: launch, visible rendering, touch button/counter, pause/resume, and readable UI. The test button's pressed signal is connected in the exported scene.
 Exit: user confirms physical-device test.
 
 ## M2 — GDExtension proof
