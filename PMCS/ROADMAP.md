@@ -179,16 +179,21 @@ The bgfx backend and its existing 2D/3D code remain optional engine-side impleme
 The upstream Godot source is now the selected foundation. The former P0–P4 standalone-engine checklist describes the preserved C++ prototype and must not be interpreted as the active engine completion plan.
 
 ### G0 — Source and Android bootstrap
-- [x] Pin upstream Godot 4.7.2-stable commit as a submodule.
+- [x] Pin upstream Godot 4.7.2-stable commit and vendor its source as ordinary tracked files (not a submodule).
 - [x] Add an Android ARM64 source-build workflow and a minimal Android export project.
-- [ ] Verify source checkout, SCons build, Gradle template generation and APK export in Actions.
-- [ ] Install the APK on the user's phone and verify first frame, touch input, resume and rotation.
+- [x] Verify vendored source, SCons build, template generation and APK export in Actions (run 45966721024).
+- [x] Install the APK and verify first visible frame and touch input on the user's phone.
+- [ ] Verify app resume/rotation, sustained rendering, audio and lifecycle behavior on the phone.
 
 ### G1 — Dream Engine Godot foundation
 - [ ] Audit Godot's scene tree, rendering, physics, input, resource, audio and Android integration against game requirements.
 - [ ] Define a narrow Dream-specific C++ module/patch layer; avoid duplicating Godot systems.
-- [ ] Establish the native extension ABI/version contract and deep internal hook/replace points.
-- [ ] Rebuild the DMod manager around trusted in-process Godot native modules/extensions.
+- [ ] Establish the append-only native ABI/version contract and real deep internal hook/replace points.
+- [ ] Embed Lua 5.4.x and support Lua source directly inside `.dmod` packages (no per-mod `.so` or compile step).
+- [ ] Support `lua`, `native`, and `hybrid` DMod runtime modes.
+- [ ] Unify Lua and native `Before`/`Around`/`Replace`/`After` hooks under one owner-aware dispatcher.
+- [ ] Integrate actual main-loop, scene, physics, render and resource hook call sites.
+- [ ] Rebuild the DMod manager around trusted in-process Godot native modules and Lua VM lifecycle.
 - [ ] Add source-build CI for desktop editor/tools and Android ARM64 runtime.
 
 ### G2 — Game and production systems
