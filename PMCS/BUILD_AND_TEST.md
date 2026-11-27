@@ -37,8 +37,8 @@
 
 ## GDScript mod validation
 - Verify script source can be loaded/compiled at runtime in the exact exported Godot configuration.
-- Test app-private user://mods/ access and Android file-picker import.
-- Test .dmod ZIP validation, path traversal rejection, resource limits, dependency ordering, and error attribution.
+- Test app-private `user://mods/` access and Android file-picker import.
+- Test `.dmod` ZIP validation, path traversal rejection, resource limits, dependency ordering, and error attribution.
 - Confirm mods can be installed and executed without rebuilding the APK.
 - Verify disabling a mod prevents its entrypoint from executing.
 - Do not claim script mods are sandboxed; the design is trusted-code execution.
@@ -48,3 +48,9 @@ Record commit SHA, workflow run ID/URL, artifact name/size, test results, user-c
 
 ## Android build trigger coverage
 The Android build workflow must run when Godot project code, scenes, resources, native extension sources, tests, native build scripts, or game assets change, including files added under future modular domains such as world, terrain, colony, vehicles, physics, rendering, and infrastructure. It should not run for documentation-only PMCS edits. Keep path filters broad enough to cover new modules without requiring a manual workflow edit for every new gameplay directory.
+
+## Branch and integration policy — 2026-11-27
+- The user requires all future project work to happen directly on `main`; do not create feature branches or ordinary PRs.
+- Make small commits to `main`, with focused tests and PMCS updates. Inspect latest main before each change.
+- One-time transition exception: the M2 GDExtension PR already open on 2026-11-27 is to be merged after all required CI checks pass. Do not merge with pending/failing checks; do not bypass protections. If blocked, report the exact blocker.
+- The user's physical Android test remains distinct from CI and must still be recorded separately.
