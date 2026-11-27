@@ -1,3 +1,5 @@
+> **Engine-base migration (2026-11-27):** This branch introduces upstream **Godot 4.7.2-stable** as the new Dream Engine foundation. The source is pinned in `third_party/godot`; the new Android workflow builds its ARM64 runtime template from source and exports a bootstrap APK. The old standalone C++ engine and GameActivity/wgpu host are preserved as reference until the Godot path is verified. See [PMCS/GODOT_MIGRATION.md](PMCS/GODOT_MIGRATION.md) for the active plan and status.
+
 # Dream Engine
 
 Dream Engine is a general-purpose **C++20 game engine** with first-class **2D and 3D** systems. Android arm64-v8a is the current device target; GitHub Actions is the primary build/test environment.

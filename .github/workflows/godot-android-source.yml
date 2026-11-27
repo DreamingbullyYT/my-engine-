@@ -1,0 +1,164 @@
+name: Godot Android ARM64 source build
+
+on:
+  push:
+    branches:
+      - main
+      - godot-4.7.2-migration
+    paths:
+      - ".gitmodules"
+      - "third_party/godot"
+      - "godot-project/**"
+      - "PMCS/GODOT_MIGRATION.md"
+      - ".github/workflows/godot-android-source.yml"
+  pull_request:
+    paths:
+      - ".gitmodules"
+      - "third_party/godot"
+      - "godot-project/**"
+      - "PMCS/GODOT_MIGRATION.md"
+      - ".github/workflows/godot-android-source.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: godot-android-arm64-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-godot-android-arm64:
+    name: Build Godot 4.7.2 from source and export ARM64 APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Checkout project and pinned upstream source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Verify the exact Godot source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="ed1daf0bf001b61586d9930840f2f1394092c079"
+          actual="$(git -C third_party/godot rev-parse HEAD)"
+          test "$actual" = "$expected"
+          grep -q '^major = 4$' third_party/godot/version.py
+          grep -q '^minor = 7$' third_party/godot/version.py
+          grep -q '^patch = 2$' third_party/godot/version.py
+          grep -q '^status = "stable"$' third_party/godot/version.py
+          echo "Building Godot source commit $actual"
+
+      - name: Set up Python and SCons
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SCons build tools
+        run: python -m pip install --disable-pip-version-check "scons==4.9.1" "zstandard>=0.23,<1"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install the exact SDK, Build Tools and NDK required by Godot 4.7.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.1.0" \
+            "ndk;29.0.14206865"
+
+      - name: Compile the Godot Android ARM64 debug template from source
+        working-directory: third_party/godot
+        run: |
+          set -euo pipefail
+          scons platform=android target=template_debug arch=arm64 \
+            dev_build=yes generate_android_binaries=yes -j2
+
+      - name: Download the matching official Linux editor for project import/export
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/godot-4.7.2-linux-x86_64.zip"
+          url="https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip"
+          expected="cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4"
+          curl --fail --location --retry 3 --retry-delay 2 "$url" --output "$archive"
+          echo "$expected  $archive" | sha256sum --check -
+          mkdir -p "$RUNNER_TEMP/godot-editor"
+          unzip -q "$archive" -d "$RUNNER_TEMP/godot-editor"
+          editor="$(find "$RUNNER_TEMP/godot-editor" -type f -name 'Godot_v4.7.2-stable_linux.x86_64' -print -quit)"
+          test -n "$editor"
+          chmod +x "$editor"
+          echo "GODOT_EDITOR=$editor" >> "$GITHUB_ENV"
+
+      - name: Install the source-built Android template
+        shell: bash
+        run: |
+          set -euo pipefail
+          template_dir="$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          mkdir -p "$template_dir"
+          test -s third_party/godot/bin/android_debug.apk
+          test -s third_party/godot/bin/android_source.zip
+          cp third_party/godot/bin/android_debug.apk "$template_dir/android_debug.apk"
+          cp third_party/godot/bin/android_source.zip "$template_dir/android_source.zip"
+          printf '4.7.2.stable\n' > "$template_dir/version.txt"
+
+      - name: Prepare the Godot Android debug signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/share/godot/keystores"
+          key="$HOME/.local/share/godot/keystores/debug.keystore"
+          if [ ! -s "$key" ]; then
+            keytool -genkeypair -v -keystore "$key" -storepass android \
+              -alias androiddebugkey -keypass android \
+              -dname "CN=Android Debug,O=Android,C=US" \
+              -keyalg RSA -keysize 2048 -validity 10000
+          fi
+
+      - name: Import, run and export the Godot bootstrap project
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT_EDITOR" --headless --path godot-project --editor --quit
+          "$GODOT_EDITOR" --headless --path godot-project --quit-after 3
+          mkdir -p "$RUNNER_TEMP/godot-apk"
+          "$GODOT_EDITOR" --headless --path godot-project \
+            --export-debug "Android ARM64" \
+            "$RUNNER_TEMP/godot-apk/DreamEngine-Godot-4.7.2-Android-arm64-debug.apk"
+
+      - name: Verify the exported APK and its source-built native library
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$RUNNER_TEMP/godot-apk/DreamEngine-Godot-4.7.2-Android-arm64-debug.apk"
+          test -s "$apk"
+          unzip -t "$apk"
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose "$apk"
+          unzip -p "$apk" lib/arm64-v8a/libgodot_android.so > "$RUNNER_TEMP/godot-apk/libgodot_android.so"
+          cmp "$RUNNER_TEMP/godot-apk/libgodot_android.so" \
+            third_party/godot/platform/android/java/lib/libs/debug/arm64-v8a/libgodot_android.so
+          echo "APK contains the exact ARM64 library built from the pinned Godot source."
+
+      - name: Upload installable APK and source-built templates
+        uses: actions/upload-artifact@v4
+        with:
+          name: dream-engine-godot-4.7.2-android-arm64
+          path: |
+            ${{ runner.temp }}/godot-apk/DreamEngine-Godot-4.7.2-Android-arm64-debug.apk
+            third_party/godot/bin/android_debug.apk
+            third_party/godot/bin/android_source.zip
+            third_party/godot/platform/android/java/lib/build/outputs/aar/godot-lib.template_debug.aar
+          if-no-files-found: error
+          retention-days: 14

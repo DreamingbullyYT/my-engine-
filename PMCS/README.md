@@ -22,3 +22,7 @@ Persistent project memory for Dream Engine. Keep these documents separate; do no
 Status labels: ACCEPTED, PROPOSED, RESEARCH, IMPLEMENTED, VERIFIED, BLOCKED. Never call something VERIFIED without reproducible evidence.
 
 - THIRD_PARTY_NOTICES.md — pinned external dependencies and license/attribution inventory.
+
+## Active direction override
+
+For the selected engine foundation and migration status, read [GODOT_MIGRATION.md](GODOT_MIGRATION.md) before the older standalone-engine architecture and handoff notes. The older material remains useful historical/reference documentation; it does not mean the migration is complete.
