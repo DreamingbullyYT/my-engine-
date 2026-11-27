@@ -21,13 +21,14 @@ Keep a machine-generated structural map of the source tree so coding agents can 
 - Workflow artifacts are retained for 30 days. They are not a permanent database service.
 
 ## Verified isolated smoke test
-- Workflow run **#13**: https://github.com/DreamingbullyYT/my-engine-/actions/runs/45988928318
+- Workflow run **#17**: https://github.com/DreamingbullyYT/my-engine-/actions/runs/45989117795 (final verified run with smoke-test outputs uploaded).
 - Result: **success**.
 - CodeGraphContext 0.5.1 installed successfully on GitHub-hosted Ubuntu.
 - Temporary fixture: 3 files (C++ source/header + Lua source).
 - Graph statistics: **3 files, 4 functions, 0 classes**.
 - Call analysis verified: `calculate()` calls `helper()` in the C++ fixture.
 - Bundle export succeeded: **14 nodes, 15 edges**.
+- Artifact **15192079735** contains the `.cgc` smoke graph and CLI logs; it is retained until 2026-12-27.
 - The fixture and graph were generated in the runner temp directory, not added to project source.
 - Earlier smoke run #12 failed because the CLI rejected `--summarize` on `cgc index`; this was removed. Run #13 validates the corrected command sequence.
 
