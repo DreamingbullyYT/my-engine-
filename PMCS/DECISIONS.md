@@ -124,3 +124,26 @@ Consequences and validation:
 - Modded buildings must be able to declare static and dynamic visual components or opt out of baking when required; their gameplay behavior remains independent of rendering LOD.
 - Profile CPU, GPU, draw calls, frame time, memory/VRAM, rebuild latency, battery, and thermal behavior on target Android ARM64 devices before setting numeric thresholds or claiming performance targets.
 - This is a design decision only; no rendering, citizen simulation, or gameplay implementation is implied.
+
+
+## D-017 — Hybrid excavatable terrain and underground colonies
+Status: ACCEPTED — 2026-11-27.
+
+Planetary terrain uses a simple, readable side-view visual style guided by the design principles of Spaceflight Simulator; do not copy its assets, code, names, or distinctive presentation. Planet surfaces retain their spherical/radial world geometry. Vegetation is intentionally minimal, guided by the restrained colony-world presentation of The Final Earth 2. Vegetation is primarily a visual accent; any plant that affects gameplay must exist as authoritative simulation data rather than only as decoration.
+
+Terrain supports a hybrid approach to mining and underground settlement. Excavated tunnels and chambers are real, traversable gameplay spaces in areas where the player digs and builds. The implementation may use simplified or abstracted representations for distant, hidden, or otherwise irrelevant underground details instead of simulating every rock fragment or voxel at full fidelity. The player can establish underground colonies and place appropriate facilities in excavated spaces, subject to terrain, structural, environmental, access, resource, power, and life-support constraints defined by later gameplay specifications.
+
+Terrain modification is local, not a requirement to deform or rebuild an entire planet. Excavation, mining, and other terrain edits invalidate only affected regions and their dependent visual/physical data. The authoritative terrain, excavation topology, resources, building placement, and collision/gameplay state must remain separate from visual caches. Surface mining may expose or consume deposits; asteroid mining remains a distinct space-mining activity and does not imply that all asteroid surfaces use the planetary underground-colony system.
+
+Rationale:
+- Preserve the readable, low-detail planetary presentation and mobile performance.
+- Enable meaningful underground colonies and physical passageways without requiring globally deformable high-resolution terrain.
+- Keep the system extensible for future mining tools, underground structures, and modded terrain interactions.
+
+Consequences and validation:
+- Represent excavated passages/chambers as persistent logical world data with stable coordinates and connectivity; do not treat a baked texture as the authoritative tunnel.
+- Update terrain visuals and collision locally after excavation, while retaining unaffected valid caches.
+- Use distance/visibility-aware simplification for underground rendering and simulation, without losing persistent colony, resource, or structural state.
+- Keep structural stability, cave-ins, support materials, detailed geology, and exact excavation tools as open gameplay specifications; this decision does not silently settle their rules.
+- Profile excavation updates, collision changes, underground rendering, memory, and save/load on Android ARM64 before choosing numeric limits.
+- This is a design decision only; no terrain engine, mining, or underground-colony implementation is implied.
