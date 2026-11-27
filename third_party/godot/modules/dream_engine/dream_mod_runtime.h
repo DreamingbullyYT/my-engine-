@@ -109,7 +109,7 @@ protected:
     static void _bind_methods();
 
 public:
-    DreamModRuntime() = default;
+    DreamModRuntime();
     ~DreamModRuntime() override;
 
     static DreamModRuntime *get_singleton();
