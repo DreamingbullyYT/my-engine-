@@ -1,0 +1,37 @@
+name: DMod SDK tests
+
+on:
+  push:
+    branches:
+      - main
+      - godot-4.7.2-migration
+    paths:
+      - "tools/dmod/**"
+      - "templates/dmod-lua/**"
+      - "tests/dmod_sdk/**"
+      - ".github/workflows/dmod-sdk.yml"
+  pull_request:
+    paths:
+      - "tools/dmod/**"
+      - "templates/dmod-lua/**"
+      - "tests/dmod_sdk/**"
+      - ".github/workflows/dmod-sdk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-dmod-packer:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate Lua-only and native/hybrid package creation
+        run: python -m unittest discover -s tests/dmod_sdk -v
+      - name: Pack the bundled Lua-only starter template
+        run: |
+          python tools/dmod/pack.py templates/dmod-lua --output "$RUNNER_TEMP/HelloDMod.dmod"
+          python -m zipfile -t "$RUNNER_TEMP/HelloDMod.dmod"
