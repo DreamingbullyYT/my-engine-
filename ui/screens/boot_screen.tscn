@@ -132,6 +132,13 @@ size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 16
 text = "Install and run sample .dmod (M4)"
 
+[node name="DisableSampleModButton" type="Button" parent="Panel/Content"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 15
+text = "Disable sample .dmod"
+
 [node name="Status" type="Label" parent="Panel/Content"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -144,3 +151,4 @@ autowrap_mode = 2
 [connection signal="pressed" from="Panel/Content/TestTouchButton" to="." method="_on_test_touch_pressed"]
 [connection signal="pressed" from="Panel/Content/TestExternalScriptButton" to="." method="_on_test_external_script_pressed"]
 [connection signal="pressed" from="Panel/Content/InstallSampleModButton" to="." method="_on_install_sample_mod_pressed"]
+[connection signal="pressed" from="Panel/Content/DisableSampleModButton" to="." method="_on_disable_sample_mod_pressed"]
