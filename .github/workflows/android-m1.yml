@@ -10,6 +10,7 @@ on:
       - "app/**"
       - "core/**"
       - "ui/**"
+      - "mods/**"
       - "native/**"
       - "tests/**"
       - ".github/scripts/build_dream_runtime.sh"
@@ -151,7 +152,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          "$GODOT_BIN" --headless --editor --path . --import --quit
+          adb start-server
+          "$GODOT_BIN" --headless --editor --path . --import --quit 2>&1 | tee "$RUNNER_TEMP/godot-import.log"
+          if grep -E "SCRIPT ERROR:|ERROR: Failed to load script|Parent path .* has vanished" "$RUNNER_TEMP/godot-import.log"; then
+            echo "Godot project import reported script or scene errors."
+            exit 1
+          fi
           echo "Godot project import completed; runtime behavior is reserved for physical-device testing."
 
       - name: Create temporary Android debug signing key
