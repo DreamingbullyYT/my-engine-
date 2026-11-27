@@ -189,6 +189,7 @@ jobs:
             build/android/dream-engine-debug.apk > build/android/apk-badging.txt
           grep -F "package: name='com.dreamingbully.dreamengine'" build/android/apk-badging.txt
           unzip -Z1 build/android/dream-engine-debug.apk | grep -F "lib/arm64-v8a/libgodot_android.so"
+          unzip -Z1 build/android/dream-engine-debug.apk | grep -F "lib/arm64-v8a/libdream_runtime.android.template_debug.arm64.so"
           {
             echo "Commit: $GITHUB_SHA"
             echo "Godot: $("$GODOT_BIN" --version)"
