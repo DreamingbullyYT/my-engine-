@@ -25,10 +25,20 @@
 4. Android build: ARM64 compile/link/package.
 5. Device: launch, rendering, touch, lifecycle, .dmod install/execution, networking.
 
+## Native GDExtension validation (M2)
+- Native source lives in `native/dream_runtime/`; Godot source remains untouched.
+- `.github/scripts/build_dream_runtime.sh` checks out the official `godot-cpp 10.0.0-stable` pin and builds the requested target with SCons.
+- CI compiles Linux x86_64 and Android arm64-v8a native libraries, then exports an Android ARM64 debug APK.
+- CI deliberately does not execute Godot headless runtime smoke tests; runtime validation is deferred to the user's physical Android device.
+- `tests/native_extension_smoke.gd` remains a manual/development diagnostic; it is not run by the build-only CI workflow.
+- The Android export must include the Android GDExtension binary and preserve package/ABI validation.
+- User device test must confirm the boot-screen native status says `Native C++: OK · 20 + 22 = 42`.
+- A successful compile and APK export do not prove the Android loader works; the user validates loading and runtime behavior on the actual device.
+
 ## GDScript mod validation
 - Verify script source can be loaded/compiled at runtime in the exact exported Godot configuration.
-- Test app-private user://mods/ access and Android file-picker import.
-- Test .dmod ZIP validation, path traversal rejection, resource limits, dependency ordering, and error attribution.
+- Test app-private `user://mods/` access and Android file-picker import.
+- Test `.dmod` ZIP validation, path traversal rejection, resource limits, dependency ordering, and error attribution.
 - Confirm mods can be installed and executed without rebuilding the APK.
 - Verify disabling a mod prevents its entrypoint from executing.
 - Do not claim script mods are sandboxed; the design is trusted-code execution.
@@ -36,9 +46,8 @@
 ## Completion evidence
 Record commit SHA, workflow run ID/URL, artifact name/size, test results, user-confirmed device outcome, and known limitations. A green compile proves only that the build succeeded; it does not prove runtime correctness, API completeness, performance, or device compatibility.
 
-
 ## Android build trigger coverage
-The M1 Android workflow must run when Godot project code, scenes, resources, native extension sources, tests, or game assets change, including files added under future modular domains such as world, terrain, colony, vehicles, physics, rendering, and infrastructure. It should not run for documentation-only PMCS edits. Keep the workflow path filters broad enough to cover new modules without requiring a manual workflow edit for every new gameplay directory.
+The Android build workflow must run when Godot project code, scenes, resources, native extension sources, tests, native build scripts, or game assets change, including files added under future modular domains such as world, terrain, colony, vehicles, physics, rendering, and infrastructure. It should not run for documentation-only PMCS edits. Keep path filters broad enough to cover new modules without requiring a manual workflow edit for every new gameplay directory.
 
 ## Branch and integration policy — 2026-11-27
 - The user requires all future project work to happen directly on `main`; do not create feature branches or ordinary PRs.
