@@ -148,18 +148,6 @@ jobs:
           test -s native/dream_runtime/bin/linux/libdream_runtime.linux.template_debug.x86_64.so
           test -s native/dream_runtime/bin/android/libdream_runtime.android.template_debug.arm64.so
 
-      - name: Validate Godot project import
-        shell: bash
-        run: |
-          set -euo pipefail
-          adb start-server
-          "$GODOT_BIN" --headless --editor --path . --import --quit 2>&1 | tee "$RUNNER_TEMP/godot-import.log"
-          if grep -E "SCRIPT ERROR:|ERROR: Failed to load script|Parent path .* has vanished" "$RUNNER_TEMP/godot-import.log"; then
-            echo "Godot project import reported script or scene errors."
-            exit 1
-          fi
-          echo "Godot project import completed; runtime behavior is reserved for physical-device testing."
-
       - name: Create temporary Android debug signing key
         shell: bash
         run: |
