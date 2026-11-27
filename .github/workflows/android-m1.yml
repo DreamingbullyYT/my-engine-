@@ -43,7 +43,7 @@ env:
   GODOT_VERSION_DIR: "4.7.2.stable"
   ANDROID_SDK_PLATFORM: "35"
   ANDROID_BUILD_TOOLS: "35.0.1"
-  ANDROID_NDK_VERSION: "29.0.14206865"
+  ANDROID_NDK_VERSION: "28.1.13356709"
 
 jobs:
   android-arm64:
@@ -64,7 +64,7 @@ jobs:
       - name: Set up Android SDK and NDK
         uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
         with:
-          packages: "platforms;android-35 build-tools;35.0.1 ndk;29.0.14206865"
+          packages: "platforms;android-35 build-tools;35.0.1 ndk;28.1.13356709"
 
       - name: Install SCons
         run: |
