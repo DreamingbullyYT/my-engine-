@@ -25,3 +25,20 @@ Use versioned, deterministic save data with schema migrations, atomic writes, ba
 
 ## CI and device validation
 GitHub Actions performs formatting, static checks, unit/integration tests, Android ARM64 build, artifact size/nonzero checks, and upload of logs/reports/APKs. Device tests include launch/render, touch, pause/resume, context restoration, long-running simulation, save/load, .dmod runtime loading, and performance/memory profiling. CI success and device success are separate evidence.
+
+
+## Adaptive hybrid rendering and visual LOD — D-016
+
+The authoritative world model is independent of its rendering caches. Keep stable logical sector coordinates and building/citizen state; allow only the visual cache regions to change size dynamically. Use distance-aware hybrid building rendering:
+- Close range: render buildings individually for selection, inspection, and full detail.
+- Medium range: use cached/baked static building visuals while drawing dynamic components separately.
+- Far range: combine multiple sectors into larger cache regions where this reduces rendering overhead.
+- Off-screen: do not render or animate visual elements that cannot contribute to the frame.
+
+Mark only affected cache regions dirty after construction, demolition, upgrades, damage, or mod changes. Batch rapid edits; retain the previous valid cache until its replacement is ready. Avoid cache thrashing with reuse, memory budgets, eviction, stable logical partitions, and hysteresis at LOD boundaries. Prepare cache data asynchronously only where safe; perform GPU resource operations on the correct Godot rendering thread. Keep selection/hit-testing based on logical building geometry and IDs, not baked texture pixels. Keep animated/dynamic layers (lights, doors, machinery, smoke, particles, damage and similar effects) separate as required. Modded assets may declare static/dynamic parts or opt out of baking. Provide a safe fallback when baking is unsupported or fails.
+
+Building visual detail adapts gradually: full animation nearby, reduced animation/effects at medium range, minimal or no animation at far range, and no off-screen visual animation. Preserve animation continuity when detail returns. Automatic adaptation is the default behavior, with player-selectable quality/performance preferences. The system may consider zoom, visible workload, measured frame time, and reliable device resource/thermal signals when available. Selecting a distant building temporarily raises that building's visual detail only. None of these visual changes may alter gameplay simulation, production, economy, physics, or time.
+
+Citizens are persistent logical individuals, while their visual representation is pixel-scale and distance-aware. Near the camera, show individual moving/animated pixels. As they become smaller, reduce visual movement/animation cadence and detail. Below a readability/visibility threshold, stop drawing individual sprites. Do not delete citizens or erase/merge their identity, population, job, skills, needs, health, or save data. Continue simulation according to the active/nearby/distant simulation tiers above; visual disappearance is not population disappearance.
+
+No numeric sector dimensions, zoom thresholds, update rates, cache sizes, or device budgets are fixed yet. Establish them through profiling on target Android ARM64 hardware. Measure CPU/GPU frame time, draw calls, memory/VRAM, cache rebuild latency, battery, and thermal behavior with representative building counts, citizen populations, zoom levels, and modded content. See D-016 in DECISIONS.md.
