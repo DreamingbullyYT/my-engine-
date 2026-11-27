@@ -67,6 +67,8 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools"
 
       - name: Install the exact SDK, Build Tools and NDK required by Godot 4.7.2
         shell: bash
