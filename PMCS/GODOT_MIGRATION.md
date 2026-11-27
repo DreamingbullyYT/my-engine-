@@ -51,7 +51,7 @@ The workflow compiles the Android debug template from the pinned Godot source wi
 
 1. Build the first in-tree Dream Engine C++ module from the directly vendored Godot source.
 2. Connect real main-loop/physics/render/scene/resource hook sites and establish the shared owner-aware hook dispatcher.
-3. Embed Lua 5.4.8, extend `.dmod` manifests for `lua`/`native`/`hybrid`, and load Lua source directly from packages.
+3. Embed Lua 5.4.8 (commit `6e22fedb74cf0c9b6656e9fce8b7331db847c605`), extend `.dmod` manifests for `lua`/`native`/`hybrid`, and load Lua source directly from packages.
 4. Add Lua and native adapters to the shared `Before`/`Around`/`Replace`/`After` hook pipeline, with lifecycle/error/unload tests.
 5. Integrate the native mod loader, package/dependency validation, raw engine interfaces, ownership and unload lifecycle.
 6. Build and install fresh Android ARM64 APKs from the modified source; validate background/resume, rotation, touch, GPU output, audio and crash/log behavior on the phone.
