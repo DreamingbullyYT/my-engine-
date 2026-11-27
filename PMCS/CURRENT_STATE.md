@@ -216,7 +216,7 @@ This update is authoritative over older checklist/status text above where they c
 ### Accepted DMod direction; implementation not yet present in the Godot runtime
 - A single `.dmod` package supports `lua`, `native`, and `hybrid` modes.
 - Lua-only mods are the ordinary authoring path: package Lua source directly, with no per-mod compiler, bytecode, `.so`, on-device compilation or APK rebuild.
-- Embed a pinned Lua 5.4.x runtime in the Dream Engine Godot C++ module.
+- Embed Lua 5.4.8 runtime in the Dream Engine Godot C++ module.
 - Lua and native mods share one owner-aware hook-point namespace and the same `Before`, `Around`, `Replace`, and `After` stages.
 - Native/hybrid mods may include prebuilt platform/ABI-specific libraries for unrestricted in-process C++ access. The SDK should automate their build/package layout.
 - Lua callbacks execute only at hook points with a safe documented thread/phase contract. Native hooks remain available for synchronous arbitrary-thread engine internals.
