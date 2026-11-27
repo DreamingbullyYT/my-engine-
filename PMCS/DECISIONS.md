@@ -86,3 +86,18 @@ Status: ACCEPTED — 2026-11-27.
 Use The Final Earth 2 as a design reference for colony simulation (individual citizens, worker assignment, production/consumption, housing and services, happiness, research, upgrades, policies, and open-ended settlement growth) and Spaceflight Simulator as a design reference for part-based spacecraft construction and readable orbital flight (part properties, mass, propulsion/fuel accounting, staging, map/orbit planning, atmospheric flight, docking, landing, and payload operations). Adapt the underlying gameplay principles to Dream Engine's spherical worlds, multi-colony economy, modular space settlements, NPC automation, and deep modding API. Do not copy source code, assets, names, distinctive UI, or exact balance values. The detailed project contracts live in GAMEPLAY.md and ROCKETS_AND_PHYSICS.md, with supporting systems in UNIVERSE.md, AUTOMATION.md, SPACE_INFRASTRUCTURE.md, and PERFORMANCE_AND_SIMULATION.md.
 
 The game clock pauses when the app is closed by default; time warp is player-controlled while the game is running. This avoids punitive offline progression and follows the active-play focus of the reference games. This is a project design baseline, not a claim about identical implementation in either reference title.
+
+## D-015 — Guided first-launch tutorial followed by free sandbox
+Status: ACCEPTED — 2026-11-27.
+
+The default first-launch experience begins with a guided tutorial and then transitions into an open, unrestricted sandbox. The tutorial introduces essential systems progressively through practical objectives; it is not a mandatory campaign and does not impose a permanent sequence of objectives after completion.
+
+The tutorial must be skippable and replayable later. Skipping it must not remove access to content or advanced mechanics. Advanced controls and systems remain available when the player chooses to explore them; onboarding may explain them progressively but must not lock them behind arbitrary player levels.
+
+Rationale: provide a welcoming learning path for mobile players without compromising the game's open-ended sandbox identity.
+
+Consequences:
+- The new-game/first-launch flow should make the guided tutorial the default path.
+- After the tutorial, the player enters the same free sandbox experience available to players who skip it.
+- Tutorial progress and completion should be saved per game/profile as appropriate, without making tutorial completion a prerequisite for sandbox access.
+- This is a design decision only; no tutorial implementation is implied.
