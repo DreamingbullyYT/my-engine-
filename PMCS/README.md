@@ -97,3 +97,5 @@ D-018 keeps the initial underground system lightweight: ordinary tunnels remain 
 
 
 2026-11-27: D-019 resolves underground terrain as persistent polar-coordinate cells with connected tunnel topology and no fixed 12-layer limit. D-020 defines the first playable v1 scope; interstellar travel and megaships are postponed to v2+. D-021 accepts flight assistance by default and automatic Romanian/English locale selection with settings override. Documentation only; no source code or runtime behavior was added.
+
+19. MODULES.md — concrete game-module catalog, source layout, dependency rules, and modularity acceptance criteria.
