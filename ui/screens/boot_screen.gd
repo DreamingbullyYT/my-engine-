@@ -19,7 +19,7 @@ func _ready() -> void:
     AppLifecycle.application_paused.connect(_on_application_paused)
     AppLifecycle.application_resumed.connect(_on_application_resumed)
     ModRuntime.probe_finished.connect(_on_external_probe_finished)
-	ModPackageManager.package_finished.connect(_on_package_finished)
+    ModPackageManager.package_finished.connect(_on_package_finished)
 
 
 func _check_native_runtime() -> void:
@@ -69,18 +69,18 @@ func _on_external_probe_finished(success: bool, message: String) -> void:
 
 
 func _on_install_sample_mod_pressed() -> void:
-	_package_status.text = "M4 .dmod: installing..."
-	ModPackageManager.create_and_run_sample()
+    _package_status.text = "M4 .dmod: installing..."
+    ModPackageManager.create_and_run_sample()
 
 
 func _on_package_finished(success: bool, message: String) -> void:
-	_package_status.text = message
-	_status_label.text = message
+    _package_status.text = message
+    _status_label.text = message
 
 
 func _on_disable_sample_mod_pressed() -> void:
-	var disabled := ModPackageManager.disable_mod("dreamingbully.m4_sample")
-	_package_status.text = "M4 sample mod: disabled" if disabled else "M4 sample mod: disable failed"
+    var disabled := ModPackageManager.disable_mod("dreamingbully.m4_sample")
+    _package_status.text = "M4 sample mod: disabled" if disabled else "M4 sample mod: disable failed"
 
 
 func _on_application_paused() -> void:
