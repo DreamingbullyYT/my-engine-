@@ -1,0 +1,134 @@
+diff --git a/third_party/godot/main/main.cpp b/third_party/godot/main/main.cpp
+--- a/third_party/godot/main/main.cpp
++++ b/third_party/godot/main/main.cpp
+@@ -26,6 +26,7 @@
+ 
+ #include "main.h"
+ 
++#include "modules/dream_engine/dream_mod_runtime.h"
+ #include "core/config/engine.h"
+ #include "core/config/project_settings.h"
+ #include "core/core_globals.h"
+@@ -4896,6 +4897,35 @@
+ bool Main::force_redraw_requested = false;
+ int Main::iterating = 0;
+ 
++static void dream_main_loop_process_original(void *p_context, Dictionary &r_context) noexcept {
++    MainLoop *main_loop = static_cast<MainLoop *>(p_context);
++    r_context["exit"] = main_loop->process(static_cast<double>(r_context.get("delta", 0.0)));
++}
++
++static void dream_main_loop_physics_process_original(void *p_context, Dictionary &r_context) noexcept {
++    MainLoop *main_loop = static_cast<MainLoop *>(p_context);
++    r_context["exit"] = main_loop->physics_process(static_cast<double>(r_context.get("delta", 0.0)));
++}
++
++#ifndef PHYSICS_3D_DISABLED
++static void dream_physics_server_3d_step_original(void *p_context, Dictionary &r_context) noexcept {
++    PhysicsServer3D *server = static_cast<PhysicsServer3D *>(p_context);
++    server->step(static_cast<real_t>(static_cast<double>(r_context.get("delta", 0.0))));
++}
++#endif
++
++#ifndef PHYSICS_2D_DISABLED
++static void dream_physics_server_2d_step_original(void *p_context, Dictionary &r_context) noexcept {
++    PhysicsServer2D *server = static_cast<PhysicsServer2D *>(p_context);
++    server->step(static_cast<real_t>(static_cast<double>(r_context.get("delta", 0.0))));
++}
++#endif
++
+ bool Main::is_iterating() {
+ 	return iterating > 0;
+ }
+@@ -5004,7 +5034,11 @@
+ #endif // PHYSICS_2D_DISABLED
+ 
+ 		GodotProfileZoneGrouped(_physics_zone, "physics_process");
+-		if (OS::get_singleton()->get_main_loop()->physics_process(physics_step * time_scale)) {
++		Dictionary dream_physics_process_context;
++		dream_physics_process_context["delta"] = physics_step * time_scale;
++		dream_physics_process_context["exit"] = false;
++		DreamModRuntime::dispatch_hook("godot.main_loop.physics_process", dream_physics_process_context, dream_main_loop_physics_process_original, OS::get_singleton()->get_main_loop());
++		if (static_cast<bool>(dream_physics_process_context.get("exit", false))) {
+ #ifndef PHYSICS_3D_DISABLED
+ 			PhysicsServer3D::get_singleton()->end_sync();
+ #endif // PHYSICS_3D_DISABLED
+@@ -5066,12 +5100,20 @@
+ #ifndef PHYSICS_3D_DISABLED
+ 		GodotProfileZoneGrouped(_physics_zone, "3D physics");
+ 		PhysicsServer3D::get_singleton()->end_sync();
+-		PhysicsServer3D::get_singleton()->step(physics_step * time_scale);
++		Dictionary dream_physics_3d_context;
++		dream_physics_3d_context["delta"] = physics_step * time_scale;
++		DreamModRuntime::dispatch_hook("godot.physics.server3d.step", dream_physics_3d_context, dream_physics_server_3d_step_original, PhysicsServer3D::get_singleton());
+ #endif // PHYSICS_3D_DISABLED
+ 
+ #ifndef PHYSICS_2D_DISABLED
+ 		GodotProfileZoneGrouped(_physics_zone, "2D physics");
+ 		PhysicsServer2D::get_singleton()->end_sync();
+-		PhysicsServer2D::get_singleton()->step(physics_step * time_scale);
++		Dictionary dream_physics_2d_context;
++		dream_physics_2d_context["delta"] = physics_step * time_scale;
++		DreamModRuntime::dispatch_hook("godot.physics.server2d.step", dream_physics_2d_context, dream_physics_server_2d_step_original, PhysicsServer2D::get_singleton());
+ #endif // PHYSICS_2D_DISABLED
+@@ -5110,9 +5152,13 @@
+ 	uint64_t process_begin = OS::get_singleton()->get_ticks_usec();
+ 
+ 	GodotProfileZoneGrouped(_profile_zone, "process");
+-	if (OS::get_singleton()->get_main_loop()->process(process_step * time_scale)) {
++	Dictionary dream_process_context;
++	dream_process_context["delta"] = process_step * time_scale;
++	dream_process_context["exit"] = false;
++	DreamModRuntime::dispatch_hook("godot.main_loop.process", dream_process_context, dream_main_loop_process_original, OS::get_singleton()->get_main_loop());
++	if (static_cast<bool>(dream_process_context.get("exit", false))) {
+ 		exit = true;
+ 	}
+ 	message_queue->flush();
+diff --git a/third_party/godot/scene/main/scene_tree.cpp b/third_party/godot/scene/main/scene_tree.cpp
+--- a/third_party/godot/scene/main/scene_tree.cpp
++++ b/third_party/godot/scene/main/scene_tree.cpp
+@@ -25,6 +25,7 @@
+ 
+ #include "scene_tree.h"
+ 
++#include "modules/dream_engine/dream_mod_runtime.h"
+ STATIC_ASSERT_INCOMPLETE_TYPE(class, RenderingServer);
+ 
+ #include "core/config/engine.h"
+@@ -152,7 +153,15 @@
+ }
+ 
+ void SceneTree::node_added(Node *p_node) {
+-	emit_signal(node_added_name, p_node);
++	struct NodeAddedCall {
++		SceneTree *tree;
++		Node *node;
++	};
++	NodeAddedCall call{ this, p_node };
++	Dictionary context;
++	context["node"] = p_node;
++	context["node_instance_id"] = static_cast<int64_t>(p_node->get_instance_id());
++	context["node_name"] = p_node->get_name();
++	DreamModRuntime::dispatch_hook("godot.scene.node_added", context, +[](void *p_data, Dictionary &) noexcept { auto *call = static_cast<NodeAddedCall *>(p_data); call->tree->emit_signal(call->tree->node_added_name, call->node); }, &call);
+ }
+ 
+ void SceneTree::node_removed(Node *p_node) {
+@@ -161,7 +170,15 @@
+ 	if (current_scene == p_node) {
+ 		current_scene = nullptr;
+ 	}
+-	emit_signal(node_removed_name, p_node);
++	struct NodeRemovedCall {
++		SceneTree *tree;
++		Node *node;
++	};
++	NodeRemovedCall call{ this, p_node };
++	Dictionary context;
++	context["node"] = p_node;
++	context["node_instance_id"] = static_cast<int64_t>(p_node->get_instance_id());
++	context["node_name"] = p_node->get_name();
++	DreamModRuntime::dispatch_hook("godot.scene.node_removed", context, +[](void *p_data, Dictionary &) noexcept { auto *call = static_cast<NodeRemovedCall *>(p_data); call->tree->emit_signal(call->tree->node_removed_name, call->node); }, &call);
+ 	if (nodes_removed_on_group_call_lock) {
+ 		nodes_removed_on_group_call.insert(p_node);
+ 	}
+ }
