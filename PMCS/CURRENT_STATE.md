@@ -25,14 +25,14 @@ These are historical facts, not claims that the code still exists or works now. 
 |---|---|---|
 | PMCS and GDScript decision | DOCUMENTED | Current PMCS and D-010 |
 | Game-specific GDScript mod proposal | DOCUMENTED | Root MOD_API.md |
-| Godot project integration | PARTIAL | project.godot, app/main.tscn, core/app_lifecycle.gd, ui/screens/boot_screen.*; Godot 4.7.2 headless import/startup passed in M1 run #3 |
+| Godot project integration | PARTIAL | project.godot, app/main.tscn, core/app_lifecycle.gd, ui/screens/boot_screen.*; Godot 4.7.2 headless import/startup passed in M1 run #4 |
 | Android host/APK | CI BUILD VERIFIED; DEVICE TEST PENDING | M1 run #4; artifact 15220112272; 28,431,521-byte ARM64 APK |
 | Dream Runtime GDExtension | NOT PRESENT | No source in active tree |
 | Runtime GDScript loading on Android | NOT VERIFIED | Must prove in M3 |
 | DMod loader/runtime | NOT PRESENT | No source in active tree |
 | Registries/events/hooks | PLANNED | PMCS/MODDING_API.md |
 | Multiplayer mod capability | PLANNED | PMCS/MODDING_API.md |
-| GitHub Actions build pipeline | M1 VERIFIED | .github/workflows/android-m1.yml; run #3 success; APK checks passed |
+| GitHub Actions build pipeline | M1 VERIFIED | .github/workflows/android-m1.yml; run #4 success; APK checks passed |
 
 ## Immediate next action
 1. User installs and validates the M1 ARM64 debug APK on a physical Android device: launch, visible screen, touch counter/button, background/pause and resume, and UI readability.
