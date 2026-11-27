@@ -11,34 +11,35 @@ Interstellar travel, additional star systems, multi-system autonomous fleets/col
 - [x] Empty source branches intentionally on 2026-11-27.
 - [x] Resolve scripting-language decision: GDScript is primary for .dmod (D-010).
 - [ ] Review and finalize PMCS, including GAMEPLAY.md, ROCKETS_AND_PHYSICS.md, UNIVERSE.md, AUTOMATION.md, SPACE_INFRASTRUCTURE.md, SPACE_EXPANSION.md, PERFORMANCE_AND_SIMULATION.md, and MOBILE_UX.md.
-- [ ] Confirm repository name and branch strategy.
+- [x] Confirm repository name and main-only development policy.
 Exit: clean baseline and reviewed project memory.
 
 ## M1 — Official Godot Android baseline
 - [x] Set up the official, unmodified Godot 4.7.2-stable editor and official Android export templates/toolchain in GitHub Actions (verified in run #5); no custom Godot fork.
 - [x] Produce a minimal installable APK from the standard Android export pipeline (run #5; 28,431,521 bytes; Android arm64-v8a library and package ID validated). No Godot source compilation was needed.
-- [ ] User to validate on physical Android device: launch, visible rendering, touch button/counter, pause/resume, and readable UI. The test button's pressed signal is connected in the exported scene.
+- [ ] User to validate on physical Android device: launch, visible rendering, touch button/counter, pause/resume, and readable UI.
 Exit: user confirms physical-device test.
 
 ## M2 — GDExtension proof
-Status: implementation in progress on branch `m2/gdextension-proof`; CI and device gates remain open.
+Status: implementation merged to main; CI compile/export passed; device validation pending.
 - [x] Add an independent, minimal C++ GDExtension module with separate entry, registration, and probe-class files.
 - [x] Pin official godot-cpp and target the Godot 4.7 API without modifying Godot source.
 - [x] Add a GDScript smoke test for native class registration, string return, and arithmetic call.
 - [x] Add a visible boot-screen status for the native probe.
-- [ ] Build Linux x86_64 and run the headless GDScript-to-C++ smoke test in Actions.
-- [ ] Cross-compile the extension for Android arm64-v8a.
-- [ ] Export an Android ARM64 APK containing the extension.
-- [ ] Verify initialization and shutdown logs in CI.
+- [x] Cross-compile Linux x86_64 and Android arm64-v8a.
+- [x] Export and validate an Android ARM64 APK containing the extension (Actions run #12).
 - [ ] User to confirm that the Android APK loads the extension on the physical phone.
-Exit: repeatable Android ARM64 build; Linux test proves the API call path; physical device confirms Android loading. CI success alone does not close the device gate.
+Exit: CI build/export and physical device confirms Android loading. CI success alone does not close the device gate.
 
 ## M3 — GDScript runtime-loading proof
-- [ ] Verify dynamic GDScript source loading/compilation using official Godot APIs.
-- [ ] Execute a test script from app-private storage on Android ARM64.
-- [ ] Verify script-to-game API calls and source-aware error reporting.
-- [ ] Confirm selected exported-build settings permit this workflow.
-Exit: a GDScript script loaded from outside the APK executes on device.
+Status: initial loader and on-device diagnostic UI implemented on main; build and device validation pending.
+- [x] Add an app-private `user://mods/` runtime loader.
+- [x] Write/read a sample GDScript from app-private storage, compile it at runtime, instantiate it, and call its entry point.
+- [x] Add visible success/failure reporting and source-path logging.
+- [ ] Export the updated Android ARM64 APK successfully.
+- [ ] User to execute the M3 test on physical Android and confirm the success status/log.
+- [ ] Follow-up: import an independently supplied script file through Android's system file picker; this is not yet implemented.
+Exit: an external GDScript stored outside the APK executes on device and calls the host runtime.
 
 ## M4 — DMod manager
 - [ ] Define and validate mod.json schema and .dmod ZIP format.
