@@ -38,24 +38,24 @@ Keep a machine-generated structural map of the source tree so coding agents can 
 ## Verified CI and source evidence
 
 ### M1 Android ARM64 build
-- Workflow run #4: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46041958085.
-- Result: **success** on commit a69f04a41b83d3f9929f4141f016a3e1248bee77.
+- Workflow run #5: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46042193393.
+- Result: **success** on commit ff2c66387940202da4de7bd69c2226c15de03aed.
 - Official Godot 4.7.2 stable editor and official Android export templates were downloaded and checksum-verified.
 - Project import and headless startup passed. The project SVG icon is configured; the previous missing-project-icon export error is gone.
 - APK export and validation passed: package ID com.dreamingbully.dreamengine, Android arm64-v8a native library present, APK size 28,431,521 bytes.
-- Artifact ID 15220112272; artifact name dream-engine-m1-a69f04a41b83d3f9929f4141f016a3e1248bee77-android-arm64. Expires 2026-12-27.
+- Artifact ID 15220028245; artifact name dream-engine-m1-ff2c66387940202da4de7bd69c2226c15de03aed-android-arm64. Expires 2026-12-27.
 - Device launch, visible UI, touch, and pause/resume still require user confirmation. A successful CI export is not a physical-device test.
 
 ### Hybrid code-memory workflow
-- Workflow run #138: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46041958212.
-- Result: **success** on commit a69f04a41b83d3f9929f4141f016a3e1248bee77.
+- Workflow run #145: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46042222729.
+- Result: **success** on commit 2f2171cb8198771aadfc188ebfacf83122e5826c.
 - CodeGraphContext 0.5.1 installed; its isolated C++/Lua smoke fixture, call analysis, and .cgc export passed.
 - Dedicated GDScript parser smoke fixture passed and verified calculate() -> helper().
 - Actual repository map: **2 GDScript files, 6 functions, 0 syntax-error files**.
 - Detected same-file call edges: _ready() -> _update_touch_count() and _on_test_touch_pressed() -> _update_touch_count().
 - The actual repository currently has no CodeGraphContext-supported C/C++ source, so no real-project .cgc native graph was generated. The C++ graph in this run is from the isolated temporary fixture, not engine source.
-- Artifact ID 15219828759 contains the code map and smoke outputs; it expires 2026-12-27.
-- The combined PMCS/CODE_MAP.md and PMCS/GDSCRIPT_CODE_MAP.md are committed and tied to the indexed source commit a69f04a41b83d3f9929f4141f016a3e1248bee77.
+- Artifact ID 15220851678 contains the code map and smoke outputs; it expires 2026-12-27.
+- The combined PMCS/CODE_MAP.md and PMCS/GDSCRIPT_CODE_MAP.md are committed and tied to the indexed source commit 2f2171cb8198771aadfc188ebfacf83122e5826c.
 
 ### Earlier CodeGraphContext validation
 - Earlier successful workflow run #18: https://github.com/DreamingbullyYT/my-engine-/actions/runs/45989248995.
