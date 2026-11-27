@@ -1,0 +1,78 @@
+name: Vendor pinned Godot source
+
+on:
+  push:
+    branches:
+      - godot-4.7.2-migration
+    paths:
+      - ".github/workflows/vendor-godot-source.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: vendor-godot-4.7.2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  vendor:
+    name: Replace Godot gitlink with its complete pinned source tree
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Dream Engine without submodules
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Fetch and verify the exact upstream Godot commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="ed1daf0bf001b61586d9930840f2f1394092c079"
+          source_dir="$RUNNER_TEMP/godot-source"
+          git clone --filter=blob:none --no-checkout https://github.com/godotengine/godot.git "$source_dir"
+          git -C "$source_dir" fetch --depth=1 origin "$expected"
+          git -C "$source_dir" checkout --detach FETCH_HEAD
+          actual="$(git -C "$source_dir" rev-parse HEAD)"
+          test "$actual" = "$expected"
+          grep -q '^major = 4$' "$source_dir/version.py"
+          grep -q '^minor = 7$' "$source_dir/version.py"
+          grep -q '^patch = 2$' "$source_dir/version.py"
+          grep -q '^status = "stable"$' "$source_dir/version.py"
+          echo "Verified Godot source at $actual"
+
+      - name: Replace the gitlink with regular tracked source files
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="ed1daf0bf001b61586d9930840f2f1394092c079"
+          source_dir="$RUNNER_TEMP/godot-source"
+
+          git rm -f --cached third_party/godot
+          git rm -f .gitmodules
+          rm -rf third_party/godot
+          mkdir -p third_party/godot
+          rsync -a --delete --exclude='.git/' "$source_dir/" third_party/godot/
+          printf '%s\n' "$expected" > third_party/GODOT_SOURCE_COMMIT
+
+          git add -A third_party
+          if git ls-files -s third_party/godot | grep -q '^160000 '; then
+            echo "Gitlink remains; refusing to commit."
+            exit 1
+          fi
+          test -s third_party/godot/SConstruct
+          test "$(tr -d '\r\n' < third_party/GODOT_SOURCE_COMMIT)" = "$expected"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Vendor Godot 4.7.2 source at $expected"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Start the Android ARM64 build from vendored source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run godot-android-source.yml --ref "${GITHUB_REF_NAME}"
