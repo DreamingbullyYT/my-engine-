@@ -1,6 +1,6 @@
 # Mobile UX and Accessibility
 
-Status: PLANNED design specification. The first-launch flow below is ACCEPTED by D-015; other UX details remain proposals unless separately accepted.
+Status: ACCEPTED baseline with implementation details still PLANNED. First-launch tutorial is D-015; flight assistance and locale defaults are D-021. Other UX details remain proposals unless separately accepted.
 
 ## Product principle
 The game may have deep simulation, but the default mobile experience must be easy to understand and operate. Complexity is available on demand, not forced on every player. Never remove simulation depth merely to simplify the interface; instead expose it progressively and automate repetitive work.
@@ -67,8 +67,10 @@ The game may have deep simulation, but the default mobile experience must be eas
 - Use summaries and on-demand detail views for large populations and fleets.
 - Keep touch input responsive during simulation, loading, and time warp; expose progress and allow safe cancellation where possible.
 
-## Remaining open UX questions
-- Should assisted controls be the default for rocket flight, with manual control available immediately?
-- Which UI language should be selected automatically, and should the user be asked on first launch?
+## Accepted defaults — D-021
+- Rocket-flight assistance is enabled by default for new players. It provides guidance/stabilization and suggested maneuvers only; physics, fuel use, and mission constraints remain unchanged.
+- Manual flight control is available immediately and is never level-gated. Players can toggle assistance at any time.
+- On first launch, select Romanian or English from the device locale when supported; otherwise fall back to English. Do not interrupt first launch with a mandatory language picker.
+- The language can be changed at any time in Settings. Romanian and English are the minimum launch languages.
 
-These remain open product choices; do not silently mark them as accepted.
+These defaults are accepted design requirements. Exact control layout, assistance strength, and localization coverage remain implementation/testing tasks.
