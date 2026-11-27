@@ -78,3 +78,11 @@ Automatic planetary colonization is restricted to worlds assessed as genuinely h
 The mayor must verify that an expedition can be supplied and sustained: population, transport capacity, ships, life support, food, water, power, construction materials, communications/logistics, and a viable landing or habitat plan. Colonies founded this way receive their own local governance and remain subject to the same economic, physical, and survival constraints as player-founded colonies. The player can inspect reports and history, change or revoke permissions, and intervene.
 
 This decision extends D-011 and D-012. It is a design requirement only; no implementation is implied.
+
+
+## D-014 — Reference-guided gameplay and flight design
+Status: ACCEPTED — 2026-11-27.
+
+Use The Final Earth 2 as a design reference for colony simulation (individual citizens, worker assignment, production/consumption, housing and services, happiness, research, upgrades, policies, and open-ended settlement growth) and Spaceflight Simulator as a design reference for part-based spacecraft construction and readable orbital flight (part properties, mass, propulsion/fuel accounting, staging, map/orbit planning, atmospheric flight, docking, landing, and payload operations). Adapt the underlying gameplay principles to Dream Engine's spherical worlds, multi-colony economy, modular space settlements, NPC automation, and deep modding API. Do not copy source code, assets, names, distinctive UI, or exact balance values. The detailed project contracts live in GAMEPLAY.md and ROCKETS_AND_PHYSICS.md, with supporting systems in UNIVERSE.md, AUTOMATION.md, SPACE_INFRASTRUCTURE.md, and PERFORMANCE_AND_SIMULATION.md.
+
+The game clock pauses when the app is closed by default; time warp is player-controlled while the game is running. This avoids punitive offline progression and follows the active-play focus of the reference games. This is a project design baseline, not a claim about identical implementation in either reference title.
