@@ -11,16 +11,17 @@ This directory is the durable memory for humans and AI agents. It prevents repea
 1. CURRENT_STATE.md — verified repository state.
 2. VISION.md — goals and non-goals.
 3. ARCHITECTURE.md — system boundaries and data flow.
-4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), and D-012 (modular orbital settlements/mobile colony ships).
+4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), D-012 (modular orbital settlements/mobile colony ships), and D-013 (mobile-colony fleet autonomy and permission-gated expansion).
 5. MODDING_API.md — .dmod package and GDScript API requirements.
-6. ROADMAP.md — implementation sequence and exit gates.
-7. BUILD_AND_TEST.md — CI and validation policy.
-8. AI_RULES.md — mandatory agent workflow.
-9. CODE_MAP.md — generated/evidence-backed source map, currently no engine source.
-10. CODE_MEMORY.md — CodeGraphContext indexing strategy and verified CI smoke-test results.
+6. SPACE_EXPANSION.md — mobile-colony fleets, habitability rules, and autonomous expansion.
+7. ROADMAP.md — implementation sequence and exit gates.
+8. BUILD_AND_TEST.md — CI and validation policy.
+9. AI_RULES.md — mandatory agent workflow.
+10. CODE_MAP.md — generated/evidence-backed source map, currently no engine source.
+11. CODE_MEMORY.md — CodeGraphContext indexing strategy and verified CI smoke-test results.
 
 ## Current game-design clarifications
-The colony remains central. A mayor begins as an adviser and progressively takes on routine management as player oversight decreases; colonies can still fail or be destroyed. Space settlements include functional satellites, large modular orbital stations, and mobile colony ships that can act as planetless colonies. See D-011 and D-012.
+The colony remains central. A mayor begins as an adviser and progressively takes on routine management as player oversight decreases; colonies can still fail or be destroyed. Space settlements include functional satellites, large modular orbital stations, and mobile colony ships that can act as planetless colonies. Mobile-colony mayors can plan fleets and, after player permission at roughly 5–6 explored star systems, autonomously found colonies only on genuinely habitable worlds or through explicitly engineered habitat solutions. See D-011 through D-013.
 
 ## Core modding decision
 Ordinary .dmod mods use GDScript, JSON, scenes, and assets. Lua is not part of the planned runtime. Mods are trusted code with direct Godot/game access by design; there is no script sandbox. See D-010 and MODDING_API.md.
@@ -68,3 +69,4 @@ For every meaningful change:
 2026-11-27: D-010 accepted GDScript as the primary .dmod scripting language; PMCS architecture, API, roadmap, and status aligned. Documentation only; no runtime implementation.
 
 2026-11-27: D-011 and D-012 record gradual mayor autonomy and modular orbital settlements/mobile colony ships. Documentation only; no gameplay implementation.
+2026-11-27: D-013 records mobile-colony fleet autonomy and player-approved planetary expansion after roughly 5–6 explored star systems, restricted to genuinely habitable worlds or explicitly engineered habitat alternatives. Documentation only; no gameplay implementation.
