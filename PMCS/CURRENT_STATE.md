@@ -47,3 +47,13 @@ Do not restore all historical experiments automatically. Reuse only reviewed cod
 
 ## 2026-11-27 design update
 D-010 resolves the prior language conflict: GDScript is the standard language for ordinary .dmod mods. Packages use mod.json; Lua is not a planned runtime dependency. The game intentionally permits trusted scripts to access Godot APIs and game autoloads without a sandbox. The documented Mod API remains the stable compatibility contract. No implementation status changes as a result of this documentation decision.
+
+
+## 2026-11-27 design clarification — colony governance and space settlements
+Accepted design decisions D-011 and D-012:
+- The mayor starts as an adviser and progressively assumes more routine colony management as player oversight decreases. This is gradual and explainable, not simply a mayor selected at game start or an always-on full-autonomy toggle.
+- The mayor cannot bypass resource or infrastructure limits. Colonies can still decline or be destroyed, including by future enemy threats.
+- Space settlements include functional satellites/probes, large modular orbital stations with docking and player-added modules, and mobile colony ships/megaships capable of serving as planetless colonies when properly equipped.
+- Asteroid bases, orbital habitats, industrial platforms, and shipyards are part of the extensible design space.
+
+Documentation/design only. No source code, runtime, simulation, or gameplay implementation was added; the active branch remains documentation-only.
