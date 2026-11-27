@@ -1,6 +1,6 @@
 # DMod + Lua architecture
 
-**Status:** Accepted architecture requirement; implementation pending  
+**Status:** Accepted architecture requirement; code in progress, not yet CI-verified  
 **Updated:** 2026-11-27  
 **Active foundation:** vendored Godot 4.7.2-stable, Dream Engine C++ module
 
@@ -15,11 +15,11 @@
 
 ## One package format, multiple execution modes
 
-A `.dmod` is a ZIP-based package with a TOML manifest:
+A `.dmod` is a ZIP-based package with a JSON manifest:
 
 ```text
 ExampleMod.dmod
-├── manifest.toml
+├── manifest.json
 ├── scripts/
 │   ├── main.lua
 │   └── helpers/
@@ -37,21 +37,18 @@ Manifest runtime modes:
 
 Example Lua manifest:
 
-```toml
-format_version = 1
-id = "author.example-mod"
-name = "Example Mod"
-version = "1.0.0"
-engine_api_min = "1.0.0"
-runtime = "lua"
-entry_script = "scripts/main.lua"
+\u0060\u0060\u0060json
+{
+  "format_version": 1,
+  "id": "author.example-mod",
+  "name": "Example Mod",
+  "version": "1.0.0",
+  "runtime": "lua",
+  "entry_script": "scripts/main.lua"
+}
+\u0060\u0060\u0060
 
-[script]
-api = "1"
-lua = "5.4"
-```
-
-Example hybrid manifest adds `native_library = "native/android-arm64-v8a/libexample.so"` and declares `runtime = "hybrid"`. The exact manifest parser changes must remain backward compatible with existing native/script packages where practical.
+A native/hybrid manifest also declares `native_library: "native/android-arm64-v8a/libexample.so"`; use `runtime: "native"` or `runtime: "hybrid"`. The Godot runtime currently reads these fields from `manifest.json`.
 
 ## Lua runtime
 
@@ -79,20 +76,18 @@ Ordering is descending explicit priority, then deterministic registration order.
 ```lua
 local hooks = dream.hooks
 
-hooks.register("dream.scene.node_added", "Before", function(ctx)
-    ctx.node:set_meta("created_by_mod", true)
-end, { priority = 10 })
+hooks.register("godot.scene.node_added", "Before", function(ctx)
+    dream.objects.call(ctx.node, "set_meta", "created_by_mod", true)
+end, 10)
 
-hooks.register("dream.physics.step", "Around", function(ctx, next)
+hooks.register("godot.physics.server2d.step", "Around", function(ctx, next)
     -- Adjust inputs before the real operation.
     ctx.delta = ctx.delta * 0.5
-    local result = next()
-    -- Inspect or adjust the result.
-    return result
+    next()
 end)
 ```
 
-This is illustrative API shape, not an implemented API or final ABI. The exact context fields are defined by each engine hook point, not guessed by the script runtime.
+This is the current intended Lua API shape. The actual registered hook IDs are `godot.main_loop.process`, `godot.main_loop.physics_process`, `godot.physics.server2d.step`, `godot.physics.server3d.step`, `godot.scene.node_added`, and `godot.scene.node_removed`. For Lua hooks, `ctx.node` is an ObjectID integer; use `dream.objects.is_valid/get/set/call` to inspect or invoke methods. The API remains subject to compile/runtime verification.
 
 ### Shared dispatch and lifecycle
 
@@ -128,13 +123,14 @@ Each hook point must have tests for stage ordering, original-call behavior, cont
 
 ## Implementation order
 
-1. Keep the existing native hook behavior and lifecycle contract as reference; port/adapt it into the active Godot Dream Engine module.
-2. Add the Lua source dependency and engine-owned VM lifecycle.
-3. Extend manifest/package validation to support `lua` and `hybrid` modes while retaining native mode.
-4. Implement one shared owner-aware hook dispatcher with native and Lua callback adapters.
-5. Expose a first set of real hook points in main loop, scene, physics and rendering.
-6. Add Lua DMod samples, package tests, hook ordering/error/unload tests and Android ARM64 CI.
-7. Only then mark Lua DMods or cross-language hook parity implemented.
+1. [x] Pin and vendor the Lua 5.4.8 source; embed it in the Godot module build.
+2. [x] Add an engine-owned Lua state per loaded script mod and package-source entry execution.
+3. [x] Add the shared owner-aware Lua/native hook registry with the four stages and deterministic ordering.
+4. [x] Add first real call sites for main-loop process/physics, PhysicsServer2D/3D steps and SceneTree node lifecycle.
+5. [ ] Complete package dependency validation, helper-module `require`, script/resource VFS and more engine bindings.
+6. [ ] Add renderer/resource/input/audio hook points and a sample `.dmod` smoke test.
+7. [ ] Compile and run Lua-only, native and hybrid DMods; verify hook order, errors, unload and hot reload in Actions/Android.
+8. [ ] Only then mark production DMod and cross-language hook parity complete.
 
 ## Non-goals
 
