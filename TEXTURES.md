@@ -294,6 +294,7 @@ Modulele sunt piese vizuale independente, conectate prin puncte de atașare stan
 | M Cadre UI | 20 |
 | N Efecte | 14 |
 | O Aplicație | 5 |
-| **Total** | **331** |
+| P Module stație/megaship | 10 |
+| **Total** | **341** |
 
 Sunete și muzică nu sunt incluse; le listez separat dacă vrei.
