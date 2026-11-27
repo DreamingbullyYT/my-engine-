@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <cstring>
 #include <limits>
+#include <cmath>
 #include <utility>
 
 extern "C" {
@@ -106,8 +107,11 @@ void DreamModRuntime::set_singleton(DreamModRuntime *runtime) {
 }
 
 DreamModRuntime::~DreamModRuntime() {
+    while (!mods.empty()) {
+        const String id = mods.back()->id;
+        if (!unload_mod(id)) break;
+    }
     hooks.clear();
-    mods.clear();
     if (singleton == this) {
         singleton = nullptr;
     }
@@ -885,11 +889,9 @@ bool DreamModRuntime::load_mod(const String &package_path) {
 
 bool DreamModRuntime::unload_mod(const String &mod_id) {
     ModInstance *mod = find_mod(mod_id);
-    if (mod == nullptr) {
-        return false;
-    }
-    mod->enabled = false;
+    if (mod == nullptr) return false;
     if (dispatch_depth != 0) {
+        mod->enabled = false;
         for (const String &pending : pending_unloads) {
             if (pending == mod_id) return true;
         }
@@ -897,6 +899,12 @@ bool DreamModRuntime::unload_mod(const String &mod_id) {
         return true;
     }
 
+    if (mod->enabled && mod->native_exports != nullptr && mod->native_exports->disable != nullptr) {
+        mod->native_exports->disable(mod->native_context);
+    }
+    mod->enabled = false;
+
+    // Unregister every callback before the native library or Lua state is destroyed.
     for (auto it = hooks.begin(); it != hooks.end();) {
         if (it->owner == mod_id) {
             if (it->lua != nullptr && it->lua_ref != LUA_NOREF) {
@@ -907,6 +915,18 @@ bool DreamModRuntime::unload_mod(const String &mod_id) {
             ++it;
         }
     }
+
+    if (mod->native_exports != nullptr && mod->native_context != nullptr &&
+            mod->native_exports->unload != nullptr) {
+        mod->native_exports->unload(mod->native_context);
+        mod->native_context = nullptr;
+    }
+    if (mod->native_library_handle != nullptr) {
+        OS::get_singleton()->close_dynamic_library(mod->native_library_handle);
+        mod->native_library_handle = nullptr;
+    }
+    mod->native_exports = nullptr;
+
     for (auto it = mods.begin(); it != mods.end(); ++it) {
         if ((*it)->id == mod_id) {
             mods.erase(it);
@@ -918,16 +938,50 @@ bool DreamModRuntime::unload_mod(const String &mod_id) {
 
 bool DreamModRuntime::enable_mod(const String &mod_id) {
     ModInstance *mod = find_mod(mod_id);
-    if (mod == nullptr) return false;
+    if (mod == nullptr || mod->enabled) return false;
+    if (mod->native_exports != nullptr && mod->native_exports->enable != nullptr &&
+            mod->native_exports->enable(mod->native_context) == 0) {
+        return false;
+    }
     mod->enabled = true;
     return true;
 }
 
 bool DreamModRuntime::disable_mod(const String &mod_id) {
     ModInstance *mod = find_mod(mod_id);
-    if (mod == nullptr) return false;
+    if (mod == nullptr || !mod->enabled) return false;
+    if (mod->native_exports != nullptr && mod->native_exports->disable != nullptr) {
+        mod->native_exports->disable(mod->native_context);
+    }
     mod->enabled = false;
     return true;
+}
+
+void DreamModRuntime::update_mods(double delta) {
+    if (!std::isfinite(delta) || delta < 0.0) return;
+    const size_t count = mods.size();
+    for (size_t i = 0; i < count && i < mods.size(); ++i) {
+        ModInstance *mod = mods[i].get();
+        if (!mod->enabled) continue;
+        if (mod->native_exports != nullptr && mod->native_exports->update != nullptr) {
+            mod->native_exports->update(mod->native_context, delta);
+        }
+        if (mod->state != nullptr) {
+            lua_getglobal(mod->state, "on_update");
+            if (lua_isfunction(mod->state, -1)) {
+                lua_pushnumber(mod->state, static_cast<lua_Number>(delta));
+                if (lua_pcall(mod->state, 1, 0, 0) != LUA_OK) {
+                    const char *error = lua_tostring(mod->state, -1);
+                    ERR_PRINT(String("DreamMods Lua on_update error (") + mod->id + "): " +
+                            (error != nullptr ? String::utf8(error) : String("unknown Lua error")));
+                    lua_pop(mod->state, 1);
+                    mod->enabled = false;
+                }
+            } else {
+                lua_pop(mod->state, 1);
+            }
+        }
+    }
 }
 
 PackedStringArray DreamModRuntime::get_loaded_mods() const {
