@@ -30,7 +30,17 @@ Repository: DreamingbullyYT/my-engine-
 - The M3 diagnostic writes a sample GDScript to `user://mods/_m3_external_probe.gd`, reads it back from app-private storage, compiles it with `GDScript.reload()`, instantiates it, and executes its entry method.
 - The external script calls back into the host runtime; the UI displays success/failure and the loader logs the source path.
 - Added a touch button and status label to run the proof manually.
-- **M3 status: IMPLEMENTED; Android APK build and physical-device execution PENDING.** This does not yet prove arbitrary third-party scripts or Android file-picker import.
+- M3 Actions run #18 succeeded: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46057843776; Android ARM64 APK artifact ID 15228256470 (29,639,009 bytes; expires 2026-12-27).
+- **M3 status: IMPLEMENTED; CI COMPILE/EXPORT VERIFIED; physical-device execution PENDING.** This does not yet prove arbitrary third-party scripts or Android file-picker import.
+
+## M4 — .dmod package manager (initial implementation)
+- Added `mods/mod_package_manager.gd` and registered `ModPackageManager` autoload.
+- `.dmod` is a ZIP archive with root `mod.json`, a GDScript entry path, API version 1, semantic numeric version, and exact-version dependency declarations.
+- Implemented package size/entry-count limits, path traversal and unsafe-path rejection, duplicate-path rejection, manifest validation, staged extraction, and atomic staging-to-install directory rename.
+- Implemented dependency loading in sorted order, exact version checks, dependency-cycle detection, script compilation, entry instantiation, enable/disable lifecycle hooks, and visible result reporting.
+- Boot screen can generate an internal sample `.dmod`, install it, and execute its entrypoint. This proves the package pipeline without needing a new APK for the mod itself once device-validated.
+- Limitations: Android system file-picker import is not implemented yet; the current UI generates a sample archive internally. `ZIPReader.read_file()` decompresses an entire entry before GDScript can inspect its resulting size, so post-read size caps do not fully prevent a malicious ZIP decompression bomb. Do not describe this parser as hardened against hostile packages until pre-decompression size checks or a bounded native ZIP reader are added.
+- **M4 status: INITIAL IMPLEMENTATION COMMITTED; Android build and device execution PENDING.**
 
 ## Current implementation matrix
 | Area | Status | Evidence |
@@ -38,14 +48,14 @@ Repository: DreamingbullyYT/my-engine-
 | Official Godot project and Android export | CI VERIFIED; DEVICE TEST PENDING | M1 run #5 |
 | Dream Runtime C++ GDExtension | COMPILE + APK EXPORT VERIFIED; DEVICE LOAD PENDING | M2 run #12; `native/dream_runtime/` |
 | External GDScript runtime loading | IMPLEMENTED; BUILD/DEVICE TEST PENDING | `mods/mod_runtime.gd`; boot-screen M3 control |
-| .dmod package manager/runtime | NOT IMPLEMENTED | M4 |
+| .dmod package manager/runtime | INITIAL IMPLEMENTATION; BUILD/DEVICE TEST PENDING | `mods/mod_package_manager.gd`; M4 boot-screen control |
 | Stable public mod API, registries, events and hooks | NOT IMPLEMENTED | M5 |
 | Gameplay systems | NOT IMPLEMENTED | v1 scope D-020 and gameplay/physics/infrastructure specifications |
 
 ## Next milestones
 1. M2 physical-device validation: install the M2/M3 APK and confirm native status.
 2. M3 validation: press the external-script test button and confirm `External GDScript: OK · loaded from user://mods/`; inspect log for `[M3] EXTERNAL_GDSCRIPT_OK`.
-3. M4: validate the `.dmod` ZIP format and manifest, safe extraction, dependency resolution, deterministic load order, and install/enable/disable a sample mod without rebuilding the APK.
+3. M4: build and physically test the sample `.dmod` install/execute flow; validate dependency failure and disable behavior. Android system file-picker import and pre-decompression ZIP size validation remain follow-up work.
 4. After M2–M4 implementations are ready, perform the planned device tests for M1/M2/M3/M4. Do not start gameplay implementation until these tests are complete and their outcomes recorded.
 5. Then begin the actual game in small, modular, tested vertical slices.
 
