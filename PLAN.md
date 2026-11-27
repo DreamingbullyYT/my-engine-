@@ -75,13 +75,24 @@ Adăugiri proprii: rachetă = resurse reale, misiuni și contracte, evenimente (
 - Totul prin registre și hook-uri, deci modurile pot adăuga tipuri de asteroizi, mărfuri și reguli de piață.
 
 
-### 5.2 Sateliți modulari [de la tine]
+### 5.2 Sateliți, stații orbitale și infrastructură spațială modulară [de la tine]
 
+**Sateliți și sonde**
 - Sateliții se construiesc din piese: structură/bus, panouri solare, baterii, antene, propulsoare, rezervoare, camere, senzori și încărcături științifice sau de navigație.
-- Sateliții au orbită reală și funcționează în limitele energiei, combustibilului, orientării, comunicațiilor și echipamentelor instalate.
-- Roluri posibile: comunicații, observație, meteorologie, navigație, prospectare de asteroizi și cercetare.
-- Acoperirea și utilitatea depind de orbită, poziție, linia de vizibilitate, putere și echipamentul instalat; nu sunt bonusuri globale decorative.
-- Sateliții pot sprijini coloniile și rețeaua logistică, de exemplu prin comunicații pentru controlul de la distanță și date pentru prospectare.
+- Au orbite reale și funcționează în limitele energiei, combustibilului, orientării, comunicațiilor și echipamentelor instalate.
+- Roluri: comunicații, observație, meteorologie, navigație, prospectare și cercetare. Acoperirea depinde de orbită, linia de vizibilitate, putere și echipament.
+
+**Stații orbitale mari**
+- Sunt structuri construibile și extensibile, nu sateliți decorativi: module de locuit, docuri de andocare, depozite, ateliere, laboratoare, șantiere navale, generatoare, panouri solare și sisteme de suport vital.
+- Jucătorul poate andoca nave, construi/extinde stația și adăuga sau înlocui module. Modulele au funcții și limite reale.
+- Stațiile pot deveni noduri pentru comerț, reparații, cercetare, transfer de combustibil, construcția navelor și logistică.
+
+**Nave-colonie / megaships locuibile**
+- Nave foarte mari, modulare, care pot găzdui populație și funcționa ca așezări mobile sau permanente, fără să fie nevoie de o planetă.
+- Pentru a susține o colonie au nevoie de module reale: locuințe, suport vital, hrană/agricultură, apă, energie, depozitare, producție, reciclare, andocare și propulsie, după rolul navei.
+- Pot călători între corpuri cerești sau pot rămâne într-o orbită/zonă ca habitat. Dacă sunt echipate corespunzător, reprezintă o **colonie fără planetă**, cu populație, economie și administrație proprie.
+- Alte forme posibile: habitate orbitale, baze pe asteroizi, platforme industriale și șantiere navale.
+- Toate aceste structuri trebuie să fie modulare și extensibile prin registre și API, astfel încât modurile să poată adăuga module și tipuri noi de habitat.
 
 ### 5.3 Piloți NPC și autopilot realist [de la tine]
 
@@ -93,17 +104,17 @@ Adăugiri proprii: rachetă = resurse reale, misiuni și contracte, evenimente (
 - Înainte de plecare, plannerul evaluează misiunea ca **fezabilă**, **fezabilă cu risc** sau **imposibilă**, explicând lipsurile și riscurile. Un NPC poate refuza sau eșua dacă nava nu poate îndeplini misiunea.
 - Jucătorul poate prelua controlul oricând. La predarea controlului către NPC, planul se recalculează din starea fizică actuală a navei.
 
-### 5.4 Primari și autonomie locală [de la tine]
+### 5.4 Primarul și autonomia care crește treptat [de la tine]
 
-Fiecare colonie poate avea un primar (și, la scară mai mare, un consiliu) care administrează dezvoltarea locală. Primarul este un agent real al simulării, nu un bonus decorativ și nu înlocuiește cetățenii.
+Primarul nu începe ca administrator complet și nu trebuie numit obligatoriu de jucător. La început este în principal un **consilier al coloniei**: observă situația, oferă sfaturi, avertizează despre lipsuri și recomandă construcții sau schimbări.
 
-- **Moduri de administrare:** manual (jucătorul decide), asistat (primarul propune, jucătorul aprobă) și autonom (primarul decide în limitele politicilor stabilite).
-- **Responsabilități:** extindere și construcții, priorități economice, rezerve, servicii pentru populație, locuri de muncă, cercetare și solicitări de transport.
-- **Politici configurabile:** creștere, industrie, cercetare, bunăstare, conservarea resurselor, nivelul rezervelor și ce cheltuieli necesită aprobare.
-- **Limite reale:** primarul nu creează resurse, nu ignoră costurile, capacitatea de producție, populația, infrastructura sau timpul de construcție. Poate lua decizii imperfecte și trebuie să raporteze lipsurile.
-- **Colonia nu intră automat în colaps doar fiindcă jucătorul nu o vizitează.** Primarul încearcă să păstreze serviciile esențiale și să adapteze producția. Crizele, dezastrele, izolarea sau lipsa reală de resurse pot avea totuși consecințe.
-- **Coloniștii rămân importanți:** au nevoi, fericire, locuri de muncă, locuințe, trăsături și contribuie la producție. Primarul coordonează colonia, nu o substituie.
-- Jucătorul poate schimba oricând modul de administrare, politicile și poate prelua controlul direct.
+- **Autonomie graduală:** când jucătorul se ocupă frecvent de colonie, primarul rămâne în principal consultativ. Dacă jucătorul petrece mult timp în joc departe de acea colonie sau nu îi mai acordă atenție, primarul începe treptat să ia inițiativa și să gestioneze mai multe activități de rutină.
+- **Inițiativă progresivă:** poate începe cu ajustări mici (priorități de producție, redistribuirea muncii), apoi poate propune și executa proiecte locale, extinderi și măsuri de stabilizare, în funcție de resurse și infrastructură.
+- **Controlul jucătorului:** jucătorul poate reveni oricând, vedea ce s-a întâmplat, inspecta recomandările și acțiunile primarului și poate interveni sau schimba prioritățile. Primarul nu confiscă controlul permanent.
+- **Fără magie:** primarul nu creează hrană, combustibil, materiale, energie, locuri de muncă sau infrastructură. Nu poate construi dacă lipsesc resursele și nu poate depăși capacitățile reale ale coloniei.
+- **Colonia poate muri:** lipsa gravă de resurse, izolarea, dezastrele, conflictele și viitorii inamici pot duce la declin, evacuare sau distrugerea coloniei. Primarul poate reduce riscul, nu garantează supraviețuirea.
+- **Coloniștii rămân fundamentali:** populația, nevoile, fericirea, profesiile, sănătatea și infrastructura determină ce poate face colonia. Primarul coordonează, nu înlocuiește societatea.
+- **Rapoarte de revenire:** la întoarcere, jucătorul poate vedea timpul trecut, evoluția populației, construcțiile, stocurile, crizele și explicația deciziilor primarului. Rapoartele nu trebuie să devină spam sau obligații zilnice.
 
 ### 5.5 Timpul coloniilor îndepărtate și rapoarte de revenire [propunere]
 
