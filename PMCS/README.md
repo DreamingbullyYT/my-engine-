@@ -11,7 +11,7 @@ This directory is the durable memory for humans and AI agents. It prevents repea
 1. CURRENT_STATE.md — verified repository state.
 2. VISION.md — goals and non-goals.
 3. ARCHITECTURE.md — system boundaries and data flow.
-4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), D-012 (modular orbital settlements/mobile colony ships), D-013 (mobile-colony fleet autonomy and permission-gated expansion), D-014 (reference-guided colony and flight design), D-015 (guided tutorial followed by free sandbox), and D-016 (adaptive hybrid rendering and citizen visual LOD), and D-017 (hybrid excavatable terrain and underground colonies).
+4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), D-012 (modular orbital settlements/mobile colony ships), D-013 (mobile-colony fleet autonomy and permission-gated expansion), D-014 (reference-guided colony and flight design), D-015 (guided tutorial followed by free sandbox), and D-016 (adaptive hybrid rendering and citizen visual LOD), and D-017 (hybrid excavatable terrain and underground colonies), and D-018 (simplified underground stability and excavation rules).
 5. MODDING_API.md — .dmod package and GDScript API requirements.
 6. GAMEPLAY.md — citizens, colony economy, buildings, research, policies, and needs.
 7. ROCKETS_AND_PHYSICS.md — part-based vehicles, propulsion, orbital and atmospheric flight.
@@ -88,3 +88,9 @@ For every meaningful change:
 2026-11-27: D-016 accepts adaptive hybrid building rendering, gradual distance/performance-based building animation LOD, automatic plus player-controlled visual quality, temporary detail promotion for selected distant buildings, and pixel-scale citizen visual LOD. Citizens remain in simulation/save data when their sprites are too small to render. Documentation only; no rendering implementation.
 
 2026-11-27: D-017 accepts hybrid local terrain excavation and traversable underground colonies, a simple side-view planetary surface, and minimal vegetation. Distant underground detail may be simplified while authoritative terrain, tunnels, resources, and structures persist. Documentation only; no terrain implementation.
+
+
+## Underground excavation rules
+D-018 keeps the initial underground system lightweight: ordinary tunnels remain stable without cave-in simulation, no structural supports or automatic support decorations are generated, and all terrain uses the same basic excavation rule. Materials may still differ in their resource deposits. See D-017 and D-018 in DECISIONS.md.
+
+2026-11-27: D-018 accepts stable-by-default tunnels, no support structures or automatic support decorations, and uniform basic excavation without complex material-hardness simulation. Resource deposits may still differ by material. Documentation only; no terrain implementation.
