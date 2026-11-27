@@ -57,3 +57,12 @@ Accepted design decisions D-011 and D-012:
 - Asteroid bases, orbital habitats, industrial platforms, and shipyards are part of the extensible design space.
 
 Documentation/design only. No source code, runtime, simulation, or gameplay implementation was added; the active branch remains documentation-only.
+
+## 2026-11-27 design clarification — mobile-colony fleet autonomy and planetary expansion
+Accepted decision D-013:
+- A mobile colony has its own mayor and may plan/build varied ship types when its technology, designs, shipyard, workforce, materials, energy, fuel, and logistics permit.
+- After roughly 5–6 explored star systems, the mayor may ask for explicit player permission to autonomously colonize additional worlds.
+- Automatic planetary colonization is limited to genuinely habitable candidates. The Sun, Mercury, Venus's surface, and gas-giant interiors are excluded as ordinary colony targets. Specialized atmospheric floating habitats, orbital habitats, and suitable moons are separate engineered settlement types.
+- Expeditions must pass habitability, capability, supply, and logistics checks; founded colonies receive their own governance and remain vulnerable to real failures.
+
+Documentation/design only. No source code or gameplay implementation was added.
