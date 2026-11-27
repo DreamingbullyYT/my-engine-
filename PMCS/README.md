@@ -54,6 +54,7 @@ For every meaningful change:
 - BUILD_AND_TEST.md — reproducible validation.
 - AI_RULES.md — instructions for coding agents.
 - CODE_MAP.md — generated/evidence-backed source map.
+- CODE_MEMORY.md — evaluation and adoption plan for persistent codebase indexing/memory.
 
 ## Change log
 2026-11-27: Initial PMCS created after both source branches were intentionally emptied. Implementation status is not carried forward from historical experiments.
