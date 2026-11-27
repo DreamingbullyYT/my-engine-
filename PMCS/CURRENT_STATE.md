@@ -103,3 +103,19 @@ D-018 resolves the initial rules left open by D-017:
 - Material and deposit differences remain relevant to the resources that can be found and extracted.
 
 These choices intentionally reduce CPU work and implementation complexity. D-017's local terrain updates, persistent traversable underground spaces, authoritative collision/topology/resources, and simplified distant underground detail remain in force. Documentation only; no source code or gameplay implementation was added.
+
+
+## 2026-11-27 consistency review — D-019 to D-021
+
+Accepted documentation decisions:
+- D-019: planet surface construction remains polar/slot-based; underground terrain is a persistent local cell grid addressed by angular sector and radial depth. Connected cells define traversable tunnels/chambers. The old fixed 12-layer proposal is removed; numeric resolution and limits await profiling.
+- D-020: first playable v1 contains one starting planet, its Moon, nearby asteroids, and a basic functional orbital station. Interstellar travel, multi-system autonomous fleets/colonization, and full megaship colonies are deferred to v2+ and remain in the long-term vision.
+- D-021: flight assistance is enabled by default but manual flight is immediately available; Romanian/English is auto-selected from device locale with English fallback and a Settings override.
+
+Consistency fixes:
+- Root README now correctly states GDScript .dmod mods and the separate C++ Dream Runtime GDExtension; Lua is historical only.
+- PLAN.md now aligns its Godot/GDExtension boundary and terrain coordinates with D-001, D-002, D-010, and D-019, and distinguishes v1 from later content.
+- TEXTURES.md now includes 10 modular station/megaship visual assets; the stated total is 341.
+- MOBILE_UX.md records D-021 instead of leaving flight assistance and language selection open.
+
+Implementation status is unchanged: documentation-only repository; M1 official Godot Android build and M2 GDExtension proof remain planned, not complete. No APK, runtime, terrain, station, or gameplay code was added.
