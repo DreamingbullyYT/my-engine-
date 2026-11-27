@@ -36,7 +36,7 @@ These are historical facts, not claims that the code still exists or works now. 
 
 ## Immediate next action
 1. Confirm exact Godot 4.7.x release/tag and upstream commit.
-2. Build official unmodified Godot for Android ARM64 through GitHub Actions.
+2. Set up the official unmodified Godot 4.7 release, official Android export templates, and toolchain in GitHub Actions; prefer the standard prebuilt release/export pipeline, with pristine upstream source compilation only as a documented fallback.
 3. Produce a minimal installable host APK.
 4. Validate launch, visible rendering, touch, pause/resume on the user's phone.
 5. Add a separate minimal GDExtension and prove it loads on device.
@@ -119,3 +119,5 @@ Consistency fixes:
 - MOBILE_UX.md records D-021 instead of leaving flight assistance and language selection open.
 
 Implementation status is unchanged: documentation-only repository; M1 official Godot Android build and M2 GDExtension proof remain planned, not complete. No APK, runtime, terrain, station, or gameplay code was added.
+
+M1 clarification: the default path is the standard official Godot Android export pipeline using the official release and export templates. No custom Godot fork or routine source compilation is required. Any pristine upstream source build must have a concrete documented reason.
