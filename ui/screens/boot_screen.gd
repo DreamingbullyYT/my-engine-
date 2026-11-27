@@ -78,6 +78,11 @@ func _on_package_finished(success: bool, message: String) -> void:
 	_status_label.text = message
 
 
+func _on_disable_sample_mod_pressed() -> void:
+	var disabled := ModPackageManager.disable_mod("dreamingbully.m4_sample")
+	_package_status.text = "M4 sample mod: disabled" if disabled else "M4 sample mod: disable failed"
+
+
 func _on_application_paused() -> void:
     _status_label.text = "Application paused by Android."
 
