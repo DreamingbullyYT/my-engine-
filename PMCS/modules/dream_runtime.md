@@ -1,6 +1,6 @@
 # Dream Runtime native module
 
-Status: initial M2 probe implementation; CI and Android device validation pending.
+Status: initial M2 probe implementation; native compilation and APK export run in CI; runtime validation is deferred to the user's Android device.
 Source: `native/dream_runtime/`
 Milestone: M2 in `PMCS/ROADMAP.md`
 
@@ -35,13 +35,13 @@ bash .github/scripts/build_dream_runtime.sh android arm64
 
 The helper verifies the official `godot-cpp 10.0.0-stable` commit `507ed9d840c01a3c5b2a39af8bb4000bfac30bf5`. The SCons project targets Godot API 4.7, single precision, and debug templates.
 
-`tests/native_extension_smoke.gd` loads the extension under headless Godot, instantiates the class, checks its return string, and checks `20 + 22 = 42`. The Android boot screen displays the same status when the APK loads and calls the extension.
+`tests/native_extension_smoke.gd` is retained as a diagnostic test but is not executed in CI. The Android boot screen displays the native status when the APK loads and calls the extension. The user verifies this behavior on the physical Android device.
 
 ## Dependencies and compatibility
 
 - Upstream Godot 4.7.2 official editor/export templates.
 - Upstream godot-cpp 10.0.0-stable at the immutable commit above.
-- SCons; Android NDK 29.0.14206865 for Android CI.
+- SCons; Android NDK 28.1.13356709 for Android CI.
 - Initial configured targets: Linux x86_64 and Android arm64-v8a; single precision; debug template.
 - Hot reload is disabled in the initial descriptor.
 
@@ -56,9 +56,9 @@ The helper verifies the official `godot-cpp 10.0.0-stable` commit `507ed9d840c01
 
 ## Next work
 
-1. Fix any build/export/runtime errors found by the first M2 Actions run.
-2. Verify the Linux smoke test and Android ARM64 APK artifact.
-3. User confirms the Android screen reports `Native C++: OK · 20 + 22 = 42`.
+1. Verify native compilation and Android ARM64 APK export in Actions.
+2. User installs the APK and confirms the Android screen reports `Native C++: OK · 20 + 22 = 42`.
+3. Fix device-side issues based on the user's logs before proceeding to M3.
 4. Only then proceed to M3 external GDScript runtime loading.
 
 Last verified source commit: pending M2 CI.
