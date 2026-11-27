@@ -52,6 +52,12 @@ jobs:
           test -s "$RUNNER_TEMP/wgpu-native/include/webgpu/webgpu.h"
           test -s "$RUNNER_TEMP/wgpu-native/include/webgpu/wgpu.h"
           test -s "$RUNNER_TEMP/wgpu-native/lib/libwgpu_native.so"
+          # The upstream Android .so is shipped without DT_SONAME. Give it a
+          # stable SONAME so lld records [libwgpu_native.so], never a CI path.
+          sudo apt-get update
+          sudo apt-get install --yes patchelf
+          patchelf --set-soname libwgpu_native.so "$RUNNER_TEMP/wgpu-native/lib/libwgpu_native.so"
+          readelf -d "$RUNNER_TEMP/wgpu-native/lib/libwgpu_native.so" | grep -F '[libwgpu_native.so]'
           echo "WGPU_NATIVE_ROOT=$RUNNER_TEMP/wgpu-native" >> "$GITHUB_ENV"
 
       - name: Set up JDK 17
