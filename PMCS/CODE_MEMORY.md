@@ -60,7 +60,7 @@ Keep a machine-generated structural map of the source tree so coding agents can 
 ### Earlier CodeGraphContext validation
 - Earlier successful workflow run #18: https://github.com/DreamingbullyYT/my-engine-/actions/runs/45989248995.
 - It verified package installation, a temporary C++/Lua fixture, calculate() -> helper(), and portable .cgc export.
-- An earlier attempt with cgc index --summarize failed because CodeGraphContext 0.5.1 rejects that option. The current workflow uses cgc index . --force without --summarize; run #129 verifies the corrected command sequence.
+- An earlier attempt with cgc index --summarize failed because CodeGraphContext 0.5.1 rejects that option. The current workflow uses cgc index . --force without --summarize; run #138 verifies the corrected command sequence.
 
 ## Important ChatGPT boundary
 CodeGraphContext exposes an MCP server, but this ordinary ChatGPT conversation does not automatically connect to a local or GitHub Actions-hosted MCP process. The GitHub connection lets this assistant inspect committed repository files and workflow outputs; it does not automatically invoke a separate MCP server. The committed Markdown maps and artifact links are the portable interfaces currently usable here. A future remote MCP setup would require a supported, reachable endpoint and explicit client configuration.
