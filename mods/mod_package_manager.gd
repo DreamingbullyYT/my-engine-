@@ -12,6 +12,7 @@ const MOD_API_VERSION := 1
 
 var _enabled: Dictionary = {}
 var _manifests: Dictionary = {}
+var _loading: Dictionary = {}
 
 
 func create_and_run_sample() -> void:
@@ -198,8 +199,14 @@ func enable_mod(mod_id: String) -> bool:
 			_finish(false, "Installed mod manifest is invalid: %s" % mod_id)
 			return false
 		_manifests[mod_id] = parsed
+	if _loading.has(mod_id):
+		_finish(false, "Dependency cycle detected at mod: %s" % mod_id)
+		return false
+	_loading[mod_id] = true
 	var manifest: Dictionary = _manifests[mod_id]
-	for dependency_id in manifest.get("dependencies", {}).keys():
+	var dependency_ids: Array = manifest.get("dependencies", {}).keys()
+	dependency_ids.sort()
+	for dependency_id in dependency_ids:
 		if not _manifests.has(dependency_id):
 			var dependency_manifest := MODS_DIR.path_join(dependency_id).path_join("mod.json")
 			if not FileAccess.file_exists(dependency_manifest):
@@ -218,11 +225,13 @@ func enable_mod(mod_id: String) -> bool:
 			_finish(false, "Dependency version mismatch: %s requires %s" % [dependency_id, required_version])
 			return false
 		if not enable_mod(String(dependency_id)):
+			_loading.erase(mod_id)
 			return false
 
 	var script_path := MODS_DIR.path_join(mod_id).path_join(String(manifest["entry"]))
 	var source_file := FileAccess.open(script_path, FileAccess.READ)
 	if source_file == null:
+		_loading.erase(mod_id)
 		_finish(false, "Cannot read mod entry: %s" % mod_id)
 		return false
 	var source := source_file.get_as_text()
@@ -231,14 +240,17 @@ func enable_mod(mod_id: String) -> bool:
 	script.source_code = source
 	var parse_error := script.reload()
 	if parse_error != OK:
+		_loading.erase(mod_id)
 		_finish(false, "Mod script parse failed (%s): %s" % [mod_id, error_string(parse_error)])
 		return false
 	var instance: Variant = script.new()
 	if not instance is Node:
+		_loading.erase(mod_id)
 		_finish(false, "Mod entry must extend Node: %s" % mod_id)
 		return false
 	add_child(instance)
 	_enabled[mod_id] = instance
+	_loading.erase(mod_id)
 	if instance.has_method("on_mod_load"):
 		instance.call("on_mod_load", self)
 	mod_state_changed.emit(mod_id, true)
