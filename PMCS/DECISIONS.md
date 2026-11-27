@@ -118,7 +118,7 @@
 ## ADR-0016 — Adopt Godot 4.7.2-stable as the engine foundation
 **Status:** ACCEPTED — migration in progress (2026-11-27)
 
-**Decision:** Use upstream Godot 4.7.2-stable source as the new foundation for the general-purpose Dream Engine. Pin tag `4.7.2-stable` to commit `ed1daf0bf001b61586d9930840f2f1394092c079` as a Git submodule at `third_party/godot`.
+**Decision:** Use upstream Godot 4.7.2-stable source as the new foundation for the general-purpose Dream Engine. Pin tag `4.7.2-stable` to commit `ed1daf0bf001b61586d9930840f2f1394092c079` as ordinary tracked source files at `third_party/godot/`, not as a Git submodule.
 
 **Reason:** Explicit user approval to use the Godot source rather than continue reimplementing mature engine foundations independently.
 
@@ -133,7 +133,7 @@
 The previous ADR-0003 restriction against adopting a complete engine unchanged is superseded by this explicit user decision. Earlier C++-first and Android/CI requirements remain compatible.
 
 ## ADR-0017 — Preserve unrestricted native mod support during the Godot migration
-**Status:** ACCEPTED REQUIREMENT; implementation design pending
+**Status:** ACCEPTED REQUIREMENT; implementation pending
 
 **Decision:** Retain the prior DMod requirement for trusted native in-process code with no sandbox/capability boundary. Evaluate GDExtension for supported public interfaces and a maintained Godot module/patch layer for deep internal hook/replace/mixin points.
 
@@ -143,3 +143,21 @@ The previous ADR-0003 restriction against adopting a complete engine unchanged i
 - Keep native mod authoring/building off the user's phone; distribute prebuilt ABI-specific libraries.
 - Native mods can crash, corrupt engine/game state or use app-permitted OS resources. Only trusted mods should be loaded.
 - Define ABI/version policy and real hook insertion points before marking the DMod migration implemented.
+
+## ADR-0018 — Lua-first DMod packages with shared hook semantics
+**Status:** ACCEPTED REQUIREMENT; implementation pending — 2026-11-27
+
+**Decision:** Keep one `.dmod` package format with three runtime modes: `lua`, `native`, and `hybrid`. Lua-only mods are the normal/default authoring path and contain source scripts directly; they do not require a compiler, bytecode generation, a `.so`, on-device compilation or an APK rebuild. Native/hybrid packages may contain prebuilt platform/ABI-specific libraries for unrestricted deep C++ access.
+
+**Decision:** Lua and native callbacks use the same owner-aware hook-point namespace and the same `Before`, `Around`, `Replace`, and `After` stages, with deterministic priority/registration ordering. The shared hook service must adapt Lua callbacks and native callbacks rather than creating incompatible parallel hook systems.
+
+**Runtime direction:** Embed a pinned Lua 5.4.x source release into the built-in Dream Engine Godot C++ module. Load Lua source from the validated package virtual filesystem. Provide typed, documented engine bindings. Lua callbacks run only at hook points whose thread/phase contract safely supports the Lua VM; arbitrary-thread synchronous hooks remain native-only unless a safe design is proven.
+
+**Consequences:**
+- A normal Lua-only `.dmod` is a single portable package and contains no shared library.
+- Native code remains trusted in-process code with no sandbox/capability boundary; it is optional for advanced engine internals.
+- The Lua runtime is not claimed to be a security boundary or a replacement for unrestricted native C++ access.
+- Mod lifecycle owns script states, callback references and hook registrations. Disable/unload must remove callbacks and release Lua references before destroying the VM or unloading native libraries.
+- Script exceptions must be contained and reported; they must never unwind through Godot/C++.
+- Real engine call sites are required. A hook registry without actual main-loop/scene/physics/render/resource dispatch points is not considered complete.
+- Exact Lua version pin, manifest parser extension, shared dispatch implementation and Godot hook insertion points require implementation and CI evidence.
