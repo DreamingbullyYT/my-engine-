@@ -3,7 +3,7 @@
 #include "core/object/object.h"
 #include "core/string/string_name.h"
 #include "core/variant/dictionary.h"
-#include "core/variant/packed_string_array.h"
+#include "core/variant/variant.h"
 
 #include <cstdint>
 #include <memory>
