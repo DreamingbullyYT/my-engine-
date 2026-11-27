@@ -11,7 +11,7 @@ This directory is the durable memory for humans and AI agents. It prevents repea
 1. CURRENT_STATE.md — verified repository state.
 2. VISION.md — goals and non-goals.
 3. ARCHITECTURE.md — system boundaries and data flow.
-4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), D-012 (modular orbital settlements/mobile colony ships), D-013 (mobile-colony fleet autonomy and permission-gated expansion), D-014 (reference-guided colony and flight design), D-015 (guided tutorial followed by free sandbox), and D-016 (adaptive hybrid rendering and citizen visual LOD).
+4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), D-012 (modular orbital settlements/mobile colony ships), D-013 (mobile-colony fleet autonomy and permission-gated expansion), D-014 (reference-guided colony and flight design), D-015 (guided tutorial followed by free sandbox), and D-016 (adaptive hybrid rendering and citizen visual LOD), and D-017 (hybrid excavatable terrain and underground colonies).
 5. MODDING_API.md — .dmod package and GDScript API requirements.
 6. GAMEPLAY.md — citizens, colony economy, buildings, research, policies, and needs.
 7. ROCKETS_AND_PHYSICS.md — part-based vehicles, propulsion, orbital and atmospheric flight.
@@ -86,3 +86,5 @@ For every meaningful change:
 2026-11-27: D-014 establishes reference-guided colony/flight design and creates detailed gameplay, rocket physics, universe, automation, infrastructure, and performance specifications. Documentation only; no gameplay implementation.
 2026-11-27: D-015 accepts a guided first-launch tutorial followed by free sandbox access; the tutorial is skippable/replayable and does not gate advanced mechanics. Documentation only; no gameplay implementation.
 2026-11-27: D-016 accepts adaptive hybrid building rendering, gradual distance/performance-based building animation LOD, automatic plus player-controlled visual quality, temporary detail promotion for selected distant buildings, and pixel-scale citizen visual LOD. Citizens remain in simulation/save data when their sprites are too small to render. Documentation only; no rendering implementation.
+
+2026-11-27: D-017 accepts hybrid local terrain excavation and traversable underground colonies, a simple side-view planetary surface, and minimal vegetation. Distant underground detail may be simplified while authoritative terrain, tunnels, resources, and structures persist. Documentation only; no terrain implementation.
