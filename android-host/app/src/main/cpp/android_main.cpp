@@ -51,6 +51,8 @@ struct DemoState final {
     bool gpu_resources_created{false};
     std::uint32_t ui_width{0};
     std::uint32_t ui_height{0};
+    std::uint64_t frames_skipped{0};
+    std::uint64_t frames_rendered{0};
 };
 
 void log_result(
@@ -267,7 +269,17 @@ void render_demo_frame(
 
     // Do not advance simulation or consume UI input while Android has
     // suspended the app or the native render surface is unavailable.
-    if (!renderer_ready || !engine.render_device().initialized()) return;
+    if (!renderer_ready || !engine.render_device().initialized()) {
+        if ((demo.frames_skipped++ % 120U) == 0U) {
+            logger.write(LogLevel::warning, "demo.diag",
+                std::string("Frame skipped: renderer_ready=") +
+                (renderer_ready ? "true" : "false") +
+                ", device_initialized=" +
+                (engine.render_device().initialized() ? "true" : "false") +
+                ", skipped_total=" + std::to_string(demo.frames_skipped));
+        }
+        return;
+    }
 
     const auto update = engine.update(delta_seconds, input_events);
     dream::ui::UiEvent ui_event;
@@ -364,7 +376,7 @@ void render_demo_frame(
     }
 
     const auto begin = engine.begin_render_frame(
-        {0.025F, 0.04F, 0.075F, 1.0F});
+        {1.0F, 0.0F, 1.0F, 1.0F});
     if (!begin) return;
 
     if (engine.frame_builder().set_camera_2d(camera_2d_matrices) !=
@@ -422,6 +434,12 @@ void render_demo_frame(
     if (!rendered) {
         logger.write(LogLevel::error, "render.frame",
                      "Demo frame submission failed: " + rendered.render.message);
+    } else if ((demo.frames_rendered++ % 120U) == 0U) {
+        logger.write(LogLevel::info, "demo.diag",
+                     "Frames submitted to bgfx: " +
+                     std::to_string(demo.frames_rendered) +
+                     "; pixel_size=" + std::to_string(metrics.pixel_width) +
+                     "x" + std::to_string(metrics.pixel_height));
     }
 }
 
