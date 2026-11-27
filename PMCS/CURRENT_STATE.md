@@ -199,23 +199,40 @@ This update is authoritative over older checklist/status text above where they c
 - **Not yet verified:** installing/running this APK on the user's phone and seeing the magenta frame. A successful CI run is not physical-device proof. The first phone check should confirm magenta presentation; if still black, capture Logcat tag `DreamEngineWgpu`, `DreamEngineBoot` and `DreamEngine` plus `logs/engine.log` if available.
 - **Next implementation order:** (1) phone validation of surface creation/presentation; (2) WGSL 2D textured/sprite pipeline and GPU upload/lifetime; (3) WGSL 3D mesh/material/depth pipeline; (4) device-loss and surface recreation/resource restoration tests; (5) wider device/GPU validation.
 
-## Godot migration state — 2026-11-27
+## Authoritative Godot 4.7.2 migration state — 2026-11-27
 
-**Active migration branch:** `godot-4.7.2-migration`
-**Pinned source:** `third_party/godot`, upstream Godot 4.7.2-stable commit `ed1daf0bf001b61586d9930840f2f1394092c079`.
-**Bootstrap project:** `godot-project/`.
+**Active migration branch:** `godot-4.7.2-migration`  
+**Pinned source:** `third_party/godot/`, upstream Godot 4.7.2-stable commit `ed1daf0bf001b61586d9930840f2f1394092c079`.  
+**Source layout:** ordinary tracked files, not a Git submodule. `third_party/GODOT_SOURCE_COMMIT` is the audit marker.  
+**Bootstrap project:** `godot-project/`.  
 **Build workflow:** `.github/workflows/godot-android-source.yml`.
 
-The migration branch adds the upstream source submodule, a minimal Android validation project and an Actions pipeline intended to compile Godot's ARM64 Android debug template from source, export an installable APK and compare the packaged native library to the source-built library.
+### Verified
+- The user tested the APK on a physical Android device. The Dream Engine UI rendered, the Godot 4.7.2 label appeared, touch input worked (25 presses), and the FPS counter reported 59 FPS.
+- Vendor workflow run 45966566078 succeeded and committed the full pinned Godot source directly into the repository.
+- Android source build/export run 45966721024 succeeded from the directly vendored source. It verified APK integrity/signature and byte-compared the packaged ARM64 `libgodot_android.so` with the library built from the vendored source.
+- APK artifact: `dream-engine-godot-4.7.2-android-arm64`, artifact ID `15183628477`, attached to [Actions run 45966721024](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45966721024).
 
-**Not yet verified:** the new Actions workflow is running; APK creation and device rendering remain pending. The older C++ engine, GameActivity host and wgpu backend are preserved unchanged as reference/legacy material. They are no longer the selected base for new runtime work while this migration is being validated.
+### Accepted DMod direction; implementation not yet present in the Godot runtime
+- A single `.dmod` package supports `lua`, `native`, and `hybrid` modes.
+- Lua-only mods are the ordinary authoring path: package Lua source directly, with no per-mod compiler, bytecode, `.so`, on-device compilation or APK rebuild.
+- Embed a pinned Lua 5.4.x runtime in the Dream Engine Godot C++ module.
+- Lua and native mods share one owner-aware hook-point namespace and the same `Before`, `Around`, `Replace`, and `After` stages.
+- Native/hybrid mods may include prebuilt platform/ABI-specific libraries for unrestricted in-process C++ access. The SDK should automate their build/package layout.
+- Lua callbacks execute only at hook points with a safe documented thread/phase contract. Native hooks remain available for synchronous arbitrary-thread engine internals.
+- The full accepted architecture and example package/API are in [DMOD_LUA_ARCHITECTURE.md](DMOD_LUA_ARCHITECTURE.md).
 
+### Not yet implemented or verified in the Godot runtime
+- Dream Engine C++ Godot module and its Lua runtime.
+- Shared Lua/native hook dispatcher and actual main-loop/scene/physics/render/resource hook call sites.
+- DMod package/manifest integration, native runtime loader, Lua VM lifecycle and mod-facing engine bindings.
+- Full renderer/physics/audio correctness and app resume/rotation behavior beyond the basic physical-device smoke test.
 
-## Authoritative Godot 4.7.2 migration update — 2026-11-27
+### Next implementation order
+1. Add the Dream Engine C++ Godot module and embed the pinned Lua source.
+2. Implement the shared owner-aware hook system and connect real engine call sites.
+3. Add `lua`/`native`/`hybrid` manifest/package loading and safe unload lifecycle.
+4. Add Lua/native DMod samples and tests, then build Android ARM64 through Actions.
+5. Continue physical-device validation for lifecycle, rendering, physics and audio.
 
-- User-confirmed Android smoke test: Dream Engine splash/UI visible, Godot 4.7.2 label visible, touch input works (25 presses), FPS counter reports 59 FPS.
-- GitHub Actions run 45961531542 passed: pinned Godot 4.7.2 source-built Android ARM64 template and APK export succeeded.
-- Accepted source layout: vendor every upstream source file directly under `third_party/godot/`, not as a Git submodule. Exact source SHA: `ed1daf0bf001b61586d9930840f2f1394092c079`; `third_party/GODOT_SOURCE_COMMIT` is the audit marker.
-- `.github/workflows/vendor-godot-source.yml` performs the one-time gitlink conversion and triggers the ARM64 source build. `.github/workflows/godot-android-source.yml` now expects regular tracked source files and checks the marker.
-- Next implementation focus: native Dream Engine module compiled into Godot, a versioned in-process C++ mod ABI, and real hook call sites for frame/physics/scene/render/resource lifecycles. The native runtime is intentionally unsandboxed by user decision.
-- Not yet verified: deep hooks, runtime native .dmod loading, engine-object access from mods, full renderer/physics/audio correctness, and lifecycle behavior beyond the reported touch/render smoke test. Do not mark those complete.
+Do not mark DMod or Lua support implemented until code and reproducible CI/device evidence exist. The older standalone C++ engine and its existing native DMod runtime remain preserved as reference material, not proof that the new Godot runtime already has those capabilities.
