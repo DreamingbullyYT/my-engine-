@@ -26,7 +26,7 @@ These are historical facts, not claims that the code still exists or works now. 
 | PMCS and GDScript decision | DOCUMENTED | Current PMCS and D-010 |
 | Game-specific GDScript mod proposal | DOCUMENTED | Root MOD_API.md |
 | Godot project integration | PARTIAL | project.godot, app/main.tscn, core/app_lifecycle.gd, ui/screens/boot_screen.*; Godot 4.7.2 headless import/startup passed in M1 run #3 |
-| Android host/APK | CI BUILD VERIFIED; DEVICE TEST PENDING | M1 run #3; artifact 15220900635; 28,255,149-byte ARM64 APK |
+| Android host/APK | CI BUILD VERIFIED; DEVICE TEST PENDING | M1 run #4; artifact 15220112272; 28,431,521-byte ARM64 APK |
 | Dream Runtime GDExtension | NOT PRESENT | No source in active tree |
 | Runtime GDScript loading on Android | NOT VERIFIED | Must prove in M3 |
 | DMod loader/runtime | NOT PRESENT | No source in active tree |
@@ -133,11 +133,11 @@ This is an accepted design decision, not an implementation claim. The initial M1
 
 ## 2026-11-27 — M1 first Android build verified in CI
 - Added a minimal official Godot 4.7.2-stable project and standard Android export preset. Exact upstream release commit: ed1daf0bf001b61586d9930840f2f1394092c079.
-- Added app/main.tscn as a thin composition root, core/app_lifecycle.gd for pause/resume notifications, and a focused UI boot screen with Godot version, touch counter, and status text.
+- Added app/main.tscn as a thin composition root, core/app_lifecycle.gd for pause/resume notifications, a focused UI boot screen with Godot version/touch counter/status, and an original SVG project icon.
 - Fixed Android export texture configuration by enabling ETC2/ASTC import. Connected the test button pressed signal to the screen handler.
-- M1 workflow run #3 succeeded: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46041536847.
-- APK: Android arm64-v8a, package com.dreamingbully.dreamengine, 28,255,149 bytes. CI verified package metadata and presence of lib/arm64-v8a/libgodot_android.so.
-- Artifact ID 15220900635; download: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46041536847/artifacts/15220900635. Artifact retention ends 2026-12-27.
+- M1 workflow run #4 succeeded: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46041958085.
+- APK: Android arm64-v8a, package com.dreamingbully.dreamengine, 28,431,521 bytes. CI verified package metadata and presence of lib/arm64-v8a/libgodot_android.so. The project icon is configured and the non-fatal missing-icon warning from the earlier build is gone.
+- Artifact ID 15220112272; download: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46041958085/artifacts/15220112272. Artifact retention ends 2026-12-27.
 - Signing limitation: the workflow creates a temporary debug keystore per run. Until a stable debug-signing secret is configured, a later APK may not install as an update over a prior debug build; uninstall the previous package before installing a newer build.
 - **Status:** M1 CI/build portion VERIFIED. Physical-device launch, visible UI, touch, and pause/resume remain PENDING user validation. No gameplay systems or Dream Runtime were implemented in this M1 slice.
 
@@ -145,6 +145,6 @@ This is an accepted design decision, not an implementation claim. The initial M1
 ## 2026-11-27 — hybrid code memory verified
 - CodeGraphContext 0.5.1 remains limited to its supported languages and is not treated as a GDScript parser.
 - Added .github/scripts/gdscript_code_map.py using tree-sitter-gdscript 6.1.0; Actions smoke test verified direct local call resolution.
-- CodeGraphContext workflow run #129 passed: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46041536809.
-- Actual GDScript map for source commit 8880dafc93a0caedffd74783257db015d4e22bee contains 2 files, 6 functions, and 0 syntax-error files. The map resolves _ready() and _on_test_touch_pressed() calls to _update_touch_count().
+- CodeGraphContext workflow run #138 passed: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46041958212.
+- Actual GDScript map for source commit a69f04a41b83d3f9929f4141f016a3e1248bee77 contains 2 files, 6 functions, and 0 syntax-error files. The map resolves _ready() and _on_test_touch_pressed() calls to _update_touch_count().
 - See PMCS/CODE_MEMORY.md, PMCS/CODE_MAP.md, and PMCS/GDSCRIPT_CODE_MAP.md. Native CodeGraphContext indexing is skipped until native/source files in its supported language set exist.
