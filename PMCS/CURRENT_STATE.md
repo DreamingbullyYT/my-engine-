@@ -73,8 +73,12 @@ The user directed that unspecified gameplay systems be completed using The Final
 
 
 ## 2026-11-27 PMCS review — mobile usability
-A second review found that simulation systems are specified in depth, but the mobile interaction model is not. Added MOBILE_UX.md as a PLANNED proposal for progressive disclosure, onboarding, touch-first controls, optional assistance/automation, accessibility, and information hierarchy. It is not yet an accepted new decision. Also identified stale PLAN.md wording about PC sandbox testing, offline time, and fixed mayor modes; these are being aligned with accepted decisions. No gameplay code was changed.
+A review found that simulation systems were specified in depth, but the mobile interaction model was not. Added MOBILE_UX.md covering progressive disclosure, onboarding, touch-first controls, optional assistance/automation, accessibility, and information hierarchy. Its first-launch flow was initially left open and is now resolved by D-015: guided tutorial followed by free sandbox. Other UX details remain proposals unless separately accepted. No gameplay code was changed.
 
 
 ## 2026-11-27 review consistency fixes
 Updated CODE_MEMORY.md to record successful workflow run #18 as the latest CodeGraphContext smoke-test evidence; run #17 is historical. CODE_MAP.md remains explicitly stale relative to later documentation commits and is not regenerated because no engine source exists. Clarified PLAN.md delivery wording: the goal is a complete game, built in testable stages, not a single unreviewed implementation run. No gameplay source code was added.
+
+
+## 2026-11-27 accepted mobile onboarding decision — D-015
+The default first-launch path is a guided tutorial, then a free sandbox. The tutorial is practical, progressive, skippable, and replayable later. Skipping it gives immediate access to the same sandbox and does not lock advanced systems or content. After the tutorial, there is no mandatory campaign. Exact lesson sequence remains to be designed. Documentation only; no source code or gameplay implementation was added.
