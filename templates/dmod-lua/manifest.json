@@ -1,8 +1,0 @@
-{
-  "format_version": 1,
-  "id": "example.hello",
-  "name": "Hello DMod",
-  "version": "1.0.0",
-  "runtime": "lua",
-  "entry_script": "scripts/main.lua"
-}
