@@ -14,7 +14,7 @@ diff --git a/third_party/godot/modules/zip/zip_reader.cpp b/third_party/godot/mo
 --- a/third_party/godot/modules/zip/zip_reader.cpp
 +++ b/third_party/godot/modules/zip/zip_reader.cpp
 @@ -89,7 +89,7 @@
- 	return s;
+ 	return arr;
  }
  
 -PackedByteArray ZIPReader::read_file(const String &p_path, bool p_case_sensitive) {
