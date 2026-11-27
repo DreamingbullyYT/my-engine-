@@ -73,3 +73,11 @@ Exit: two real clients connect and synchronize the sample mod.
 - [ ] Release and migration policy.
 
 Do not jump to multiplayer or advanced hooks before M1-M4 are proven. Prefer small vertical slices that compile, run, and can be tested.
+
+
+## Development start authorization — 2026-11-27
+The project is approved to move from design/planning into implementation. This records authorization to begin; it does **not** claim that implementation or device validation has already happened.
+
+Execution starts with **M1 — Official Godot Android baseline**. Keep M1 narrow: official unmodified Godot 4.7.x, official Android export templates/toolchain, standard export pipeline, and a minimal installable APK. Validate visible rendering, touch, pause/resume, readable UI, and onboarding on the user's phone. M2 (separate C++ GDExtension proof) and M3 (external GDScript runtime-loading proof) remain separate gates. Continue in small, testable vertical slices; GitHub Actions performs repeatable builds/tests and the user performs physical-device validation after an APK is available.
+
+Do not start by implementing the entire game at once. The v1 scope and milestone exit criteria above remain authoritative.
