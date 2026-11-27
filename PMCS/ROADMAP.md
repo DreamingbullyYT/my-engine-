@@ -5,14 +5,14 @@ All milestones are PLANNED until evidence is recorded in CURRENT_STATE.md.
 ## M0 — Clean baseline and PMCS
 - [x] Empty source branches intentionally on 2026-11-27.
 - [x] Resolve scripting-language decision: GDScript is primary for .dmod (D-010).
-- [ ] Review and finalize PMCS, including GAMEPLAY.md, ROCKETS_AND_PHYSICS.md, UNIVERSE.md, AUTOMATION.md, SPACE_INFRASTRUCTURE.md, SPACE_EXPANSION.md, and PERFORMANCE_AND_SIMULATION.md.
+- [ ] Review and finalize PMCS, including GAMEPLAY.md, ROCKETS_AND_PHYSICS.md, UNIVERSE.md, AUTOMATION.md, SPACE_INFRASTRUCTURE.md, SPACE_EXPANSION.md, PERFORMANCE_AND_SIMULATION.md, and MOBILE_UX.md.
 - [ ] Confirm repository name and branch strategy.
 Exit: clean baseline and reviewed project memory.
 
 ## M1 — Official Godot Android baseline
 - [ ] Build official unmodified Godot for Android ARM64 in GitHub Actions.
 - [ ] Produce a minimal installable APK.
-- [ ] Validate launch, visible rendering, touch, pause/resume on device.
+- [ ] Validate launch, visible rendering, touch, pause/resume, readable UI, and core onboarding flow on device.
 Exit: user confirms physical-device test.
 
 ## M2 — GDExtension proof
