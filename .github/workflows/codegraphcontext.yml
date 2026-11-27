@@ -35,6 +35,50 @@ jobs:
           python -m pip install "codegraphcontext==0.5.1"
           cgc --version
 
+      - name: Smoke-test C++ and Lua indexing in an isolated fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture="$RUNNER_TEMP/codegraph-smoke"
+          mkdir -p "$fixture/src" "$fixture/scripts"
+          cat > "$fixture/src/math.cpp" <<'EOF'
+          int helper(int value) {
+              return value + 1;
+          }
+
+          int calculate(int value) {
+              return helper(value) * 2;
+          }
+          EOF
+          cat > "$fixture/src/math.hpp" <<'EOF'
+          #pragma once
+          int helper(int value);
+          int calculate(int value);
+          EOF
+          cat > "$fixture/scripts/init.lua" <<'EOF'
+          local function normalize(value)
+              return value + 1
+          end
+
+          function start_game(value)
+              return normalize(value) * 2
+          end
+          EOF
+
+          cgc index "$fixture" --force --summarize 2>&1 | tee "$RUNNER_TEMP/codegraph-smoke-index.log"
+          cgc stats "$fixture" 2>&1 | tee "$RUNNER_TEMP/codegraph-smoke-stats.log"
+          cgc analyze calls calculate 2>&1 | tee "$RUNNER_TEMP/codegraph-smoke-calls.log"
+          cgc bundle export "$RUNNER_TEMP/codegraph-smoke.cgc" --repo "$fixture"
+          test -s "$RUNNER_TEMP/codegraph-smoke.cgc"
+          {
+            echo "## CodeGraphContext isolated smoke test"
+            echo "- C++ and Lua fixture indexing: **passed**"
+            echo "- Graph statistics command: **passed**"
+            echo "- Call analysis command: **passed**"
+            echo "- Portable .cgc bundle export: **passed**"
+            echo "- Bundle size: $(stat -c%s "$RUNNER_TEMP/codegraph-smoke.cgc") bytes"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Detect source code
         id: source
         shell: bash
