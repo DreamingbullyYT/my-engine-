@@ -32,11 +32,11 @@ Status: implementation merged to main; CI compile/export passed; device validati
 Exit: CI build/export and physical device confirms Android loading. CI success alone does not close the device gate.
 
 ## M3 — GDScript runtime-loading proof
-Status: initial loader and on-device diagnostic UI implemented on main; build and device validation pending.
+Status: initial loader and on-device diagnostic UI implemented on main; CI compile/export passed; device validation pending.
 - [x] Add an app-private `user://mods/` runtime loader.
 - [x] Write/read a sample GDScript from app-private storage, compile it at runtime, instantiate it, and call its entry point.
 - [x] Add visible success/failure reporting and source-path logging.
-- [ ] Export the updated Android ARM64 APK successfully.
+- [x] Export the updated Android ARM64 APK successfully (Actions run #18; artifact ID 15228256470).
 - [ ] User to execute the M3 test on physical Android and confirm the success status/log.
 - [ ] Follow-up: import an independently supplied script file through Android's system file picker; this is not yet implemented.
 Exit: an external GDScript stored outside the APK executes on device and calls the host runtime.
@@ -46,7 +46,7 @@ Exit: an external GDScript stored outside the APK executes on device and calls t
 - [ ] Safely inspect/extract package contents; reject path traversal and oversized entries.
 - [ ] Resolve dependencies, versions, conflicts, duplicate IDs, and deterministic load order.
 - [ ] Install/enable/disable a script mod without APK rebuild.
-Exit: sample .dmod installed and executed on device.
+Exit: sample `.dmod` installed and executed on device; external package import and robust hostile-archive handling must be proven before calling the manager production-ready.
 
 ## M5 — Core API
 - [ ] Lifecycle, event bus, extensible registries, hooks, direct game integration, mod-owned save/config data.
