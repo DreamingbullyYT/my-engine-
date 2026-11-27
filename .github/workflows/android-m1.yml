@@ -12,6 +12,7 @@ on:
       - "ui/**"
       - "native/**"
       - "tests/**"
+      - ".github/scripts/build_dream_runtime.sh"
       - "**/*.gd"
       - "**/*.tscn"
       - "**/*.tres"
@@ -42,12 +43,13 @@ env:
   GODOT_VERSION_DIR: "4.7.2.stable"
   ANDROID_SDK_PLATFORM: "35"
   ANDROID_BUILD_TOOLS: "35.0.1"
+  ANDROID_NDK_VERSION: "28.1.13356709"
 
 jobs:
   android-arm64:
     name: Export and validate Android ARM64 APK
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -59,10 +61,17 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
+      - name: Set up Android SDK and NDK
         uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
         with:
-          packages: "platforms;android-35 build-tools;35.0.1"
+          packages: "platforms;android-35 build-tools;35.0.1 ndk;28.1.13356709"
+
+      - name: Install SCons
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y scons
+          scons --version
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$ANDROID_NDK_VERSION" >> "$GITHUB_ENV"
 
       - name: Cache official Godot Android export templates
         id: godot-templates
@@ -117,8 +126,7 @@ jobs:
           test -s "$destination/android_source.zip"
           echo "Official Android export templates installed and checksum verified."
 
-      - name: Verify toolchain
-        shell: bash
+      - name: Download and verify official Godot
         run: |
           set -euo pipefail
           "$GODOT_BIN" --version
@@ -126,15 +134,28 @@ jobs:
           test -d "$ANDROID_HOME/platforms/android-$ANDROID_SDK_PLATFORM"
           test -x "$ANDROID_HOME/build-tools/$ANDROID_BUILD_TOOLS/aapt"
           test -s "$HOME/.local/share/godot/export_templates/$GODOT_VERSION_DIR/android_debug.apk"
+          test -d "$ANDROID_NDK_ROOT"
           echo "Android SDK: $ANDROID_HOME"
-          echo "Android platform: android-$ANDROID_SDK_PLATFORM"
-          echo "Android build tools: $ANDROID_BUILD_TOOLS"
+          echo "Android NDK: $ANDROID_NDK_ROOT"
 
-      - name: Validate project import and headless startup
+      - name: Build Linux and Android Dream Runtime libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash .github/scripts/build_dream_runtime.sh linux x86_64
+          bash .github/scripts/build_dream_runtime.sh android arm64
+          test -s native/dream_runtime/bin/linux/libdream_runtime.linux.template_debug.x86_64.so
+          test -s native/dream_runtime/bin/android/libdream_runtime.android.template_debug.arm64.so
+
+      - name: Validate Godot import and native GDExtension
         shell: bash
         run: |
           set -euo pipefail
           "$GODOT_BIN" --headless --editor --path . --import --quit
+          "$GODOT_BIN" --headless --path . --script res://tests/native_extension_smoke.gd 2>&1 | tee "$RUNNER_TEMP/native-smoke.log"
+          grep -F "[DreamRuntime] initialized" "$RUNNER_TEMP/native-smoke.log"
+          grep -F "[DreamRuntime] shutdown" "$RUNNER_TEMP/native-smoke.log"
+          grep -F "NATIVE_GDEXTENSION_SMOKE_OK" "$RUNNER_TEMP/native-smoke.log"
           "$GODOT_BIN" --headless --path . --quit-after 3
 
       - name: Create temporary Android debug signing key
@@ -168,10 +189,12 @@ jobs:
             build/android/dream-engine-debug.apk > build/android/apk-badging.txt
           grep -F "package: name='com.dreamingbully.dreamengine'" build/android/apk-badging.txt
           unzip -Z1 build/android/dream-engine-debug.apk | grep -F "lib/arm64-v8a/libgodot_android.so"
+          unzip -Z1 build/android/dream-engine-debug.apk | grep -F "lib/arm64-v8a/libdream_runtime.android.template_debug.arm64.so"
           {
             echo "Commit: $GITHUB_SHA"
             echo "Godot: $("$GODOT_BIN" --version)"
             echo "Target: Android arm64-v8a"
+            echo "Native extension: DreamRuntimeProbe"
             echo "Package: com.dreamingbully.dreamengine"
             echo "Build type: debug"
           } > build/android/build-info.txt
@@ -180,10 +203,12 @@ jobs:
       - name: Upload APK and validation report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: dream-engine-m1-${{ github.sha }}-android-arm64
+          name: dream-engine-m2-${{ github.sha }}-android-arm64
           path: |
             build/android/dream-engine-debug.apk
             build/android/apk-badging.txt
             build/android/build-info.txt
+            native/dream_runtime/bin/android/libdream_runtime.android.template_debug.arm64.so
+            native/dream_runtime/bin/linux/libdream_runtime.linux.template_debug.x86_64.so
           if-no-files-found: error
           retention-days: 30
