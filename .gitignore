@@ -1,0 +1,10 @@
+# Godot editor and import cache
+.godot/
+
+# CI and local exports
+build/
+dist/
+
+# Operating system noise
+.DS_Store
+Thumbs.db
