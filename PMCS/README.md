@@ -20,11 +20,12 @@ This directory is the durable memory for humans and AI agents. It prevents repea
 10. SPACE_INFRASTRUCTURE.md — satellites, stations, megaships, and habitats.
 11. SPACE_EXPANSION.md — mobile-colony fleet expansion and habitability rules.
 12. PERFORMANCE_AND_SIMULATION.md — simulation tiers, saves, Android lifecycle, and budgets.
-13. ROADMAP.md — implementation sequence and exit gates.
-14. BUILD_AND_TEST.md — CI and validation policy.
-15. AI_RULES.md — mandatory agent workflow.
-16. CODE_MAP.md — generated/evidence-backed source map, currently no engine source.
-17. CODE_MEMORY.md — CodeGraphContext indexing strategy and verified CI smoke-test results.
+13. MOBILE_UX.md — progressive complexity, touch-first UX, onboarding, and accessibility (planned proposal).
+14. ROADMAP.md — implementation sequence and exit gates.
+15. BUILD_AND_TEST.md — CI and validation policy.
+16. AI_RULES.md — mandatory agent workflow.
+17. CODE_MAP.md — generated/evidence-backed source map, currently no engine source.
+18. CODE_MEMORY.md — CodeGraphContext indexing strategy and verified CI smoke-test results.
 
 ## Reference-guided design baseline
 D-014 adapts colony-management principles from The Final Earth 2 and part-based orbital-flight principles from Spaceflight Simulator. It does not authorize copying code, art, names, distinctive UI, or exact balance values. See GAMEPLAY.md and ROCKETS_AND_PHYSICS.md.
@@ -80,3 +81,5 @@ For every meaningful change:
 2026-11-27: D-011 and D-012 record gradual mayor autonomy and modular orbital settlements/mobile colony ships. Documentation only; no gameplay implementation.
 2026-11-27: D-013 records mobile-colony fleet autonomy and player-approved planetary expansion after roughly 5–6 explored star systems, restricted to genuinely habitable worlds or explicitly engineered habitat alternatives. Documentation only; no gameplay implementation.
 2026-11-27: D-014 establishes reference-guided colony/flight design and creates detailed gameplay, rocket physics, universe, automation, infrastructure, and performance specifications. Documentation only; no gameplay implementation.
+
+2026-11-27: PMCS review identified mobile usability as an under-specified area. MOBILE_UX.md added as a proposal, not yet an accepted decision. Stale plan wording on time progression and PC testing is being reconciled with accepted Android/CI and D-014 decisions.
