@@ -1,0 +1,46 @@
+diff --git a/third_party/godot/modules/zip/zip_reader.h b/third_party/godot/modules/zip/zip_reader.h
+--- a/third_party/godot/modules/zip/zip_reader.h
++++ b/third_party/godot/modules/zip/zip_reader.h
+@@ -55,7 +55,7 @@
+ 	Error close();
+ 
+ 	PackedStringArray get_files();
+-	PackedByteArray read_file(const String &p_path, bool p_case_sensitive);
++	PackedByteArray read_file(const String &p_path, bool p_case_sensitive, int64_t p_max_size = 2147483647LL);
+ 	bool file_exists(const String &p_path, bool p_case_sensitive);
+ 	int get_compression_level(const String &p_path, bool p_case_sensitive);
+ 
+diff --git a/third_party/godot/modules/zip/zip_reader.cpp b/third_party/godot/modules/zip/zip_reader.cpp
+--- a/third_party/godot/modules/zip/zip_reader.cpp
++++ b/third_party/godot/modules/zip/zip_reader.cpp
+@@ -89,7 +89,7 @@
+ 	return s;
+ }
+ 
+-PackedByteArray ZIPReader::read_file(const String &p_path, bool p_case_sensitive) {
++PackedByteArray ZIPReader::read_file(const String &p_path, bool p_case_sensitive, int64_t p_max_size) {
+ 	ERR_FAIL_COND_V_MSG(fa.is_null(), PackedByteArray(), "ZIPReader must be opened before use.");
+ 
+ 	int err = UNZ_OK;
+@@ -103,7 +103,12 @@
+ 	// Read the file info.
+ 	unz_file_info info;
+ 	err = unzGetCurrentFileInfo(uzf, &info, nullptr, 0, nullptr, 0, nullptr, 0);
+ 	ERR_FAIL_COND_V_MSG(err != UNZ_OK, PackedByteArray(), "Unable to read file information from zip archive.");
+-	ERR_FAIL_COND_V_MSG(info.uncompressed_size > INT_MAX, PackedByteArray(), "File contents too large to read from zip archive (>2 GB).");
++	if (p_max_size < 0 || info.uncompressed_size > static_cast<uint64_t>(p_max_size) || info.uncompressed_size > INT_MAX) {
++		unzCloseCurrentFile(uzf);
++		ERR_PRINT("ZIPReader: file exceeds the configured maximum uncompressed size.");
++		return PackedByteArray();
++	}
+ 
+ 	// Read the file data.
+ 	PackedByteArray data;
+@@ -171,7 +176,7 @@
+ 	ClassDB::bind_method(D_METHOD("close"), &ZIPReader::close);
+ 	ClassDB::bind_method(D_METHOD("get_files"), &ZIPReader::get_files);
+-	ClassDB::bind_method(D_METHOD("read_file", "path", "case_sensitive"), &ZIPReader::read_file, DEFVAL(Variant(true)));
++	ClassDB::bind_method(D_METHOD("read_file", "path", "case_sensitive", "max_size"), &ZIPReader::read_file, DEFVAL(Variant(true)), DEFVAL(Variant(2147483647)));
+ 	ClassDB::bind_method(D_METHOD("file_exists", "path", "case_sensitive"), &ZIPReader::file_exists, DEFVAL(Variant(true)));
+ 	ClassDB::bind_method(D_METHOD("get_compression_level", "path", "case_sensitive"), &ZIPReader::get_compression_level, DEFVAL(Variant(true)));
+ }
