@@ -223,3 +223,28 @@ Consequences:
 - Manual controls remain immediately accessible.
 - Localization fallback and override behavior must be covered by tests.
 - This is a UX decision only; no UI implementation is implied.
+
+
+## D-022 — Modular-by-default game architecture
+Status: ACCEPTED — 2026-11-27.
+
+The game must be implemented as cohesive, independently understandable modules with clear ownership, contracts, and focused tests. The goal is to make features easy to add, replace, test, and debug without repeatedly patching giant central files. The module catalog and dependency rules are defined in PMCS/MODULES.md and PMCS/ARCHITECTURE.md.
+
+The game is divided by domain boundaries such as world/terrain, colony simulation, vehicles, physics, exploration, infrastructure, automation, rendering, UI, save system, modding, Android platform integration, and the separate native Dream Runtime. The exact source tree may evolve as implementation reveals the right boundaries; the catalog is a guide, not an instruction to create unused or empty modules.
+
+Each module owns its authoritative state and rules. UI is not a gameplay authority; rendering is presentation-only; simulation and physics are shared services; modules communicate through small explicit contracts, direct calls for request/response, and events/signals for notifications where appropriate. Circular dependencies, duplicated rules, catch-all scripts, and giant all-purpose managers are prohibited. The bootstrap/composition root may wire modules but must not absorb their domain logic.
+
+Prefer GDScript for ordinary gameplay. Use C++ in Dream Runtime only for measured native/platform/performance needs. Extend the owning module or introduce a focused module rather than adding unrelated logic to a central file. Split files when responsibilities or independent change/test reasons diverge; do not fragment trivial functions into unnecessary files and do not impose an arbitrary line-count limit.
+
+Every meaningful module has focused tests and, once substantial, a concise PMCS/modules/<module>.md memory note. Cross-module changes must update affected contracts, tests, PMCS, and the generated CodeGraphContext map for the same commit.
+
+Rationale:
+- Reduce regressions and merge/edit complexity as the game grows.
+- Make it practical for coding agents to navigate, remember, and change one system at a time.
+- Keep the base game extensible for the accepted modding design without coupling every feature to the mod loader.
+- Make performance work and Android validation local to the responsible subsystem.
+
+Consequences:
+- M1 stays small and establishes the official Godot Android foundation; it does not create every future module in advance.
+- Implementation proceeds as small vertical slices, with tests and module memory added as the real code appears.
+- This is an accepted architecture decision only; no source modules are implemented by this documentation change.
