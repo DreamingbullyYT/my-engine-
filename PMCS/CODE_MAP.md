@@ -1,13 +1,13 @@
 # Dream Engine Code Map
 
-- Source commit: fb671b316c27d538a183d3d971ce3b42a0275def
-- Generated: 2026-11-27T17:23:28Z
+- Source commit: 8880dafc93a0caedffd74783257db015d4e22bee
+- Generated: 2026-11-27T17:24:36Z
 
 ## GDScript
 # GDScript Code Map
 
-- Source commit: fb671b316c27d538a183d3d971ce3b42a0275def
-- Generated (UTC): 2026-11-27T17:23:28Z
+- Source commit: 8880dafc93a0caedffd74783257db015d4e22bee
+- Generated (UTC): 2026-11-27T17:24:36Z
 - Parser: tree-sitter-gdscript 6.1.0
 - Files: **2**
 - Script/nested classes: **0**
@@ -35,8 +35,8 @@
 # CodeGraphContext Code Map
 
 - Status: **NO_SOURCE_CODE_TO_INDEX**
-- Commit: fb671b316c27d538a183d3d971ce3b42a0275def
-- Generated: 2026-11-27T17:23:28Z
+- Commit: 8880dafc93a0caedffd74783257db015d4e22bee
+- Generated: 2026-11-27T17:24:36Z
 
 No CodeGraphContext-supported source files were detected; GDScript is not supported by this indexer.
 CodeGraphContext indexing is skipped when the repository contains only unsupported source formats.
