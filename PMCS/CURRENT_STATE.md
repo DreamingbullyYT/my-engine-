@@ -74,3 +74,7 @@ The user directed that unspecified gameplay systems be completed using The Final
 
 ## 2026-11-27 PMCS review — mobile usability
 A second review found that simulation systems are specified in depth, but the mobile interaction model is not. Added MOBILE_UX.md as a PLANNED proposal for progressive disclosure, onboarding, touch-first controls, optional assistance/automation, accessibility, and information hierarchy. It is not yet an accepted new decision. Also identified stale PLAN.md wording about PC sandbox testing, offline time, and fixed mayor modes; these are being aligned with accepted decisions. No gameplay code was changed.
+
+
+## 2026-11-27 review consistency fixes
+Updated CODE_MEMORY.md to record successful workflow run #18 as the latest CodeGraphContext smoke-test evidence; run #17 is historical. CODE_MAP.md remains explicitly stale relative to later documentation commits and is not regenerated because no engine source exists. Clarified PLAN.md delivery wording: the goal is a complete game, built in testable stages, not a single unreviewed implementation run. No gameplay source code was added.
