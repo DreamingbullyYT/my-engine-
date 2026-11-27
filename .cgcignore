@@ -1,0 +1,49 @@
+# CodeGraphContext: avoid indexing generated, vendored, and private material.
+.git/
+.github/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Build and IDE output
+build/
+build-*/
+out/
+dist/
+bin/
+obj/
+.gradle/
+.idea/
+.vscode/
+.godot/
+.cache/
+
+# Generated binaries and archives
+*.apk
+*.aab
+*.so
+*.dll
+*.dylib
+*.exe
+*.o
+*.a
+*.jar
+*.zip
+*.7z
+*.tar
+*.gz
+
+# Generated analysis/index data
+.codegraphcontext/
+artifacts/
+coverage/
+*.log
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*credentials*
