@@ -32,7 +32,7 @@ jobs:
       - name: Install CodeGraphContext
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "codegraphcontext==0.5.1"
+          python -m pip install "codegraphcontext==0.5.1" "tree-sitter-gdscript==6.1.0"
           cgc --version
 
       - name: Smoke-test C++ and Lua indexing in an isolated fixture
@@ -79,6 +79,34 @@ jobs:
             echo "- Bundle size: $(stat -c%s "$RUNNER_TEMP/codegraph-smoke.cgc") bytes"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Smoke-test dedicated GDScript indexing
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture="$RUNNER_TEMP/gdscript-smoke"
+          mkdir -p "$fixture/scripts"
+          cat > "$fixture/scripts/smoke.gd" <<'EOF'
+          class_name SmokeScript
+          extends RefCounted
+
+          func helper(value: int) -> int:
+              return value + 1
+
+          func calculate(value: int) -> int:
+              return helper(value) * 2
+          EOF
+          python .github/scripts/gdscript_code_map.py \
+            --root "$fixture" \
+            --output "$RUNNER_TEMP/gdscript-smoke-map.md" \
+            --commit "$GITHUB_SHA" \
+            --expect-call calculate:helper
+          grep -F "calculate()" "$RUNNER_TEMP/gdscript-smoke-map.md"
+          grep -F "calls helper()" "$RUNNER_TEMP/gdscript-smoke-map.md"
+          {
+            echo "## GDScript structural smoke test"
+            echo "- Dedicated Tree-sitter parser: **passed**"
+            echo "- Local call edge calculate() -> helper(): **passed**"
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Detect source code
         id: source
         shell: bash
@@ -113,6 +141,32 @@ jobs:
             echo "This is not evidence that an engine implementation exists."
           } > PMCS/CODE_MAP.md
 
+      - name: Generate dedicated GDScript code map
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .github/scripts/gdscript_code_map.py \
+            --root . \
+            --output PMCS/GDSCRIPT_CODE_MAP.md \
+            --commit "$GITHUB_SHA" \
+            --generated-at "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+      - name: Assemble portable code map
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "# Dream Engine Code Map"
+            echo
+            echo "- Source commit: $GITHUB_SHA"
+            echo "- Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo
+            echo "## GDScript"
+            cat PMCS/GDSCRIPT_CODE_MAP.md
+            echo
+            echo "## CodeGraphContext (supported native/script languages)"
+            cat .codegraphcontext/NATIVE_CODE_MAP.md
+          } > PMCS/CODE_MAP.md
       - name: Index repository
         if: steps.source.outputs.present == 'true'
         run: |
@@ -138,7 +192,7 @@ jobs:
             echo
             echo "## Potential dead code"
             cgc analyze dead-code || true
-          } > PMCS/CODE_MAP.md
+          } > .codegraphcontext/NATIVE_CODE_MAP.md
           cgc bundle export .codegraphcontext/dream-engine.cgc --repo .
 
       - name: Upload graph and readable report
@@ -147,11 +201,14 @@ jobs:
           name: codegraphcontext-${{ github.sha }}
           path: |
             PMCS/CODE_MAP.md
+            PMCS/GDSCRIPT_CODE_MAP.md
+            .codegraphcontext/NATIVE_CODE_MAP.md
             .codegraphcontext/dream-engine.cgc
             ${{ runner.temp }}/codegraph-smoke.cgc
             ${{ runner.temp }}/codegraph-smoke-index.log
             ${{ runner.temp }}/codegraph-smoke-stats.log
             ${{ runner.temp }}/codegraph-smoke-calls.log
+            ${{ runner.temp }}/gdscript-smoke-map.md
           if-no-files-found: warn
           retention-days: 30
 
