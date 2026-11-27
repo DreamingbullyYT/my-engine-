@@ -19,6 +19,7 @@
 #endif
 
 #include <algorithm>
+#include <cstring>
 #include <limits>
 #include <utility>
 
@@ -64,51 +65,28 @@ struct DreamModRuntime::DispatchState {
     bool original_called = false;
 };
 
-namespace {
-struct NextContext {
-    DreamModRuntime::DispatchState *dispatch = nullptr;
+struct DreamModRuntime::NextContext {
+    DispatchState *dispatch = nullptr;
     size_t next_index = 0;
     lua_State *lua = nullptr;
     int table_ref = LUA_NOREF;
+    uint32_t call_count = 0;
 };
 
-uint8_t dream_mod_call_next(void *p_context) noexcept {
-    if (p_context == nullptr) {
-        return 0;
-    }
+uint8_t DreamModRuntime::native_call_next(void *p_context) noexcept {
+    if (p_context == nullptr) return 0;
     auto *next = static_cast<NextContext *>(p_context);
-    if (next->dispatch == nullptr || next->dispatch->runtime == nullptr) {
-        return 0;
-    }
-
+    if (next->dispatch == nullptr || next->dispatch->runtime == nullptr) return 0;
+    ++next->call_count;
     if (next->lua != nullptr && next->table_ref != LUA_NOREF) {
-        lua_rawgeti(next->lua, LUA_REGISTRYINDEX, next->table_ref);
-        DreamModRuntime::read_dictionary(next->lua, -1, *next->dispatch->context);
-        lua_pop(next->lua, 1);
+        sync_lua_table_to_dictionary(next->lua, next->table_ref, *next->dispatch->context);
     }
-
     next->dispatch->runtime->invoke_chain(*next->dispatch, next->next_index);
-
     if (next->lua != nullptr && next->table_ref != LUA_NOREF) {
-        lua_rawgeti(next->lua, LUA_REGISTRYINDEX, next->table_ref);
-        DreamModRuntime::push_dictionary(next->lua, *next->dispatch->context);
-        // Replace the original callback table contents with the mutated context.
-        lua_pushnil(next->lua);
-        while (lua_next(next->lua, -2) != 0) {
-            lua_pop(next->lua, 1);
-        }
-        lua_pop(next->lua, 1);
-        lua_rawgeti(next->lua, LUA_REGISTRYINDEX, next->table_ref);
-        lua_pushnil(next->lua);
-        while (lua_next(next->lua, -2) != 0) {
-            lua_pop(next->lua, 1);
-        }
-        lua_pop(next->lua, 1);
-        luaL_unref(next->lua, LUA_REGISTRYINDEX, LUA_NOREF);
+        sync_dictionary_to_lua_table(next->lua, next->table_ref, *next->dispatch->context);
     }
     return 1;
 }
-} // namespace
 
 DreamModRuntime *DreamModRuntime::singleton = nullptr;
 
@@ -266,6 +244,36 @@ bool DreamModRuntime::read_variant(lua_State *state, int index, Variant &value) 
     }
 }
 
+void DreamModRuntime::sync_dictionary_to_lua_table(
+        lua_State *state, int table_ref, const Dictionary &dictionary) {
+    lua_rawgeti(state, LUA_REGISTRYINDEX, table_ref);
+    const int table_index = lua_absindex(state, -1);
+    lua_pushnil(state);
+    while (lua_next(state, table_index) != 0) {
+        lua_pop(state, 1);
+        lua_pushvalue(state, -1);
+        lua_pushnil(state);
+        lua_settable(state, table_index);
+    }
+    Array keys = dictionary.keys();
+    for (int i = 0; i < keys.size(); ++i) {
+        Variant key = keys[i];
+        if (key.get_type() != Variant::STRING) continue;
+        CharString utf8 = String(key).utf8();
+        lua_pushlstring(state, utf8.get_data(), utf8.length());
+        push_variant(state, dictionary[key]);
+        lua_settable(state, table_index);
+    }
+    lua_pop(state, 1);
+}
+
+void DreamModRuntime::sync_lua_table_to_dictionary(
+        lua_State *state, int table_ref, Dictionary &dictionary) {
+    lua_rawgeti(state, LUA_REGISTRYINDEX, table_ref);
+    read_dictionary(state, -1, dictionary);
+    lua_pop(state, 1);
+}
+
 void DreamModRuntime::push_dictionary(lua_State *state, const Dictionary &dictionary) {
     lua_createtable(state, 0, dictionary.size());
     Array keys = dictionary.keys();
@@ -342,14 +350,12 @@ uint64_t DreamModRuntime::register_native_hook(
 }
 
 uint64_t DreamModRuntime::native_register_hook(
-        void *runtime, const char *point, uint8_t stage, int32_t priority,
+        void *runtime, const char *owner, const char *point, uint8_t stage, int32_t priority,
         DreamModNativeHookCallbackV1 callback, void *callback_context) noexcept {
-    if (runtime == nullptr || point == nullptr || stage > HOOK_AFTER) {
-        return 0;
-    }
-    // The owner ID is set by the native package loader before exposing this
-    // callback. The v1 host API is intentionally append-only.
-    return 0;
+    if (runtime == nullptr || owner == nullptr || point == nullptr || stage > HOOK_AFTER) return 0;
+    return static_cast<DreamModRuntime *>(runtime)->register_native_hook(
+            String::utf8(owner), StringName(String::utf8(point)),
+            static_cast<HookStage>(stage), priority, callback, callback_context);
 }
 
 void *DreamModRuntime::native_query_interface(void *runtime, const char *name, uint32_t min_version) noexcept {
@@ -392,6 +398,8 @@ uint64_t DreamModRuntime::add_native_hook(
 
 DreamModRuntime::NativeHostApiV1 DreamModRuntime::get_native_host_api() noexcept {
     NativeHostApiV1 api;
+    api.struct_size = sizeof(NativeHostApiV1);
+    api.abi_version = NATIVE_ABI_V1;
     api.runtime = this;
     api.register_hook = &DreamModRuntime::native_register_hook;
     api.query_interface = &DreamModRuntime::native_query_interface;
@@ -429,26 +437,8 @@ int DreamModRuntime::lua_register_hook(lua_State *state) {
 
 int DreamModRuntime::lua_call_next(lua_State *state) {
     auto *next = static_cast<NextContext *>(lua_touserdata(state, lua_upvalueindex(1)));
-    if (next == nullptr || next->dispatch == nullptr) {
-        return 0;
-    }
-    if (next->table_ref != LUA_NOREF) {
-        lua_rawgeti(state, LUA_REGISTRYINDEX, next->table_ref);
-        read_dictionary(state, -1, *next->dispatch->context);
-        lua_pop(state, 1);
-    }
-    next->dispatch->runtime->invoke_chain(*next->dispatch, next->next_index);
-    if (next->table_ref != LUA_NOREF) {
-        lua_rawgeti(state, LUA_REGISTRYINDEX, next->table_ref);
-        push_dictionary(state, *next->dispatch->context);
-        // Copy the post-chain fields into the caller's table.
-        lua_pushnil(state);
-        while (lua_next(state, -2) != 0) {
-            lua_pop(state, 1);
-        }
-        lua_pop(state, 1);
-        luaL_unref(state, LUA_REGISTRYINDEX, next->table_ref);
-        next->table_ref = LUA_NOREF;
+    if (next != nullptr) {
+        (void)native_call_next(next);
     }
     return 0;
 }
@@ -464,7 +454,7 @@ void DreamModRuntime::invoke_chain(DispatchState &dispatch, size_t index) {
 
     const HookEntry &entry = dispatch.chain[index];
     NextContext next{ &dispatch, index + 1, nullptr, LUA_NOREF };
-    DreamModHookInvocationV1 invocation{ &next, &dream_mod_call_next };
+    DreamModHookInvocationV1 invocation{ &next, &DreamModRuntime::native_call_next };
 
     if (entry.native_callback != nullptr) {
         entry.native_callback(entry.native_context, dispatch.context, &invocation);
@@ -489,17 +479,12 @@ void DreamModRuntime::invoke_chain(DispatchState &dispatch, size_t index) {
                 (error != nullptr ? String::utf8(error) : String("unknown Lua error")));
         lua_pop(state, 1);
         ModInstance *mod = find_mod(entry.owner);
-        if (mod != nullptr) {
-            mod->enabled = false;
-        }
-        // A failed wrapper falls through instead of suppressing the engine.
-        invoke_chain(dispatch, index + 1);
+        if (mod != nullptr) mod->enabled = false;
+        if (next.call_count == 0) invoke_chain(dispatch, index + 1);
     } else {
-        read_dictionary(state, next.table_ref == LUA_NOREF ? -1 : -1, *dispatch.context);
+        sync_lua_table_to_dictionary(state, next.table_ref, *dispatch.context);
     }
-    if (next.table_ref != LUA_NOREF) {
-        luaL_unref(state, LUA_REGISTRYINDEX, next.table_ref);
-    }
+    if (next.table_ref != LUA_NOREF) luaL_unref(state, LUA_REGISTRYINDEX, next.table_ref);
 }
 
 void DreamModRuntime::dispatch_internal(
@@ -551,6 +536,8 @@ void DreamModRuntime::dispatch_internal(
             } else if (entry.lua != nullptr && entry.lua_ref != LUA_NOREF) {
                 lua_rawgeti(entry.lua, LUA_REGISTRYINDEX, entry.lua_ref);
                 push_dictionary(entry.lua, context);
+                lua_pushvalue(entry.lua, -1);
+                const int table_ref = luaL_ref(entry.lua, LUA_REGISTRYINDEX);
                 if (lua_pcall(entry.lua, 1, 0, 0) != LUA_OK) {
                     const char *error = lua_tostring(entry.lua, -1);
                     ERR_PRINT(String("DreamMods Lua Before hook error: ") +
@@ -559,9 +546,9 @@ void DreamModRuntime::dispatch_internal(
                     ModInstance *mod = find_mod(entry.owner);
                     if (mod != nullptr) mod->enabled = false;
                 } else {
-                    // Before callbacks use a mutable context table.
-                    read_dictionary(entry.lua, -1, context);
+                    sync_lua_table_to_dictionary(entry.lua, table_ref, context);
                 }
+                luaL_unref(entry.lua, LUA_REGISTRYINDEX, table_ref);
             }
         }
     }
@@ -578,6 +565,8 @@ void DreamModRuntime::dispatch_internal(
         } else if (it->lua != nullptr && it->lua_ref != LUA_NOREF) {
             lua_rawgeti(it->lua, LUA_REGISTRYINDEX, it->lua_ref);
             push_dictionary(it->lua, context);
+            lua_pushvalue(it->lua, -1);
+            const int table_ref = luaL_ref(it->lua, LUA_REGISTRYINDEX);
             if (lua_pcall(it->lua, 1, 0, 0) != LUA_OK) {
                 const char *error = lua_tostring(it->lua, -1);
                 ERR_PRINT(String("DreamMods Lua After hook error: ") +
@@ -586,8 +575,9 @@ void DreamModRuntime::dispatch_internal(
                 ModInstance *mod = find_mod(it->owner);
                 if (mod != nullptr) mod->enabled = false;
             } else {
-                read_dictionary(it->lua, -1, context);
+                sync_lua_table_to_dictionary(it->lua, table_ref, context);
             }
+            luaL_unref(it->lua, LUA_REGISTRYINDEX, table_ref);
         }
     }
 
