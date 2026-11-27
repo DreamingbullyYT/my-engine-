@@ -419,6 +419,123 @@ DreamModRuntime::NativeHostApiV1 DreamModRuntime::get_native_host_api() noexcept
     return api;
 }
 
+int DreamModRuntime::load_script_chunk_from_package(lua_State *state, const char *entry_path) {
+    DreamModRuntime *runtime = get_singleton();
+    ModInstance *mod = runtime != nullptr ? runtime->find_mod(state) : nullptr;
+    if (mod == nullptr || entry_path == nullptr) {
+        lua_pushliteral(state, "DMod package is no longer available");
+        return LUA_ERRFILE;
+    }
+
+    const String member_path = String::utf8(entry_path);
+    if (!valid_package_path(member_path)) {
+        lua_pushliteral(state, "DMod script path is invalid");
+        return LUA_ERRFILE;
+    }
+
+    Ref<ZIPReader> zip;
+    zip.instantiate();
+    if (zip->open(mod->package_path) != OK) {
+        lua_pushliteral(state, "Unable to reopen DMod package");
+        return LUA_ERRFILE;
+    }
+    PackedByteArray source = zip->read_file(member_path, true, 4 * 1024 * 1024);
+    zip->close();
+    if (source.is_empty()) {
+        lua_pushfstring(state, "DMod script not found or exceeds the 4 MiB limit: %s", entry_path);
+        return LUA_ERRFILE;
+    }
+
+    CharString chunk_name = (String("@") + mod->id + "/" + member_path).utf8();
+    return luaL_loadbufferx(
+            state, reinterpret_cast<const char *>(source.ptr()), source.size(),
+            chunk_name.get_data(), "t");
+}
+
+int DreamModRuntime::load_module_chunk_from_package(lua_State *state, const char *module_name) {
+    if (module_name == nullptr) {
+        lua_pushliteral(state, "require() needs a module name");
+        return LUA_ERRFILE;
+    }
+    const String module = String::utf8(module_name);
+    if (!valid_mod_id(module)) {
+        lua_pushliteral(state, "DMod module names must be dotted lowercase identifiers");
+        return LUA_ERRFILE;
+    }
+    const String entry = "scripts/" + module.replace(".", "/") + ".lua";
+    CharString entry_utf8 = entry.utf8();
+    return load_script_chunk_from_package(state, entry_utf8.get_data());
+}
+
+int DreamModRuntime::lua_require_package(lua_State *state) {
+    const char *module_name = luaL_checkstring(state, 1);
+
+    // Reuse Lua's conventional package.loaded cache.
+    lua_getglobal(state, "package");
+    lua_getfield(state, -1, "loaded");
+    lua_pushstring(state, module_name);
+    lua_gettable(state, -2);
+    if (!lua_isnil(state, -1)) {
+        return 1;
+    }
+    lua_pop(state, 1);
+    lua_pop(state, 2);
+
+    const int load_status = load_module_chunk_from_package(state, module_name);
+    if (load_status != LUA_OK) {
+        return lua_error(state);
+    }
+    if (lua_pcall(state, 0, 1, 0) != LUA_OK) {
+        return lua_error(state);
+    }
+    if (lua_isnil(state, -1)) {
+        lua_pop(state, 1);
+        lua_pushboolean(state, true);
+    }
+
+    lua_getglobal(state, "package");
+    lua_getfield(state, -1, "loaded");
+    lua_pushstring(state, module_name);
+    lua_pushvalue(state, 2);
+    lua_settable(state, -3);
+    lua_pop(state, 2);
+    return 1;
+}
+
+int DreamModRuntime::lua_package_read(lua_State *state) {
+    const char *path = luaL_checkstring(state, 1);
+    DreamModRuntime *runtime = get_singleton();
+    ModInstance *mod = runtime != nullptr ? runtime->find_mod(state) : nullptr;
+    if (mod == nullptr || path == nullptr) {
+        lua_pushnil(state);
+        lua_pushliteral(state, "DMod package is unavailable");
+        return 2;
+    }
+
+    const String member_path = String::utf8(path);
+    if (!valid_package_path(member_path)) {
+        lua_pushnil(state);
+        lua_pushliteral(state, "invalid package-relative path");
+        return 2;
+    }
+    Ref<ZIPReader> zip;
+    zip.instantiate();
+    if (zip->open(mod->package_path) != OK) {
+        lua_pushnil(state);
+        lua_pushliteral(state, "unable to open DMod package");
+        return 2;
+    }
+    PackedByteArray bytes = zip->read_file(member_path, true, 16 * 1024 * 1024);
+    zip->close();
+    if (bytes.is_empty()) {
+        lua_pushnil(state);
+        lua_pushliteral(state, "package member missing or exceeds the 16 MiB limit");
+        return 2;
+    }
+    lua_pushlstring(state, reinterpret_cast<const char *>(bytes.ptr()), bytes.size());
+    return 1;
+}
+
 int DreamModRuntime::lua_register_hook(lua_State *state) {
     DreamModRuntime *runtime = get_singleton();
     if (runtime == nullptr || lua_gettop(state) < 3 || lua_type(state, 3) != LUA_TFUNCTION) {
@@ -849,6 +966,9 @@ bool DreamModRuntime::load_mod(const String &package_path) {
         }
 
         luaL_openlibs(active_mod->state);
+        lua_pushcfunction(active_mod->state, &DreamModRuntime::lua_require_package);
+        lua_setglobal(active_mod->state, "require");
+
         lua_newtable(active_mod->state);
         lua_newtable(active_mod->state);
         lua_pushcfunction(active_mod->state, &DreamModRuntime::lua_register_hook);
@@ -865,6 +985,12 @@ bool DreamModRuntime::load_mod(const String &package_path) {
         lua_pushcfunction(active_mod->state, &DreamModRuntime::lua_object_call);
         lua_setfield(active_mod->state, -2, "call");
         lua_setfield(active_mod->state, -2, "objects");
+
+        lua_newtable(active_mod->state);
+        lua_pushcfunction(active_mod->state, &DreamModRuntime::lua_package_read);
+        lua_setfield(active_mod->state, -2, "read");
+        lua_setfield(active_mod->state, -2, "package");
+
         lua_setglobal(active_mod->state, "dream");
 
         CharString chunk_name = (String("@") + id + "/" + entry_script).utf8();
