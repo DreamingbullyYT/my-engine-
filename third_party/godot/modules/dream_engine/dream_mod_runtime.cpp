@@ -5,6 +5,7 @@
 #include "core/io/file_access.h"
 #include "core/io/json.h"
 #include "core/object/class_db.h"
+#include "core/object/object_id.h"
 #include "core/os/os.h"
 #include "core/string/print_string.h"
 #include "modules/zip/zip_reader.h"
@@ -610,6 +611,72 @@ void DreamModRuntime::process_pending_unloads() {
     }
 }
 
+namespace {
+Object *dream_lua_get_object(lua_State *state, int index) {
+    if (!lua_isinteger(state, index)) return nullptr;
+    const int64_t id = static_cast<int64_t>(lua_tointeger(state, index));
+    if (id <= 0) return nullptr;
+    return ObjectDB::get_instance(ObjectID(static_cast<uint64_t>(id)));
+}
+} // namespace
+
+int DreamModRuntime::lua_object_is_valid(lua_State *state) {
+    lua_pushboolean(state, dream_lua_get_object(state, 1) != nullptr);
+    return 1;
+}
+
+int DreamModRuntime::lua_object_get(lua_State *state) {
+    Object *object = dream_lua_get_object(state, 1);
+    const char *property = luaL_checkstring(state, 2);
+    if (object == nullptr || property == nullptr) {
+        lua_pushnil(state);
+        return 1;
+    }
+    bool valid = false;
+    Variant value = object->get(StringName(String::utf8(property)), &valid);
+    if (!valid) {
+        lua_pushnil(state);
+    } else {
+        push_variant(state, value);
+    }
+    return 1;
+}
+
+int DreamModRuntime::lua_object_set(lua_State *state) {
+    Object *object = dream_lua_get_object(state, 1);
+    const char *property = luaL_checkstring(state, 2);
+    Variant value;
+    if (object == nullptr || property == nullptr || !read_variant(state, 3, value)) {
+        lua_pushboolean(state, false);
+        return 1;
+    }
+    bool valid = false;
+    object->set(StringName(String::utf8(property)), value, &valid);
+    lua_pushboolean(state, valid);
+    return 1;
+}
+
+int DreamModRuntime::lua_object_call(lua_State *state) {
+    Object *object = dream_lua_get_object(state, 1);
+    const char *method = luaL_checkstring(state, 2);
+    if (object == nullptr || method == nullptr) {
+        lua_pushnil(state);
+        return 1;
+    }
+    Array arguments;
+    for (int i = 3; i <= lua_gettop(state); ++i) {
+        Variant value;
+        if (!read_variant(state, i, value)) {
+            lua_pushnil(state);
+            return 1;
+        }
+        arguments.push_back(value);
+    }
+    Variant result = object->callv(StringName(String::utf8(method)), arguments);
+    push_variant(state, result);
+    return 1;
+}
+
 bool DreamModRuntime::load_mod(const String &package_path) {
     Ref<FileAccess> package_file = FileAccess::open(package_path, FileAccess::READ);
     if (package_file.is_null() || package_file->get_length() <= 0 ||
@@ -675,6 +742,18 @@ bool DreamModRuntime::load_mod(const String &package_path) {
     lua_pushcfunction(mod->state, &DreamModRuntime::lua_register_hook);
     lua_setfield(mod->state, -2, "register");
     lua_setfield(mod->state, -2, "hooks");
+
+    lua_newtable(mod->state);
+    lua_pushcfunction(mod->state, &DreamModRuntime::lua_object_is_valid);
+    lua_setfield(mod->state, -2, "is_valid");
+    lua_pushcfunction(mod->state, &DreamModRuntime::lua_object_get);
+    lua_setfield(mod->state, -2, "get");
+    lua_pushcfunction(mod->state, &DreamModRuntime::lua_object_set);
+    lua_setfield(mod->state, -2, "set");
+    lua_pushcfunction(mod->state, &DreamModRuntime::lua_object_call);
+    lua_setfield(mod->state, -2, "call");
+    lua_setfield(mod->state, -2, "objects");
+
     lua_setglobal(mod->state, "dream");
 
     lua_State *state = mod->state;
