@@ -148,6 +148,10 @@ jobs:
           path: |
             PMCS/CODE_MAP.md
             .codegraphcontext/dream-engine.cgc
+            ${{ runner.temp }}/codegraph-smoke.cgc
+            ${{ runner.temp }}/codegraph-smoke-index.log
+            ${{ runner.temp }}/codegraph-smoke-stats.log
+            ${{ runner.temp }}/codegraph-smoke-calls.log
           if-no-files-found: warn
           retention-days: 30
 
