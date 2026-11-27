@@ -71,3 +71,13 @@ These are proposed boundaries, not existing directories. Keep the first implemen
 
 ## Runtime flow
 Host starts Godot → Dream Runtime initializes → Mod Manager discovers and validates .dmod packages → dependency solver creates deterministic load order → GDScript entrypoints are loaded → each mod receives API/context → scripts register listeners/content/hooks → host invokes documented integration points → runtime routes calls and reports mod-attributed errors → save/network layers persist or sync explicitly registered data.
+
+## Autonomous mobile-colony expansion service (planned)
+The game host should provide a testable expansion planner used by mobile-colony mayors:
+- Fleet planning and ship construction requests, constrained by unlocked designs, technology, shipyard modules, production chains, workforce, materials, components, energy, fuel, and construction time.
+- Star-system exploration progression and a configurable first expansion-permission prompt after approximately 5–6 systems have been explored.
+- Explicit player permission state for autonomous planetary colonization; no silent expansion before approval.
+- A habitability evaluator that distinguishes ordinary habitable planets from extreme worlds and from engineered alternatives such as atmospheric floating habitats, orbital habitats, or settlements on suitable moons.
+- Expedition feasibility checks for transport, population, life support, food, water, power, landing/habitat infrastructure, and sustained logistics.
+- New-colony founding, assignment of local governance, auditable reports, and player revocation/intervention.
+These services must share the same economy, physics, and failure rules as player-directed activity. The approximate system-count threshold is a progression/balance setting, not a hard-coded universal constant.
