@@ -48,6 +48,7 @@ Exit: integration tests and sample mods exercise every public contract.
 - [ ] Vehicle/physics sample.
 - [ ] Demonstrate a system absent from the original host game.
 - [ ] Validate game-host integration contracts with examples for colony governance (advice → graduated delegation), NPC pilots, modular orbital stations, and mobile colony habitats.
+- [ ] Validate mobile-colony fleet planning/construction and permission-gated autonomous colonization after roughly 5–6 explored star systems, including habitability and expedition-supply checks.
 - [ ] Ensure host APIs allow modded station/habitat modules and do not hard-code only the base game's content.
 Exit: samples work without Godot source modifications or APK rebuild.
 
