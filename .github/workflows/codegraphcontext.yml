@@ -61,8 +61,8 @@ jobs:
             echo "# CodeGraphContext Code Map"
             echo
             echo "- Status: **NO_SOURCE_CODE_TO_INDEX**"
-            echo "- Commit: `$GITHUB_SHA`"
-            echo "- Generated: `$(date -u +'%Y-%m-%dT%H:%M:%SZ')`"
+            echo "- Commit: $GITHUB_SHA"
+            echo "- Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
             echo
             echo "The active repository tree currently contains project documentation only."
             echo "CodeGraphContext was installed successfully, but indexing is deferred until source files are added."
@@ -82,8 +82,8 @@ jobs:
           {
             echo "# CodeGraphContext Code Map"
             echo
-            echo "- Commit: `$GITHUB_SHA`"
-            echo "- Generated: `$(date -u +'%Y-%m-%dT%H:%M:%SZ')`"
+            echo "- Commit: $GITHUB_SHA"
+            echo "- Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
             echo "- Indexer: CodeGraphContext 0.5.1"
             echo
             echo "## Index statistics"
