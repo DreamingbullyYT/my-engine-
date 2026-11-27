@@ -8,6 +8,12 @@ on:
     paths:
       - "third_party/GODOT_SOURCE_COMMIT"
       - "third_party/godot/**"
+      - "third_party/lua-5.4.8/**"
+      - "third_party/LUA_SOURCE_COMMIT"
+      - "patches/godot/**"
+      - "third_party/lua-5.4.8/**"
+      - "third_party/LUA_SOURCE_COMMIT"
+      - "patches/godot/**"
       - "godot-project/**"
       - "PMCS/GODOT_MIGRATION.md"
       - ".github/workflows/godot-android-source.yml"
@@ -46,6 +52,11 @@ jobs:
           actual="$(tr -d '\r\n' < third_party/GODOT_SOURCE_COMMIT)"
           test "$actual" = "$expected"
           test -s third_party/godot/SConstruct
+          lua_expected="6e22fedb74cf0c9b6656e9fce8b7331db847c605"
+          lua_actual="$(tr -d '\r\n' < third_party/LUA_SOURCE_COMMIT)"
+          test "$lua_actual" = "$lua_expected"
+          test -s third_party/lua-5.4.8/onelua.c
+          test -s third_party/godot/modules/dream_engine/dream_mod_runtime.cpp
           if git ls-files -s third_party/godot | grep -q '^160000 '; then
             echo "Godot must be regular tracked files, not a gitlink."
             exit 1
@@ -63,6 +74,17 @@ jobs:
 
       - name: Install SCons build tools
         run: python -m pip install --disable-pip-version-check "scons==4.9.1" "zstandard>=0.23,<1"
+
+      - name: Apply Dream Engine Godot source patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          for patch in patches/godot/*.patch; do
+            test -s "$patch"
+            git apply --check "$patch"
+            git apply "$patch"
+          done
+          echo "Applied Dream Engine main-loop, physics, SceneTree and bounded ZIP hooks."
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
