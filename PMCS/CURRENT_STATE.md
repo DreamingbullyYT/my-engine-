@@ -86,3 +86,10 @@ The default first-launch path is a guided tutorial, then a free sandbox. The tut
 
 ## 2026-11-27 accepted performance/rendering design — D-016
 Accepted D-016 establishes adaptive hybrid building rendering and pixel-scale citizen visual LOD. Buildings remain logical entities while static visuals can be baked into dynamically sized sector caches and combined at distance; dynamic effects and selection data remain separate. Building animation/detail adapts gradually, with automatic and player-controlled quality preferences; selecting a distant building temporarily promotes only its visual detail. Citizens remain persistent individual simulation records; their pixel sprites and visible movement are simplified with distance and disappear only below the visual readability threshold. No gameplay state is deleted or aggregated merely because sprites are not drawn. Numeric thresholds and budgets remain unchosen pending Android ARM64 profiling. Documentation only; no source code or runtime behavior was implemented.
+
+
+## 2026-11-27 accepted terrain and underground-colony decision — D-017
+
+D-017 accepts a hybrid excavatable-terrain design. Planet surfaces use a simple, readable side-view style with minimal vegetation. Players can excavate persistent, traversable tunnels and chambers and establish underground colonies; nearby/relevant spaces receive the fidelity needed for gameplay, while distant or irrelevant details may be simplified. Terrain edits invalidate only affected regions rather than rebuilding an entire planet. Authoritative terrain, collision, excavation topology, resources, and structures remain separate from visual caches.
+
+Asteroid mining remains a distinct system. Structural stability, cave-ins, support materials, detailed geology, and exact excavation mechanics remain open design questions. Numeric terrain resolution and performance budgets await Android ARM64 profiling. Documentation only; no terrain, mining, or underground-colony implementation was added.
