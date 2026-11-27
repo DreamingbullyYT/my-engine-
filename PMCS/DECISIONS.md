@@ -168,3 +168,58 @@ Consequences:
 - Excavation still updates authoritative terrain geometry/topology, collision/navigation, deposits, and affected local visual data as specified by D-017.
 - This decision does not remove resource differences between materials or deposits.
 - This is a design decision only; no excavation or terrain implementation is implied.
+
+
+## D-019 — Polar cell terrain with persistent underground topology
+Status: ACCEPTED — 2026-11-27.
+
+The planet surface keeps its polar/circumferential coordinate model for radial building placement. Underground terrain uses a local cell grid addressed by angular sector and radial depth relative to the planet surface. Excavated cells form persistent connected passages and chambers; topology and stable cell coordinates, not rendered pixels, are authoritative.
+
+The underground grid is not limited to the old proposal of exactly 12 depth layers. Depth is data-driven and bounded only by explicit world-generation/gameplay limits established later. The grid is chunked/sectorized so excavation updates only affected cells, collision/navigation, deposits, and visual caches. Surface building slots and underground excavation cells are related by coordinates but remain distinct data layers.
+
+Rationale:
+- Resolve the conflict between fixed-depth surface slots and free traversable tunnels.
+- Keep terrain deterministic, saveable, and straightforward to test.
+- Avoid full-resolution voxel simulation and global planet rebuilds.
+
+Consequences:
+- Remove the fixed 12-layer excavation assumption from PLAN.md.
+- Use integer cell/sector coordinates for authoritative excavation and connectivity.
+- Cell size, angular resolution, chunk dimensions, and maximum depth remain profiling/configuration values, not fixed here.
+- This is a design decision only; no terrain implementation is implied.
+
+## D-020 — First playable release scope
+Status: ACCEPTED — 2026-11-27.
+
+The first playable release (v1) is deliberately limited to one starting planet, its Moon, nearby asteroids, and a basic functional orbital station. It must include the core colony loop, construction/economy/research, a first spacecraft, basic orbital flight, exploration of the Moon/nearby asteroids, and the minimum station functions needed to make the first orbital infrastructure useful.
+
+Interstellar travel, multiple star systems, autonomous interstellar fleets, permission-gated multi-system colonization, and full-scale mobile-colony megaships are later-release (v2+) features. They remain part of the long-term game vision and accepted decisions D-011–D-014; this scope decision postpones them rather than deleting or redesigning them. Advanced station modules may also arrive incrementally after the basic station.
+
+Rationale:
+- Deliver a coherent, testable game before attempting the entire intended universe.
+- Reduce early CPU, memory, content, and balancing risks on Android.
+- Preserve the complete long-term vision while making v1 achievable.
+
+Consequences:
+- Roadmap milestones must distinguish the first playable v1 from later expansion.
+- Do not implement interstellar simulation or megaship-scale colony simulation as a v1 prerequisite.
+- The exact v1 content list can be refined, but it may not silently expand to include the postponed systems.
+- This is a scope decision only; no gameplay implementation is implied.
+
+## D-021 — Default flight assistance and first-launch language
+Status: ACCEPTED — 2026-11-27.
+
+Rocket flight assistance is enabled by default for new players. It provides optional guidance/stabilization and suggested maneuvers while preserving the same physics, fuel costs, and mission constraints. Manual control is available immediately and is never level-gated. Players can change assistance at any time.
+
+The game automatically selects Romanian or English from the device language when a supported locale is detected. If the device language is unsupported, English is used. Do not force a language-selection dialog on first launch; language can be changed at any time in Settings. Romanian and English are the minimum supported languages for the initial release.
+
+Rationale:
+- Give mobile newcomers a usable default without taking away direct control.
+- Avoid an unnecessary first-launch interruption.
+- Support the user's two primary target languages while retaining an explicit override.
+
+Consequences:
+- Assistance changes control guidance only; it must not alter physics or silently automate consequential actions.
+- Manual controls remain immediately accessible.
+- Localization fallback and override behavior must be covered by tests.
+- This is a UX decision only; no UI implementation is implied.
