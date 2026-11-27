@@ -45,3 +45,22 @@ Consequences:
 - Direct access to game internals is permitted by design but is not a stable compatibility guarantee.
 - Historical Lua experiments and CodeGraphContext Lua smoke fixtures remain historical only.
 - Runtime script loading/execution must be verified on exported Android ARM64 before claiming support.
+
+
+## D-011 — Gradual mayor autonomy based on player oversight
+Status: ACCEPTED — 2026-11-27.
+The mayor begins mainly as an adviser, recommending improvements and warning about problems. As the player spends more in-game time away from a colony or gives it less direct attention, the mayor progressively assumes more routine management. This is a gradual response to reduced oversight, not a mandatory mayor appointment or a simple permanent autonomy toggle.
+
+The mayor must obey actual resource, workforce, infrastructure, production, and logistics constraints. The player can return and intervene. Reports should explain what the mayor recommended, what they did, and why. A colony can still fail or be destroyed; future enemies and other severe threats must remain capable of causing loss. The mayor is not an invulnerability system.
+
+## D-012 — Modular orbital settlements and mobile colony ships
+Status: ACCEPTED — 2026-11-27.
+The space-settlement design includes small functional satellites/probes, large modular orbital stations, and very large mobile colony ships/megaships. Stations support docking and player-installed modules. A mobile colony ship can function as a planetless settlement if equipped with sufficient life support, power, food production, storage, population facilities, and other required modules. Asteroid bases, orbital habitats, industrial platforms, and shipyards may extend this family.
+
+Rationale: space infrastructure should support more than observation satellites and should allow civilization to exist and expand without requiring every settlement to be founded on a planet.
+
+Consequences:
+- Keep satellites, stations, and mobile colony ships as distinct entity classes or capability profiles, not one decorative satellite type.
+- Make stations and colony ships modular and extensible through the game host and mod API.
+- Their survival and operation depend on real installed systems, resources, and logistics; no free power, supplies, or guaranteed safety.
+- These are design requirements only; no implementation is implied.
