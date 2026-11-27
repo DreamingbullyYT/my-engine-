@@ -2,72 +2,67 @@
 
 Status: requirements/proposal only. No runtime implementation exists in the current branch.
 
-## .dmod package
-Proposed ZIP container. Required manifest fields:
-- id: stable namespaced identifier.
-- name: display name.
-- version: semantic version.
-- api_version: compatible Dream API range.
-- entrypoint: script entry file.
-- description, authors, license.
+## Accepted direction
+- GDScript is the primary language for ordinary .dmod mods.
+- .dmod is a ZIP package containing GDScript, JSON data, scenes, and assets; unpacked folders are supported for development.
+- The base game is itself a mod and uses the same API wherever practical.
+- Mods may directly access Godot APIs, game autoloads, and internal state. This is intentionally trusted-code execution, not a sandbox.
+- Godot remains official and unmodified (4.7.x). Dream-specific native integration stays in a separate C++ GDExtension.
+- C++ native extensions are optional advanced features. Lua is not part of the planned runtime.
 
-Optional fields:
-- dependencies and version ranges.
-- optional_dependencies.
-- conflicts.
-- load_after / load_before.
-- capabilities requested from the host.
-- resource namespaces.
+## Package layout
+A .dmod archive contains mod.json, optional main.gd, scripts/, data/, scenes/, textures/, sounds/, lang/, optional config.json, and optional LICENSE. The manifest defines stable id, name, semantic version, integer api_version, entry script, authors, description, dependencies/version constraints, optional dependencies, conflicts, and load-order hints.
 
-Suggested contents: manifest.json, scripts/, data/, scenes/, assets/, LICENSE.
+On Android, discover mods in user://mods/ and support importing a .dmod through the system file picker into app-private storage. Validate manifest, archive paths, and resource sizes before loading. Reject path traversal and malformed/oversized entries. Never execute scripts during package validation.
+
+## Script execution and trust
+GDScript is loaded/compiled by Godot at runtime from package source. Ordinary script/data/assets mods should not require PCK or APK rebuild. This must be proven in an exported Android build before it is considered implemented.
+
+This is not a security sandbox. Mod scripts can use Godot APIs and objects available to the project, including direct access to game autoloads and internal state. Internal fields are unstable across versions; the documented Dream Mod API is the stable compatibility contract.
+
+The manager must display a clear trusted-code warning and require explicit user activation. Do not automatically download or activate executable mods. Attribute errors to mod ID and source file; provide disable/quarantine controls.
+
+## Lifecycle and loading
+Provisional callbacks: on_load(api), on_enable(), on_disable(), on_unload(), on_save(), on_world_ready(), and optional migration callbacks. Finalize signatures through executable tests.
+
+Resolve dependencies and load order deterministically; load base first. Detect missing dependencies, version mismatches, conflicts, duplicate IDs, and cycles. A mod failure should be logged and isolated where possible.
 
 ## API concepts
-
-### Lifecycle
-Provisional callbacks: on_load, on_enable, on_disable, on_unload, on_save, on_world_ready. Exact signatures remain undecided until implemented and tested.
-
-### Event bus
-Stable event IDs, typed payloads, subscribe/unsubscribe, deterministic priority/order, explicit cancellation semantics, and mod-attributed error handling.
+### Events
+Stable event IDs, documented/typed payloads, subscribe/unsubscribe, deterministic priority/order, cancellation semantics, and mod-attributed error handling. Support game-defined and mod-defined namespaced events.
 
 ### Registries
-Namespaced IDs, duplicate detection, validation, registration phases, and extensible registry types for entities, items, blocks, components, recipes, effects, and game-defined content. Registries must not be a closed hardcoded list.
+Namespaced IDs, duplicate detection, validation, registration phases, patch/remove/query operations, and extensible registry types. Preserve unknown data fields for compatible mod-to-mod data exchange.
 
 ### Hooks
-Before, Around, Replace, After. Stable target IDs, typed signatures, priority/order, owner identity, explicit replaceable targets, recursion protection, and diagnostics.
+Before, Around/Wrap, Replace/Override, and After. Stable target IDs, documented signatures, priority/order, owner ID, diagnostics, and recursion protection. Only explicitly registered targets are hookable. Multiple wrappers compose deterministically.
 
-### Capabilities
-Mods declare host capabilities they need. Potential families: world read/write, entity spawn/despawn, scene/resource registration, input, save-data namespaces, UI, physics, navigation, networking/session, audio, and rendering. Host games may deny or omit capabilities.
+### Game access
+Mods can directly access game autoloads and internal state by design. The stable ModAPI facade should provide versioned helpers for common operations: world/colony, resources, citizens, buildings, research, rockets, universe, markets, missions, UI, audio, assets, commands, and mod-owned save/config data.
+
+### UI, assets, commands
+Allow panels, tabs, buttons, dialogs, themes, commands, texture/sound overrides, and custom assets. Define deterministic override priority and Android touch behavior.
+
+### Mod communication
+Support optional dependencies, public service registration/lookup, namespaced events/messages, and documented contracts. Direct access to another mod's private globals is not a stable compatibility promise.
+
+### Entirely new systems
+Mods must be able to implement systems absent from the host, such as enemy AI, multiplayer, vehicles, crafting, quests, magic, or inventory. This requires usable Godot/game primitives and integration points. Multiplayer additionally requires a host-provided session, authority, and networking path; the mod API cannot invent a network transport.
 
 ### Networking
-Mod-defined namespaced messages, schema validation, explicit client/server authority, size limits, version negotiation, and entity/state sync helpers. Never assume a single-player game has a session/network integration.
-
-### Mod-to-mod communication
-Public service registration/lookup, typed messages/events, optional dependencies, and no default access to another mod's private globals.
-
-## Entirely new gameplay systems
-The API must allow a mod to implement systems absent from the original game, such as enemy AI, multiplayer, vehicles, crafting, quests, magic, or inventory. This requires composing exposed host primitives and registering mod-owned systems. Multiplayer additionally requires a host-approved authority/session/network path.
+When host networking exists, define mod-owned namespaced messages, schema validation, authority, size limits, version negotiation, and entity/state sync helpers. Do not claim multiplayer support until two real clients are tested.
 
 ## Compatibility
-Version engine, Dream Runtime, and Mod API independently. Use semantic versioning for public API, explicit manifest compatibility ranges, and a deprecation policy. Never silently reinterpret old manifest fields.
-
-## Security
-- Reject path traversal and unsafe ZIP extraction.
-- Enforce package/resource size limits.
-- Do not execute code during package validation.
-- Attribute script errors to mod ID and source.
-- Provide disable/quarantine controls.
-- Lua VM isolation is not a security sandbox by itself.
-- Native extensions are trusted code.
-- Review current Android/store policies before enabling downloads of executable native code.
+Version Godot integration, Dream Runtime, and Dream Mod API independently. Use integer api_version or a documented manifest range, semantic versioning for public API releases, explicit migration behavior, and deprecation policy. Never silently reinterpret old fields.
 
 ## Acceptance tests
-1. Install and execute a script-only mod without APK rebuild.
-2. Reject malformed manifests and archive path traversal.
-3. Resolve dependencies; detect cycles and conflicts.
-4. Register/query a custom registry entry.
-5. Subscribe/unsubscribe to events.
-6. Test all four hook stages on explicitly exposed targets.
-7. Add an enemy and AI using documented script APIs.
+1. Install and execute a GDScript-only .dmod on Android without APK rebuild.
+2. Reject malformed manifests, unsafe ZIP paths, oversized entries, and duplicate IDs.
+3. Resolve dependencies and detect cycles/conflicts deterministically.
+4. Register/query/patch/remove a custom registry entry.
+5. Verify event subscription, cancellation, and priority order.
+6. Test Before/Around/Replace/After on exposed hook targets.
+7. Add enemy AI using documented game APIs.
 8. Let two mods communicate through public contracts.
-9. Reload a script mod with defined state semantics.
-10. Connect two clients and sync a mod-owned entity in a host exposing networking.
+9. Reload a script mod with defined state/save semantics.
+10. Connect two clients and sync a mod-owned entity in a host with networking.
