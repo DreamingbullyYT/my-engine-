@@ -93,3 +93,11 @@ The game-specific design is specified in dedicated PMCS documents rather than be
 - SPACE_EXPANSION.md: permission-gated expansion and habitability checks.
 - PERFORMANCE_AND_SIMULATION.md: simulation fidelity tiers, save integrity, time policy, Android lifecycle, and profiling.
 These are design contracts only. Implementation must be proven with tests and device evidence.
+
+
+## Modular implementation contract — D-022
+The game is modular by default. The concrete gameplay/module catalog, suggested source layout, internal module structure, dependency direction, state ownership, file-growth rules, test requirements, and module-memory policy are specified in **PMCS/MODULES.md**. Follow that document whenever adding or changing game code.
+
+At minimum: each domain owns its authoritative state and rules; UI does not own gameplay; rendering is presentation-only; physics and simulation are shared services; modules use explicit contracts and avoid circular dependencies; the bootstrap only wires components; and no all-purpose manager or catch-all script may accumulate unrelated game systems. Prefer cohesive feature modules and small changes over repeated patches to a central file. Do not create empty future modules during M1, and do not split trivial functions into needless files.
+
+The existing module list in this document (Dream Runtime, Mod Manager, API, events, registries, hooks, networking, and Android integration) describes runtime/modding boundaries. PMCS/MODULES.md expands the catalog to the actual colony, planet, vehicle, physics, exploration, infrastructure, automation, rendering, save, and UI game domains. All are plans until source and tests exist.
