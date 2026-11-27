@@ -58,7 +58,7 @@ private:
     uint32_t dispatch_depth = 0;
 
     static int lua_register_hook(lua_State *state);
-    static int lua_next(lua_State *state);
+    static int lua_call_next(lua_State *state);
     static void push_variant(lua_State *state, const Variant &value, int depth = 0);
     static bool read_variant(lua_State *state, int index, Variant &value);
     static void push_dictionary(lua_State *state, const Dictionary &dictionary);
