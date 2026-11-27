@@ -32,6 +32,10 @@ The old DMod requirement remains mandatory:
 - Native code executes in-process without a sandbox or capability enforcement. It has the application's process privileges and can crash or corrupt the engine. Only trusted packages should be installed.
 - GDExtension remains useful for its public supported interface but is not treated as unrestricted private-engine access.
 - The active implementation direction is a built-in Dream Engine C++ Godot module with an append-only versioned native ABI, direct access to live engine objects, owner-tracked native hooks and explicit `Before`, `Around`, `Replace`, and `After` stages.
+- A `.dmod` is the single package format for `lua`, `native`, and `hybrid` mods. Lua-only mods are the normal authoring path: source `.lua` files are loaded by an embedded Lua runtime, so authors do not need a compiler, bytecode, `.so`, on-device compilation or APK rebuild.
+- Lua and native mods share the same hook-point namespace and all four hook stages. Lua callbacks run only at hook points with a safe, documented thread/phase contract; synchronous arbitrary-thread hooks remain native-only unless a safe Lua execution model is proven.
+- Native/hybrid packages may contain prebuilt platform/ABI-specific libraries. The SDK should build and package these automatically for advanced authors; the internal `.so` layout is not something ordinary Lua modders manage.
+- The accepted format, Lua runtime direction, hook semantics, lifecycle and test requirements are specified in [DMOD_LUA_ARCHITECTURE.md](DMOD_LUA_ARCHITECTURE.md).
 - Hook points must be integrated into real engine lifecycle/scene/physics/render/resource paths. A registry without engine call sites is not considered deep-hook completion.
 - Module unload must deactivate hooks and call mod shutdown before unloading its shared library. Mods are responsible for stopping their own threads and releasing owned resources before shutdown returns.
 
@@ -45,12 +49,13 @@ The workflow compiles the Android debug template from the pinned Godot source wi
 
 ## Remaining foundation work
 
-1. Vendor the full Godot source directly into this repository at the SHA above and remove the `.gitmodules` entry.
-2. Build the first in-tree Dream Engine C++ module and connect real main-loop/physics/render/scene/resource hook sites.
-3. Integrate the native mod loader, package/manifest/dependency validation, raw engine interfaces, ownership and unload lifecycle.
-4. Build and install fresh Android ARM64 APKs from the vendored/modified source.
-5. Validate background/resume, rotation, touch, GPU output, audio and crash/log behavior on the phone.
-6. Extend and harden engine systems by relying on Godot's existing 2D/3D renderer, physics, animation, UI, assets and audio rather than duplicating them.
-7. Add full editor/tooling and validate with different game workloads.
+1. Build the first in-tree Dream Engine C++ module from the directly vendored Godot source.
+2. Connect real main-loop/physics/render/scene/resource hook sites and establish the shared owner-aware hook dispatcher.
+3. Embed Lua 5.4.x, extend `.dmod` manifests for `lua`/`native`/`hybrid`, and load Lua source directly from packages.
+4. Add Lua and native adapters to the shared `Before`/`Around`/`Replace`/`After` hook pipeline, with lifecycle/error/unload tests.
+5. Integrate the native mod loader, package/dependency validation, raw engine interfaces, ownership and unload lifecycle.
+6. Build and install fresh Android ARM64 APKs from the modified source; validate background/resume, rotation, touch, GPU output, audio and crash/log behavior on the phone.
+7. Extend and harden engine systems by relying on Godot's existing 2D/3D renderer, physics, animation, UI, assets and audio rather than duplicating them.
+8. Add full editor/tooling and validate with different game workloads.
 
 CI compilation is not a substitute for phone testing. Do not mark a feature complete without build/test evidence.
