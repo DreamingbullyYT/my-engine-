@@ -75,6 +75,7 @@ private:
     static int lua_require_package(lua_State *state);
     static int lua_package_read(lua_State *state);
     static int load_script_chunk_from_package(lua_State *state, const char *entry_path);
+    static int load_module_chunk_from_package(lua_State *state, const char *module_name);
     static int lua_object_is_valid(lua_State *state);
     static int lua_object_get(lua_State *state);
     static int lua_object_set(lua_State *state);
