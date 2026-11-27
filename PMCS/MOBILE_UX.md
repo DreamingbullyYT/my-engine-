@@ -1,9 +1,18 @@
 # Mobile UX and Accessibility
 
-Status: PLANNED design proposal for review; not an accepted new gameplay decision yet.
+Status: PLANNED design specification. The first-launch flow below is ACCEPTED by D-015; other UX details remain proposals unless separately accepted.
 
 ## Product principle
 The game may have deep simulation, but the default mobile experience must be easy to understand and operate. Complexity is available on demand, not forced on every player. Never remove simulation depth merely to simplify the interface; instead expose it progressively and automate repetitive work.
+
+## First-launch experience — ACCEPTED (D-015)
+- The default first-launch path is a guided tutorial followed by a completely open sandbox.
+- The tutorial teaches essential systems gradually through practical actions rather than overwhelming the player with every mechanic at once.
+- The tutorial is skippable. Skipping it leads directly to the same free sandbox; it does not disable content or advanced controls.
+- The tutorial is replayable later from the game's UI.
+- Tutorial completion is not a campaign gate, progression level, or prerequisite for advanced mechanics.
+- After the tutorial, there are no mandatory campaign objectives; the player chooses their own goals.
+- Exact tutorial missions, pacing, and lesson content remain to be designed and tested.
 
 ## Progressive disclosure
 - Start with a small number of clear actions and essential indicators.
@@ -13,8 +22,6 @@ The game may have deep simulation, but the default mobile experience must be eas
 - Use contextual explanations: explain a value where it appears, not only in a separate manual.
 
 ## Beginner and advanced play
-- Default onboarding teaches one useful action at a time: inspect colony, build housing/food, assign or enable worker automation, research, build a basic rocket, launch, and reach a simple orbital objective.
-- Tutorials are skippable, replayable, and do not block sandbox play.
 - Basic controls use sensible defaults, recommended designs, automatic worker assignment, suggested flight maneuvers, and clear mission feasibility feedback.
 - Advanced controls expose manual worker priorities, production-chain details, part-level craft design, staging configuration, orbital parameters, maneuver nodes, and detailed telemetry.
 - Do not lock advanced mechanics behind arbitrary player levels. Let users open advanced controls when ready.
@@ -60,8 +67,8 @@ The game may have deep simulation, but the default mobile experience must be eas
 - Use summaries and on-demand detail views for large populations and fleets.
 - Keep touch input responsive during simulation, loading, and time warp; expose progress and allow safe cancellation where possible.
 
-## Review questions before acceptance
-- Should the first launch use a guided scenario, a free sandbox, or offer both?
+## Remaining open UX questions
 - Should assisted controls be the default for rocket flight, with manual control available immediately?
 - Which UI language should be selected automatically, and should the user be asked on first launch?
-These are open product choices; do not silently mark them as accepted.
+
+These remain open product choices; do not silently mark them as accepted.
