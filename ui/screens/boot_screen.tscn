@@ -47,12 +47,20 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("PanelBackground")
 
-[node name="Content" type="VBoxContainer" parent="Panel"]
+[node name="Scroll" type="ScrollContainer" parent="Panel"]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
+
+[node name="Content" type="VBoxContainer" parent="Panel/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
 alignment = 1
 theme_override_constants/separation = 9
 
-[node name="Title" type="Label" parent="Panel/Content"]
+[node name="Title" type="Label" parent="Panel/Scroll/Content"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
 theme_override_font_sizes/font_size = 30
@@ -148,7 +156,7 @@ text = "Ready. Test touch and external scripts."
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[connection signal="pressed" from="Panel/Content/TestTouchButton" to="." method="_on_test_touch_pressed"]
+[connection signal="pressed" from="Panel/Scroll/Content/TestTouchButton" to="." method="_on_test_touch_pressed"]
 [connection signal="pressed" from="Panel/Content/TestExternalScriptButton" to="." method="_on_test_external_script_pressed"]
 [connection signal="pressed" from="Panel/Content/InstallSampleModButton" to="." method="_on_install_sample_mod_pressed"]
 [connection signal="pressed" from="Panel/Content/DisableSampleModButton" to="." method="_on_disable_sample_mod_pressed"]
