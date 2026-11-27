@@ -2,14 +2,13 @@ diff --git a/third_party/godot/main/main.cpp b/third_party/godot/main/main.cpp
 --- a/third_party/godot/main/main.cpp
 +++ b/third_party/godot/main/main.cpp
 @@ -31,2 +31,3 @@
- #include "main.h"
+-#include "main.h"
++#include "main.h"
 +#include "modules/dream_engine/dream_mod_runtime.h"
  
-diff --git a/third_party/godot/main/main.cpp b/third_party/godot/main/main.cpp
---- a/third_party/godot/main/main.cpp
-+++ b/third_party/godot/main/main.cpp
-@@ -4907,2 +4907,25 @@
- int Main::iterating = 0;
+@@ -4907,2 +4908,25 @@
+-int Main::iterating = 0;
++int Main::iterating = 0;
 +static void dream_main_loop_process_original(void *p_context, Dictionary &r_context) noexcept {
 +	MainLoop *main_loop = static_cast<MainLoop *>(p_context);
 +	r_context["exit"] = main_loop->process(static_cast<double>(r_context.get("delta", 0.0)));
@@ -34,10 +33,7 @@ diff --git a/third_party/godot/main/main.cpp b/third_party/godot/main/main.cpp
 +}
 +#endif
  
-diff --git a/third_party/godot/main/main.cpp b/third_party/godot/main/main.cpp
---- a/third_party/godot/main/main.cpp
-+++ b/third_party/godot/main/main.cpp
-@@ -5000,3 +5000,7 @@
+@@ -5000,3 +5024,7 @@
  		GodotProfileZoneGrouped(_physics_zone, "physics_process");
 -		if (OS::get_singleton()->get_main_loop()->physics_process(physics_step * time_scale)) {
 +		Dictionary dream_physics_process_context;
@@ -46,21 +42,21 @@ diff --git a/third_party/godot/main/main.cpp b/third_party/godot/main/main.cpp
 +		DreamModRuntime::dispatch_hook("godot.main_loop.physics_process", dream_physics_process_context, dream_main_loop_physics_process_original, OS::get_singleton()->get_main_loop());
 +		if (static_cast<bool>(dream_physics_process_context.get("exit", false))) {
  #ifndef PHYSICS_3D_DISABLED
-@@ -5034,3 +5038,5 @@
+@@ -5034,3 +5062,5 @@
  		PhysicsServer3D::get_singleton()->end_sync();
 -		PhysicsServer3D::get_singleton()->step(physics_step * time_scale);
 +		Dictionary dream_physics_3d_context;
 +		dream_physics_3d_context["delta"] = physics_step * time_scale;
 +		DreamModRuntime::dispatch_hook("godot.physics.server3d.step", dream_physics_3d_context, dream_physics_server_3d_step_original, PhysicsServer3D::get_singleton());
  #endif // PHYSICS_3D_DISABLED
-@@ -5040,3 +5046,5 @@
+@@ -5040,3 +5070,5 @@
  		PhysicsServer2D::get_singleton()->end_sync();
 -		PhysicsServer2D::get_singleton()->step(physics_step * time_scale);
 +		Dictionary dream_physics_2d_context;
 +		dream_physics_2d_context["delta"] = physics_step * time_scale;
 +		DreamModRuntime::dispatch_hook("godot.physics.server2d.step", dream_physics_2d_context, dream_physics_server_2d_step_original, PhysicsServer2D::get_singleton());
  #endif // PHYSICS_2D_DISABLED
-@@ -5061,3 +5069,7 @@
+@@ -5061,3 +5093,7 @@
  	GodotProfileZoneGrouped(_profile_zone, "process");
 -	if (OS::get_singleton()->get_main_loop()->process(process_step * time_scale)) {
 +	Dictionary dream_process_context;
@@ -73,13 +69,11 @@ diff --git a/third_party/godot/scene/main/scene_tree.cpp b/third_party/godot/sce
 --- a/third_party/godot/scene/main/scene_tree.cpp
 +++ b/third_party/godot/scene/main/scene_tree.cpp
 @@ -31,2 +31,3 @@
- #include "scene_tree.h"
+-#include "scene_tree.h"
++#include "scene_tree.h"
 +#include "modules/dream_engine/dream_mod_runtime.h"
  
-diff --git a/third_party/godot/scene/main/scene_tree.cpp b/third_party/godot/scene/main/scene_tree.cpp
---- a/third_party/godot/scene/main/scene_tree.cpp
-+++ b/third_party/godot/scene/main/scene_tree.cpp
-@@ -155,3 +155,12 @@
+@@ -155,3 +156,12 @@
  void SceneTree::node_added(Node *p_node) {
 -	emit_signal(node_added_name, p_node);
 +	struct NodeAddedCall {
@@ -93,7 +87,7 @@ diff --git a/third_party/godot/scene/main/scene_tree.cpp b/third_party/godot/sce
 +	context["node_name"] = p_node->get_name();
 +	DreamModRuntime::dispatch_hook("godot.scene.node_added", context, +[](void *p_data, Dictionary &) noexcept { auto *call = static_cast<NodeAddedCall *>(p_data); call->tree->emit_signal(call->tree->node_added_name, call->node); }, &call);
  }
-@@ -163,3 +172,12 @@
+@@ -163,3 +173,12 @@
  	}
 -	emit_signal(node_removed_name, p_node);
 +	struct NodeRemovedCall {
