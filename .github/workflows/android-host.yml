@@ -2,15 +2,17 @@ name: Android host APK
 
 on:
   push:
+    branches:
+      - main
     paths:
       - "android-host/**"
       - "engine/**"
       - "CMakeLists.txt"
-      - "PMCS/**"
-      - "third_party/**"
-      - "THIRD_PARTY_NOTICES.md"
-      - ".github/workflows/android-host.yml"
+      - "third_party/wgpu-native/**"
+      - "third_party/webgpu-headers/**"
   pull_request:
+    branches:
+      - main
     paths:
       - "android-host/**"
       - "engine/**"
