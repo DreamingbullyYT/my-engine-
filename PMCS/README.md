@@ -11,7 +11,7 @@ This directory is the durable memory for humans and AI agents. It prevents repea
 1. CURRENT_STATE.md — verified repository state.
 2. VISION.md — goals and non-goals.
 3. ARCHITECTURE.md — system boundaries and data flow.
-4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), D-012 (modular orbital settlements/mobile colony ships), D-013 (mobile-colony fleet autonomy and permission-gated expansion), and D-014 (reference-guided colony and flight design).
+4. DECISIONS.md — accepted decisions, including D-010 (GDScript mods), D-011 (gradual mayor autonomy), D-012 (modular orbital settlements/mobile colony ships), D-013 (mobile-colony fleet autonomy and permission-gated expansion), D-014 (reference-guided colony and flight design), and D-015 (guided tutorial followed by free sandbox).
 5. MODDING_API.md — .dmod package and GDScript API requirements.
 6. GAMEPLAY.md — citizens, colony economy, buildings, research, policies, and needs.
 7. ROCKETS_AND_PHYSICS.md — part-based vehicles, propulsion, orbital and atmospheric flight.
@@ -20,7 +20,7 @@ This directory is the durable memory for humans and AI agents. It prevents repea
 10. SPACE_INFRASTRUCTURE.md — satellites, stations, megaships, and habitats.
 11. SPACE_EXPANSION.md — mobile-colony fleet expansion and habitability rules.
 12. PERFORMANCE_AND_SIMULATION.md — simulation tiers, saves, Android lifecycle, and budgets.
-13. MOBILE_UX.md — progressive complexity, touch-first UX, onboarding, and accessibility (planned proposal).
+13. MOBILE_UX.md — progressive complexity, touch-first UX, onboarding, and accessibility; first-launch flow accepted in D-015, other details still planned.
 14. ROADMAP.md — implementation sequence and exit gates.
 15. BUILD_AND_TEST.md — CI and validation policy.
 16. AI_RULES.md — mandatory agent workflow.
@@ -32,6 +32,9 @@ D-014 adapts colony-management principles from The Final Earth 2 and part-based 
 
 ## Current game-design clarifications
 The colony remains central. A mayor begins as an adviser and progressively takes on routine management as player oversight decreases; colonies can still fail or be destroyed. Space settlements include functional satellites, large modular orbital stations, and mobile colony ships that can act as planetless colonies. Mobile-colony mayors can plan fleets and, after player permission at roughly 5–6 explored star systems, autonomously found colonies only on genuinely habitable worlds or through explicitly engineered habitat solutions. See D-011 through D-013.
+
+## Mobile onboarding decision
+The default first-launch path is a guided tutorial followed by a free sandbox. The tutorial can be skipped or replayed later; skipping grants immediate access to the same sandbox and does not lock advanced mechanics. There is no mandatory campaign after the tutorial. See D-015 and MOBILE_UX.md.
 
 ## Core modding decision
 Ordinary .dmod mods use GDScript, JSON, scenes, and assets. Lua is not part of the planned runtime. Mods are trusted code with direct Godot/game access by design; there is no script sandbox. See D-010 and MODDING_API.md.
@@ -81,5 +84,4 @@ For every meaningful change:
 2026-11-27: D-011 and D-012 record gradual mayor autonomy and modular orbital settlements/mobile colony ships. Documentation only; no gameplay implementation.
 2026-11-27: D-013 records mobile-colony fleet autonomy and player-approved planetary expansion after roughly 5–6 explored star systems, restricted to genuinely habitable worlds or explicitly engineered habitat alternatives. Documentation only; no gameplay implementation.
 2026-11-27: D-014 establishes reference-guided colony/flight design and creates detailed gameplay, rocket physics, universe, automation, infrastructure, and performance specifications. Documentation only; no gameplay implementation.
-
-2026-11-27: PMCS review identified mobile usability as an under-specified area. MOBILE_UX.md added as a proposal, not yet an accepted decision. Stale plan wording on time progression and PC testing is being reconciled with accepted Android/CI and D-014 decisions.
+2026-11-27: D-015 accepts a guided first-launch tutorial followed by free sandbox access; the tutorial is skippable/replayable and does not gate advanced mechanics. Documentation only; no gameplay implementation.
