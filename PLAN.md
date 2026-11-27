@@ -36,7 +36,7 @@ Mecanicile nu sunt protejate; codul, grafica, sunetele, numele și interfața su
 
 ## 3. Referințe de design [cercetat, rezumat]
 
-**The Final Earth 2** (referință de design pentru simularea coloniilor; adaptare, nu copiere): resurse (lemn, piatră, mâncare, cunoștințe, piese, metale, cipuri, grafen, combustibil); cetățeni simulați care își găsesc joburi; **fericirea** schimbă viteza de lucru (0,25x la 0 până la 2,0x la 100, 2,5x cu festivaluri) și vine din 5 surse: casă, sens, distracție, educație, sănătate; case cu compromisuri; arbore de deblocare; îmbunătățiri pe clădire; politici (City Hall); festivaluri; facțiuni. Slăbiciuni: repetitiv, lume mică și statică.
+**The Final Earth 2** (referință de design pentru simularea coloniilor; adaptare, nu copiere): resurse (lemn, piatră, mâncare, cunoștințe, piese, metale, cipuri, grafen, combustibil); cetățeni simulați care își găsesc joburi; **fericirea** schimbă viteza de lucru (0,25x la 0 până la 2,0x la 100, 2,5x cu festivaluri) și vine din 5 surse: casă, sens, distracție, educație, sănătate; case cu compromisuri; arbore de deblocare; îmbunătățiri pe clădire; politici (City Hall); festivaluri; facțiuni. Slăbiciuni: repetitiv, lume mică și statică. Valorile numerice de fericire sunt doar date de referință din jocul analizat, nu valori adoptate pentru Dream Engine.
 
 **Spaceflight Simulator** (referință de design pentru construcția și zborul navelor; adaptare, nu copiere): construire din piese, fizică orbitală reală, hartă + time warp, reintrare cu încălzire, parașute, andocare, transfer de combustibil, undo și revenire. Slăbiciuni: fără scop economic, nimic nu se întoarce în bază.
 
@@ -119,7 +119,7 @@ Primarul nu începe ca administrator complet și nu trebuie numit obligatoriu de
 ### 5.5 Timpul coloniilor îndepărtate și rapoarte de revenire [propunere]
 
 - Coloniile active pe ecran folosesc simularea detaliată. Coloniile îndepărtate folosesc simulare economică agregată, dar păstrează aceleași reguli, costuri, stocuri, populație și limite de producție.
-- Timpul jocului avansează când jucătorul explorează în altă parte. Avansarea timpului real cât aplicația este închisă rămâne o setare de design separată; nu trebuie să creeze obligația de conectare zilnică sau pierderi punitive.
+- Timpul jocului avansează când jucătorul explorează în altă parte. Când aplicația este închisă sau suspendată, ceasul jocului se oprește implicit; nu există pierderi punitive offline. Time warp este controlat de jucător în timpul jocului.
 - La revenire sau la consultarea hărții, jucătorul poate primi un raport: timp trecut în joc, schimbări de populație, clădiri, economie, evenimente și mesajul primarului.
 - Rapoartele sunt informative, nu sarcini obligatorii. Fără spam repetitiv; jucătorul poate configura frecvența și tipurile de notificări.
 - Exemplu de mesaj: „Nu ai mai vizitat Eos de 86 de zile. Colonia a crescut; primarul a extins cartierele și a identificat o lipsă de metal.”
@@ -183,24 +183,24 @@ Simularea e separată de desen; modelele nu știu de ecran; testăm fără ecran
 
 Puncte tehnice: precizie dublă în cod propriu pentru poziții mari; orbite = matematică proprie, nu motorul de fizică; zbor cu fizică proprie; 30/60 FPS, grafică redusă opțională, salvare automată la pauză.
 
-## 9. Testare (în sandbox-ul meu, pe PC)
+## 9. Testare (GitHub Actions + telefon)
 
-- Godot rulat **headless**: teste de logică (economie, fericire, orbite, fizica rachetei, încărcarea modurilor, salvare/încărcare).
-- Simulări de mulți ani de joc rulate rapid pentru verificat stabilitatea și echilibrul grosier.
-- Capturi de ecran din scene reale (dacă se poate randa în sandbox) ca verificare vizuală.
-- **Nu pot testa pe telefon**: atingeri, performanță reală, notch, baterie. Asta intră în runda ta de corecturi.
+- GitHub Actions: teste headless pentru economie, fericire, orbite, fizica rachetei, încărcarea modurilor și salvare/încărcare.
+- GitHub Actions: simulări accelerate de perioade lungi pentru stabilitate și echilibru, plus build Android ARM64 și verificarea artefactelor.
+- Utilizatorul validează APK-ul pe telefon: lansare, randare, touch, notch/zone sigure, pauză/reluare, performanță, baterie și utilizabilitatea interfeței.
+- Nu presupunem existența unui PC local; orice test automat trebuie să poată rula în CI.
 
 ## 10. Foaie de parcurs (într-un singur run, în ordinea construirii)
 
 1. Fundație: proiect, coordonate polare, registre, încărcător de moduri, modul `base`, salvare.
-2. Colonia: globul, clădiri, cetățeni, resurse, fericire, cercetare, politici și primar (manual/asistat/autonom).
+2. Colonia: globul, clădiri, cetățeni, resurse, fericire, cercetare, politici și primar cu autonomie graduală conform D-011.
 3. Racheta: constructor, zbor, aterizare.
 4. Orbite: motor orbital, hartă, warp, corpuri.
 5. Legătura: platformă, costuri reale, misiuni, evenimente, avanposturi, asteroizi, piață și credite.
 6. Sateliți modulari și infrastructură orbitală.
 7. Planificator de zbor și piloți NPC (la bord, la distanță, autonomi), cu verificări de fezabilitate.
 8. Logistică cargo și simularea coloniilor îndepărtate; rapoarte de revenire.
-9. UI, sunet, texturi placeholder, tutorial, localizare (EN + RO).
+9. UI mobil cu complexitate progresivă, sunet, texturi placeholder, tutorial opțional, localizare (EN + RO), asistență configurabilă și verificări de accesibilitate.
 10. Modding complet: manager în joc, exemple de moduri, documentație.
 11. Teste, export Android, lista "ce merge / ce nu".
 
@@ -232,3 +232,7 @@ Pentru regulile complete, PLAN.md se citește împreună cu documentele PMCS ded
 - `PMCS/PERFORMANCE_AND_SIMULATION.md`: niveluri de simulare, salvări, timp și Android.
 
 Politica de timp de bază: ceasul jocului se oprește când aplicația este închisă; time warp este controlat de jucător în timpul jocului. Aceasta evită progresia offline punitivă.
+
+
+## UX mobil și complexitate
+Interfața trebuie să păstreze profunzimea simulării fără a afișa toate sistemele simultan. Detaliile avansate sunt disponibile la cerere; acțiunile de bază au valori implicite și explicații clare. Automatizarea reduce micro-managementul, dar nu ascunde costurile sau riscurile. Vezi `PMCS/MOBILE_UX.md` (propunere în review, încă neacceptată ca decizie separată).
