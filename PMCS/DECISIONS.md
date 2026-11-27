@@ -151,7 +151,7 @@ The previous ADR-0003 restriction against adopting a complete engine unchanged i
 
 **Decision:** Lua and native callbacks use the same owner-aware hook-point namespace and the same `Before`, `Around`, `Replace`, and `After` stages, with deterministic priority/registration ordering. The shared hook service must adapt Lua callbacks and native callbacks rather than creating incompatible parallel hook systems.
 
-**Runtime direction:** Embed a pinned Lua 5.4.x source release into the built-in Dream Engine Godot C++ module. Load Lua source from the validated package virtual filesystem. Provide typed, documented engine bindings. Lua callbacks run only at hook points whose thread/phase contract safely supports the Lua VM; arbitrary-thread synchronous hooks remain native-only unless a safe design is proven.
+**Runtime direction:** Embed Lua 5.4.8 source into the built-in Dream Engine Godot C++ module, pinned to commit `6e22fedb74cf0c9b6656e9fce8b7331db847c605` (tag `v5.4.8`). Load Lua source from the validated package virtual filesystem. Provide typed, documented engine bindings. Lua callbacks run only at hook points whose thread/phase contract safely supports the Lua VM; arbitrary-thread synchronous hooks remain native-only unless a safe design is proven.
 
 **Consequences:**
 - A normal Lua-only `.dmod` is a single portable package and contains no shared library.
