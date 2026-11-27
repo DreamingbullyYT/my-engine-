@@ -16,7 +16,8 @@ This directory is the durable memory for humans and AI agents. It prevents repea
 6. ROADMAP.md — implementation sequence and exit gates.
 7. BUILD_AND_TEST.md — CI and validation policy.
 8. AI_RULES.md — mandatory agent workflow.
-9. CODE_MAP.md — actual code structure, currently empty/planned.
+9. CODE_MAP.md — generated/evidence-backed source map, currently no engine source.
+10. CODE_MEMORY.md — CodeGraphContext indexing strategy and verified CI smoke-test results.
 
 ## Evidence labels
 - VERIFIED: confirmed in current source, successful CI, or user-confirmed device test. Cite path, commit, run, log, or artifact.
