@@ -3,6 +3,8 @@
 #include "core/config/engine.h"
 #include "core/input/input.h"
 #include "core/io/file_access.h"
+#include "core/io/dir_access.h"
+#include "core/config/project_settings.h"
 #include "core/io/json.h"
 #include "core/object/class_db.h"
 #include "core/object/object_id.h"
@@ -35,6 +37,10 @@ struct DreamModRuntime::ModInstance {
     String package_path;
     lua_State *state = nullptr;
     bool enabled = false;
+    void *native_library_handle = nullptr;
+    void *native_context = nullptr;
+    const NativeModExportsV1 *native_exports = nullptr;
+    NativeHostApiV1 native_api;
 
     ~ModInstance() {
         if (state != nullptr) {
@@ -693,7 +699,7 @@ bool DreamModRuntime::load_mod(const String &package_path) {
     }
 
     PackedByteArray manifest_bytes = zip->read_file("manifest.json", true, 64 * 1024);
-    if (manifest_bytes.is_empty() || manifest_bytes.size() > 64 * 1024) {
+    if (manifest_bytes.is_empty()) {
         zip->close();
         ERR_PRINT("DreamMods: manifest.json is missing or larger than 64 KiB.");
         return false;
@@ -711,68 +717,169 @@ bool DreamModRuntime::load_mod(const String &package_path) {
     String id = manifest.get("id", String());
     String name = manifest.get("name", id);
     String runtime = manifest.get("runtime", String("lua"));
+    const bool needs_lua = runtime == "lua" || runtime == "hybrid";
+    const bool needs_native = runtime == "native" || runtime == "hybrid";
     String entry_script = manifest.get("entry_script", String("scripts/main.lua"));
-    if (!valid_mod_id(id) || find_mod(id) != nullptr || runtime != "lua" ||
-            !valid_package_path(entry_script)) {
+    String native_library = manifest.get("native_library", String());
+
+    if (!valid_mod_id(id) || find_mod(id) != nullptr ||
+            (!needs_lua && !needs_native) ||
+            (needs_lua && !valid_package_path(entry_script)) ||
+            (needs_native && !valid_package_path(native_library))) {
         zip->close();
-        ERR_PRINT("DreamMods: invalid, duplicate, or unsupported manifest (Lua runtime expected).");
+        ERR_PRINT("DreamMods: invalid or duplicate manifest/runtime paths.");
         return false;
     }
 
-    PackedByteArray source = zip->read_file(entry_script, true, 4 * 1024 * 1024);
-    zip->close();
-    if (source.is_empty() || source.size() > 4 * 1024 * 1024) {
-        ERR_PRINT("DreamMods: entry script missing or larger than 4 MiB.");
-        return false;
+    PackedByteArray source;
+    if (needs_lua) {
+        source = zip->read_file(entry_script, true, 4 * 1024 * 1024);
+        if (source.is_empty()) {
+            zip->close();
+            ERR_PRINT("DreamMods: entry script missing or larger than 4 MiB.");
+            return false;
+        }
     }
+
+    PackedByteArray native_bytes;
+    if (needs_native) {
+        native_bytes = zip->read_file(native_library, true, 16 * 1024 * 1024);
+        if (native_bytes.is_empty()) {
+            zip->close();
+            ERR_PRINT("DreamMods: native library missing or larger than 16 MiB for this platform.");
+            return false;
+        }
+    }
+    zip->close();
 
     std::unique_ptr<ModInstance> mod = std::make_unique<ModInstance>();
     mod->id = id;
     mod->name = name;
     mod->package_path = package_path;
-    mod->state = luaL_newstate();
-    if (mod->state == nullptr) {
-        ERR_PRINT("DreamMods: Lua VM allocation failed.");
-        return false;
+    ModInstance *active_mod = mod.get();
+    mods.push_back(std::move(mod));
+
+    if (needs_native) {
+        if (DirAccess::make_dir_recursive("user://dream_mod_cache") != OK) {
+            ERR_PRINT("DreamMods: cannot create native module cache directory.");
+            unload_mod(id);
+            return false;
+        }
+
+        String suffix = ".so";
+#if defined(WINDOWS_ENABLED)
+        suffix = ".dll";
+#elif defined(MACOS_ENABLED)
+        suffix = ".dylib";
+#endif
+        const String cached_library_path = "user://dream_mod_cache/" + id + suffix;
+        Ref<FileAccess> output = FileAccess::open(cached_library_path, FileAccess::WRITE);
+        if (output.is_null() || !output->store_buffer(native_bytes.ptr(), native_bytes.size())) {
+            ERR_PRINT("DreamMods: failed to write native module to the private cache.");
+            unload_mod(id);
+            return false;
+        }
+        output->flush();
+        output = Ref<FileAccess>();
+
+#if defined(UNIX_ENABLED)
+        const BitField<FileAccess::UnixPermissionFlags> readonly_permissions =
+                FileAccess::UNIX_READ_OWNER | FileAccess::UNIX_READ_GROUP | FileAccess::UNIX_READ_OTHER;
+        if (FileAccess::set_unix_permissions(cached_library_path, readonly_permissions) != OK) {
+            ERR_PRINT("DreamMods: could not mark the extracted native library read-only.");
+            unload_mod(id);
+            return false;
+        }
+#endif
+
+        const String absolute_library_path = ProjectSettings::get_singleton()->globalize_path(cached_library_path);
+        if (OS::get_singleton()->open_dynamic_library(
+                    absolute_library_path, active_mod->native_library_handle) != OK) {
+            ERR_PRINT("DreamMods: the native library could not be loaded for this OS/ABI.");
+            unload_mod(id);
+            return false;
+        }
+
+        void *entry_symbol = nullptr;
+        if (OS::get_singleton()->get_dynamic_library_symbol_handle(
+                    active_mod->native_library_handle, "dream_dmod_entry_v1", entry_symbol) != OK ||
+                entry_symbol == nullptr) {
+            ERR_PRINT("DreamMods: native module is missing dream_dmod_entry_v1.");
+            unload_mod(id);
+            return false;
+        }
+
+        NativeModEntryPointV1 entry_point = reinterpret_cast<NativeModEntryPointV1>(entry_symbol);
+        active_mod->native_exports = entry_point();
+        if (active_mod->native_exports == nullptr ||
+                active_mod->native_exports->struct_size < sizeof(NativeModExportsV1) ||
+                active_mod->native_exports->abi_version != NATIVE_ABI_V1 ||
+                active_mod->native_exports->mod_id == nullptr ||
+                String::utf8(active_mod->native_exports->mod_id) != id ||
+                active_mod->native_exports->create == nullptr ||
+                active_mod->native_exports->enable == nullptr ||
+                active_mod->native_exports->unload == nullptr) {
+            ERR_PRINT("DreamMods: native module descriptor or identity is invalid.");
+            active_mod->native_exports = nullptr;
+            unload_mod(id);
+            return false;
+        }
+
+        active_mod->native_api = get_native_host_api();
+        active_mod->native_context = active_mod->native_exports->create(&active_mod->native_api);
+        if (active_mod->native_context == nullptr) {
+            ERR_PRINT("DreamMods: native module create callback failed.");
+            unload_mod(id);
+            return false;
+        }
     }
 
-    luaL_openlibs(mod->state);
-    lua_newtable(mod->state);
-    lua_newtable(mod->state);
-    lua_pushcfunction(mod->state, &DreamModRuntime::lua_register_hook);
-    lua_setfield(mod->state, -2, "register");
-    lua_setfield(mod->state, -2, "hooks");
+    if (needs_lua) {
+        active_mod->state = luaL_newstate();
+        if (active_mod->state == nullptr) {
+            ERR_PRINT("DreamMods: Lua VM allocation failed.");
+            unload_mod(id);
+            return false;
+        }
 
-    lua_newtable(mod->state);
-    lua_pushcfunction(mod->state, &DreamModRuntime::lua_object_is_valid);
-    lua_setfield(mod->state, -2, "is_valid");
-    lua_pushcfunction(mod->state, &DreamModRuntime::lua_object_get);
-    lua_setfield(mod->state, -2, "get");
-    lua_pushcfunction(mod->state, &DreamModRuntime::lua_object_set);
-    lua_setfield(mod->state, -2, "set");
-    lua_pushcfunction(mod->state, &DreamModRuntime::lua_object_call);
-    lua_setfield(mod->state, -2, "call");
-    lua_setfield(mod->state, -2, "objects");
+        luaL_openlibs(active_mod->state);
+        lua_newtable(active_mod->state);
+        lua_newtable(active_mod->state);
+        lua_pushcfunction(active_mod->state, &DreamModRuntime::lua_register_hook);
+        lua_setfield(active_mod->state, -2, "register");
+        lua_setfield(active_mod->state, -2, "hooks");
 
-    lua_setglobal(mod->state, "dream");
+        lua_newtable(active_mod->state);
+        lua_pushcfunction(active_mod->state, &DreamModRuntime::lua_object_is_valid);
+        lua_setfield(active_mod->state, -2, "is_valid");
+        lua_pushcfunction(active_mod->state, &DreamModRuntime::lua_object_get);
+        lua_setfield(active_mod->state, -2, "get");
+        lua_pushcfunction(active_mod->state, &DreamModRuntime::lua_object_set);
+        lua_setfield(active_mod->state, -2, "set");
+        lua_pushcfunction(active_mod->state, &DreamModRuntime::lua_object_call);
+        lua_setfield(active_mod->state, -2, "call");
+        lua_setfield(active_mod->state, -2, "objects");
+        lua_setglobal(active_mod->state, "dream");
 
-    lua_State *state = mod->state;
-    mods.push_back(std::move(mod));
-    CharString chunk_name = (String("@") + id + "/" + entry_script).utf8();
-    if (luaL_loadbufferx(state, reinterpret_cast<const char *>(source.ptr()), source.size(),
-                chunk_name.get_data(), "t") != LUA_OK ||
-            lua_pcall(state, 0, 0, 0) != LUA_OK) {
-        const char *error = lua_tostring(state, -1);
-        ERR_PRINT(String("DreamMods: Lua load failed for ") + id + ": " +
-                (error != nullptr ? String::utf8(error) : String("unknown error")));
-        lua_pop(state, 1);
+        CharString chunk_name = (String("@") + id + "/" + entry_script).utf8();
+        if (luaL_loadbufferx(active_mod->state, reinterpret_cast<const char *>(source.ptr()), source.size(),
+                    chunk_name.get_data(), "t") != LUA_OK ||
+                lua_pcall(active_mod->state, 0, 0, 0) != LUA_OK) {
+            const char *error = lua_tostring(active_mod->state, -1);
+            ERR_PRINT(String("DreamMods: Lua load failed for ") + id + ": " +
+                    (error != nullptr ? String::utf8(error) : String("unknown error")));
+            lua_pop(active_mod->state, 1);
+            unload_mod(id);
+            return false;
+        }
+    }
+
+    if (needs_native && active_mod->native_exports->enable(active_mod->native_context) == 0) {
+        ERR_PRINT("DreamMods: native module enable callback failed.");
         unload_mod(id);
         return false;
     }
-    ModInstance *loaded = find_mod(id);
-    if (loaded != nullptr) {
-        loaded->enabled = true;
-    }
+    active_mod->enabled = true;
     return true;
 }
 
