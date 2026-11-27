@@ -4,9 +4,9 @@ All milestones are PLANNED until evidence is recorded in CURRENT_STATE.md.
 
 ## M0 — Clean baseline and PMCS
 - [x] Empty source branches intentionally on 2026-11-27.
+- [x] Resolve scripting-language decision: GDScript is primary for .dmod (D-010).
 - [ ] Review and finalize PMCS.
 - [ ] Confirm repository name and branch strategy.
-- [ ] Pin exact Godot release/tag and upstream commit.
 Exit: clean baseline and reviewed project memory.
 
 ## M1 — Official Godot Android baseline
@@ -22,23 +22,24 @@ Exit: user confirms physical-device test.
 - [ ] Verify initialization/shutdown logs.
 Exit: repeatable on-device load test without Godot source edits.
 
-## M3 — Lua proof
-- [ ] Select/implement maintained Lua 5.4 integration.
-- [ ] Verify ARM64 compatibility and license.
-- [ ] Execute a Lua script from app-private storage.
-- [ ] Expose one typed Dream API binding and capture source-aware errors.
-Exit: Lua executes on device through the GDExtension.
+## M3 — GDScript runtime-loading proof
+- [ ] Verify dynamic GDScript source loading/compilation using official Godot APIs.
+- [ ] Execute a test script from app-private storage on Android ARM64.
+- [ ] Verify script-to-game API calls and source-aware error reporting.
+- [ ] Confirm selected exported-build settings permit this workflow.
+Exit: a GDScript script loaded from outside the APK executes on device.
 
 ## M4 — DMod manager
-- [ ] Define manifest schema and package validation.
-- [ ] Safely read .dmod packages.
-- [ ] Resolve dependencies, versions, conflicts, and load order.
-- [ ] Install/enable/disable/uninstall a script mod without APK rebuild.
-Exit: sample mod installed and executed on device.
+- [ ] Define and validate mod.json schema and .dmod ZIP format.
+- [ ] Safely inspect/extract package contents; reject path traversal and oversized entries.
+- [ ] Resolve dependencies, versions, conflicts, duplicate IDs, and deterministic load order.
+- [ ] Install/enable/disable a script mod without APK rebuild.
+Exit: sample .dmod installed and executed on device.
 
 ## M5 — Core API
-- [ ] Lifecycle, event bus, registries, capabilities, hooks.
-- [ ] Mod-to-mod API and script reload.
+- [ ] Lifecycle, event bus, extensible registries, hooks, direct game integration, mod-owned save/config data.
+- [ ] Mod-to-mod public services/events and script reload semantics.
+- [ ] Publish stable API IDs/signatures and compatibility policy.
 Exit: integration tests and sample mods exercise every public contract.
 
 ## M6 — New game systems
