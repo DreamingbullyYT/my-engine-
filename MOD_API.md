@@ -68,7 +68,7 @@ func _on_day(e: Event) -> void: pass
 
 `api.registry.register(kind, id, def)` / `.patch(kind, id, changes)` / `.remove(kind, id)` / `.get(kind, id)` / `.all(kind)`
 
-Tipuri (`kind`): `resource`, `building`, `house`, `rocket_part`, `spacecraft_part`, `satellite_part`, `satellite_payload`, `engine`, `fuel_type`, `body` (corp ceresc), `asteroid_type`, `market_good` (marfă cu preț de bază și volatilitate), `research`, `policy`, `faction`, `event`, `mission`, `job`, `trait` (trăsătură de cetățean), `mayor_role`, `colony_policy`, `autopilot`, `flight_plan`, `cargo_route`, `cargo_vehicle`, `orbital_station_module`, `ai_behavior`, `navigation_algorithm`, `biome`, `item_tag`, `ui_theme`, `sound`, `music`, `command`.
+Tipuri (`kind`): `resource`, `building`, `house`, `rocket_part`, `spacecraft_part`, `satellite`, `satellite_part`, `satellite_payload`, `orbital_station`, `station_module`, `docking_port`, `mobile_colony_ship`, `habitat_module`, `life_support`, `food_production`, `power_system`, `storage_module`, `shipyard_module`, `asteroid_base`, `orbital_habitat`, `industrial_platform`, `engine`, `fuel_type`, `body` (corp ceresc), `asteroid_type`, `market_good` (marfă cu preț de bază și volatilitate), `research`, `policy`, `faction`, `event`, `mission`, `job`, `trait` (trăsătură de cetățean), `mayor_role`, `colony_policy`, `autopilot`, `flight_plan`, `cargo_route`, `cargo_vehicle`, `ai_behavior`, `navigation_algorithm`, `biome`, `item_tag`, `ui_theme`, `sound`, `music`, `command`.
 
 - ID-uri cu spațiu de nume: `base:stone_mine`, `mymod:gold_mine`. Fără prefix = al modului curent.
 - `def` e un dicționar; câmpurile necunoscute sunt păstrate și accesibile (un mod poate adăuga câmpuri proprii citite de alt mod).
@@ -124,17 +124,26 @@ Obiecte de nivel înalt, toate citibile și scriibile:
 
 Orice câmp intern poate fi citit; modificarea directă a stării interne e permisă și **nu e garantată stabilă între versiuni** (doar fațada `ModAPI` e garantată).
 
-### 5.1 Contracte de comportament pentru sisteme NPC și automatizare
+### 5.1 Contracte de comportament pentru sisteme NPC, guvernare și automatizare
 
-Modelul oficial pentru piloți este **BOTH**: API-ul trebuie să suporte simultan piloți-coloniști aflați la bord, piloți-coloniști care controlează de la distanță și control autonom pentru vehicule fără echipaj. Acestea sunt moduri complementare, nu alternative exclusive.
+Modelul oficial pentru piloți este **BOTH**: API-ul trebuie să suporte simultan piloți-coloniști aflați la bord, piloți-coloniști care controlează de la distanță și control autonom pentru vehicule fără echipaj.
 
-- Primarii și piloții sunt extensibili prin registre, evenimente și hook-uri; modurile pot adăuga roluri, politici, algoritmi de navigație, priorități și comportamente AI.
-- API-ul de control al vehiculelor este generic: un vehicul de bază sau adăugat de un mod poate fi pilotat dacă expune capabilitățile necesare (propulsie, orientare, control, comunicații, andocare/aterizare). Nu există o piesă universală obligatorie de autopilot.
-- `Autopilot.evaluate(vehicle, plan)` trebuie să întoarcă un rezultat structurat: `feasible`, `risky` sau `impossible`, cu motive, cerințe lipsă și estimări de combustibil/delta-v. Execuția folosește motorul fizic comun, nu o simulare privilegiată.
-- Piloții la bord trebuie să fie coloniști existenți și alocați navei. Piloții la distanță necesită un canal de comunicații valid; comportamentul la pierderea legăturii este configurabil prin proceduri și echipamente. Vehiculele fără echipaj pot folosi control autonom.
-- API-ul primarului oferă modurile `manual`, `assisted`, `autonomous`. În `assisted`, propunerile cer aprobare; în `autonomous`, primarul poate acționa doar în limitele politicilor, bugetelor, rezervelor și resurselor disponibile.
-- Simularea coloniilor îndepărtate poate agrega tick-urile, dar trebuie să respecte aceleași formule și limite economice ca simularea detaliată. Modurile pot asculta evenimentele și modifica regulile prin hook-uri.
-- Rapoartele de colonie sunt evenimente/rezumate persistente, nu notificări obligatorii. API-ul permite configurarea frecvenței și filtrarea lor.
+- Primarii și piloții sunt extensibili prin registre, evenimente și hook-uri; modurile pot adăuga roluri, priorități, algoritmi de navigație și comportamente AI.
+- **Primarul începe ca sfătuitor**, oferind recomandări și avertismente. Pe măsură ce jucătorul petrece mai mult timp în joc departe de colonie sau îi acordă mai puțină atenție, primarul preia treptat mai multe sarcini de rutină. Nu este obligatoriu să fie numit ca administrator complet de la început și nu este un simplu comutator permanent de autonomie.
+- API-ul trebuie să expună nivelul de supraveghere/atenție, recomandările, delegarea progresivă, politicile și istoricul acțiunilor primarului. Jucătorul poate reveni și interveni.
+- Primarul respectă resursele, populația, forța de muncă, infrastructura, producția și logistica. Nu poate garanta supraviețuirea: coloniile pot intra în declin sau pot fi distruse de lipsuri, dezastre, conflicte și viitori inamici.
+- API-ul de control al vehiculelor este generic: un vehicul de bază sau adăugat de un mod poate fi pilotat dacă expune capabilitățile necesare. Nu există o piesă universală obligatorie de autopilot.
+- `Autopilot.evaluate(vehicle, plan)` întoarce `feasible`, `risky` sau `impossible`, cu motive și cerințe lipsă. Execuția folosește aceleași reguli fizice și resurse ca pentru jucător.
+- Piloții la bord trebuie să fie coloniști existenți și alocați navei. Piloții la distanță necesită comunicații funcționale; vehiculele fără echipaj pot folosi control autonom.
+- Simularea coloniilor îndepărtate poate agrega tick-urile, dar păstrează aceleași formule și limite. Rapoartele de revenire sunt informative și explică schimbările și deciziile primarului.
+
+### 5.2 Contracte pentru stații și colonii mobile
+
+- API-ul trebuie să distingă sateliți/sonde, stații orbitale modulare și nave-colonie mobile. Nu le reduce la o singură categorie decorativă de satelit.
+- Registre propuse: satellite, satellite_payload, orbital_station, station_module, docking_port, mobile_colony_ship, habitat_module, life_support, food_production, power_system, storage_module, shipyard_module, asteroid_base, orbital_habitat și industrial_platform.
+- Stațiile trebuie să suporte andocare și extindere prin module instalabile. Modulele pot adăuga locuințe, energie, depozitare, ateliere, laboratoare, rafinare, șantiere navale și suport vital.
+- O navă-colonie poate funcționa ca așezare fără planetă numai dacă are populație și module/capabilități suficiente pentru hrană, apă, aer/suport vital, energie, depozitare și producție. Aceste funcții consumă resurse și pot eșua.
+- Modurile pot adăuga noi module, componente, tipuri de stații și nave-habitat prin API-ul public.
 
 ## 6. Suprascrieri și învelitori (pentru a schimba "orice")
 
