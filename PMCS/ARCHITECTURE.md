@@ -81,3 +81,15 @@ The game host should provide a testable expansion planner used by mobile-colony 
 - Expedition feasibility checks for transport, population, life support, food, water, power, landing/habitat infrastructure, and sustained logistics.
 - New-colony founding, assignment of local governance, auditable reports, and player revocation/intervention.
 These services must share the same economy, physics, and failure rules as player-directed activity. The approximate system-count threshold is a progression/balance setting, not a hard-coded universal constant.
+
+
+## Detailed game-system contracts
+The game-specific design is specified in dedicated PMCS documents rather than being inferred from engine architecture:
+- GAMEPLAY.md: individual citizens, needs, jobs, production chains, research, policies, and colony UI.
+- ROCKETS_AND_PHYSICS.md: modular craft, mass/propellant, staging, orbital/atmospheric dynamics, docking, and landing.
+- UNIVERSE.md: celestial data, procedural systems, discovery, surveys, and interstellar travel.
+- AUTOMATION.md: mayor delegation, NPC piloting, fleet orders, cargo routes, and remote simulation.
+- SPACE_INFRASTRUCTURE.md: functional satellites, connected station modules, megaships, and habitats.
+- SPACE_EXPANSION.md: permission-gated expansion and habitability checks.
+- PERFORMANCE_AND_SIMULATION.md: simulation fidelity tiers, save integrity, time policy, Android lifecycle, and profiling.
+These are design contracts only. Implementation must be proven with tests and device evidence.
