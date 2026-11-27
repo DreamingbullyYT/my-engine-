@@ -1,7 +1,7 @@
 # GDScript Code Map
 
-- Source commit: 8880dafc93a0caedffd74783257db015d4e22bee
-- Generated (UTC): 2026-11-27T17:24:36Z
+- Source commit: 5445a848003b662e0edf13d7c1917c66445062ba
+- Generated (UTC): 2026-11-27T17:26:27Z
 - Parser: tree-sitter-gdscript 6.1.0
 - Files: **2**
 - Script/nested classes: **0**
