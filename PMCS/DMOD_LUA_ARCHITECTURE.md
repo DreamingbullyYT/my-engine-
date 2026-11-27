@@ -55,7 +55,7 @@ Example hybrid manifest adds `native_library = "native/android-arm64-v8a/libexam
 
 ## Lua runtime
 
-- Embed a pinned Lua 5.4.x source release into the Dream Engine Godot C++ module and compile it into the engine. Do not fetch or compile Lua on the phone.
+- Embed Lua 5.4.8 source into the Dream Engine Godot C++ module and compile it into the engine. Do not fetch or compile Lua on the phone.
 - Load `.lua` source directly from the validated DMod package virtual filesystem. Do not require per-mod bytecode or generated shared libraries.
 - The engine owns the Lua VM lifecycle. Each loaded Lua mod receives its own Lua state initially; shared package/dependency APIs are explicit rather than accidental global-state sharing.
 - Provide a documented `dream` API for engine objects, events, resources, scenes, physics, input, rendering and mod metadata as those bindings are integrated.
