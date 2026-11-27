@@ -1,3 +1,5 @@
+#define MAKE_LIB
+
 /*
 ** Lua core, libraries, and interpreter in a single file.
 ** Compiling just this file generates a complete Lua stand-alone
