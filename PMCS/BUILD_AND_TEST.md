@@ -35,3 +35,7 @@
 
 ## Completion evidence
 Record commit SHA, workflow run ID/URL, artifact name/size, test results, user-confirmed device outcome, and known limitations. A green compile proves only that the build succeeded; it does not prove runtime correctness, API completeness, performance, or device compatibility.
+
+
+## Android build trigger coverage
+The M1 Android workflow must run when Godot project code, scenes, resources, native extension sources, tests, or game assets change, including files added under future modular domains such as world, terrain, colony, vehicles, physics, rendering, and infrastructure. It should not run for documentation-only PMCS edits. Keep the workflow path filters broad enough to cover new modules without requiring a manual workflow edit for every new gameplay directory.
