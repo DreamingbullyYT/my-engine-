@@ -68,7 +68,7 @@ func _on_day(e: Event) -> void: pass
 
 `api.registry.register(kind, id, def)` / `.patch(kind, id, changes)` / `.remove(kind, id)` / `.get(kind, id)` / `.all(kind)`
 
-Tipuri (`kind`): `resource`, `building`, `house`, `rocket_part`, `body` (corp ceresc), `asteroid_type`, `market_good` (marfă cu preț de bază și volatilitate), `research`, `policy`, `faction`, `event`, `mission`, `job`, `trait` (trăsătură de cetățean), `biome`, `item_tag`, `ui_theme`, `sound`, `music`, `command`.
+Tipuri (`kind`): `resource`, `building`, `house`, `rocket_part`, `spacecraft_part`, `satellite_part`, `satellite_payload`, `engine`, `fuel_type`, `body` (corp ceresc), `asteroid_type`, `market_good` (marfă cu preț de bază și volatilitate), `research`, `policy`, `faction`, `event`, `mission`, `job`, `trait` (trăsătură de cetățean), `mayor_role`, `colony_policy`, `autopilot`, `flight_plan`, `cargo_route`, `cargo_vehicle`, `orbital_station_module`, `ai_behavior`, `navigation_algorithm`, `biome`, `item_tag`, `ui_theme`, `sound`, `music`, `command`.
 
 - ID-uri cu spațiu de nume: `base:stone_mine`, `mymod:gold_mine`. Fără prefix = al modului curent.
 - `def` e un dicționar; câmpurile necunoscute sunt păstrate și accesibile (un mod poate adăuga câmpuri proprii citite de alt mod).
@@ -91,6 +91,10 @@ Evenimentele marcate **[cancel]** pot fi anulate (`e.cancel()`) și permit modif
 | Cercetare | `research_started`, `research_completed`, `policy_enacted` [cancel], `festival_started`, `festival_ended` |
 | Rachete | `rocket_designed`, `rocket_part_placed` [cancel], `rocket_built`, `rocket_launch` [cancel], `rocket_stage_separated`, `rocket_docked`, `rocket_crashed`, `rocket_landed`, `rocket_reentry_heat`, `rocket_soi_changed`, `rocket_orbit_reached` |
 | Univers | `body_discovered`, `outpost_founded`, `colony_founded`, `asteroid_prospected`, `asteroid_mined` |
+| Guvernare | `mayor_assigned`, `mayor_policy_changed`, `colony_autonomy_changed`, `colony_report_ready`, `colony_crisis_started`, `colony_crisis_resolved` |
+| Sateliți | `satellite_built`, `satellite_launched`, `satellite_orbit_changed`, `satellite_payload_activated`, `satellite_power_low`, `satellite_coverage_changed` |
+| Piloți și zbor NPC | `npc_pilot_assigned`, `npc_pilot_unassigned`, `flight_plan_created`, `flight_plan_evaluated`, `autopilot_started`, `autopilot_interrupted`, `autopilot_completed`, `autopilot_failed`, `remote_link_lost`, `remote_link_restored`, `player_takeover` |
+| Logistică | `cargo_route_created`, `cargo_loaded`, `cargo_unloaded`, `cargo_route_paused`, `cargo_route_completed`, `cargo_delivery_failed` |
 | Comerț | `market_price_update` (modifici prețul), `cargo_sold` [cancel], `cargo_delivered` |
 | Misiuni/evenimente | `mission_offered`, `mission_accepted`, `mission_completed`, `random_event_roll` [cancel], `random_event_started`, `random_event_ended` |
 | UI | `ui_opened`, `ui_closed`, `tile_clicked`, `building_selected` |
@@ -109,10 +113,26 @@ Obiecte de nivel înalt, toate citibile și scriibile:
 - `Universe` — corpuri, orbite, `add_body(def)`, `time_warp`, ora jocului.
 - `Market` — `price(good)`, `sell(good, amount)`, `set_price(good, value)`, `credits` (în `Economy`).
 - `Missions`, `Events` (aleatorii), `Policies`.
+- `Colonies` — colonii, primari, consilii, nivelul de autonomie, politici, bugete/rezerve și rapoarte.
+- `Satellites` — sateliți, piese, încărcături utile, energie, acoperire și comunicații.
+- `Autopilot` — asignare pilot, evaluarea navei, executarea planului și preluarea controlului.
+- `FlightPlanner` — lansare, orbită, transfer, corecții, andocare și aterizare.
+- `Logistics` — rute cargo, inventare, încărcare/descărcare și livrări.
+- `Fleet` și `Stations` — nave, flote și module de stație.
 - `UI` — vezi §7.
 - `Audio` — `play(sound_id)`, `music(track_id)`.
 
 Orice câmp intern poate fi citit; modificarea directă a stării interne e permisă și **nu e garantată stabilă între versiuni** (doar fațada `ModAPI` e garantată).
+
+### 5.1 Contracte de comportament pentru sisteme NPC și automatizare
+
+- Primarii și piloții sunt extensibili prin registre, evenimente și hook-uri; modurile pot adăuga roluri, politici, algoritmi de navigație, priorități și comportamente AI.
+- API-ul de control al vehiculelor este generic: un vehicul de bază sau adăugat de un mod poate fi pilotat dacă expune capabilitățile necesare (propulsie, orientare, control, comunicații, andocare/aterizare). Nu există o piesă universală obligatorie de autopilot.
+- `Autopilot.evaluate(vehicle, plan)` trebuie să întoarcă un rezultat structurat: `feasible`, `risky` sau `impossible`, cu motive, cerințe lipsă și estimări de combustibil/delta-v. Execuția folosește motorul fizic comun, nu o simulare privilegiată.
+- Piloții la bord trebuie să fie coloniști existenți și alocați navei. Piloții la distanță necesită un canal de comunicații valid; comportamentul la pierderea legăturii este configurabil prin proceduri și echipamente. Vehiculele fără echipaj pot folosi control autonom.
+- API-ul primarului oferă modurile `manual`, `assisted`, `autonomous`. În `assisted`, propunerile cer aprobare; în `autonomous`, primarul poate acționa doar în limitele politicilor, bugetelor, rezervelor și resurselor disponibile.
+- Simularea coloniilor îndepărtate poate agrega tick-urile, dar trebuie să respecte aceleași formule și limite economice ca simularea detaliată. Modurile pot asculta evenimentele și modifica regulile prin hook-uri.
+- Rapoartele de colonie sunt evenimente/rezumate persistente, nu notificări obligatorii. API-ul permite configurarea frecvenței și filtrarea lor.
 
 ## 6. Suprascrieri și învelitori (pentru a schimba "orice")
 
