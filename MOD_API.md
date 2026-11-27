@@ -126,6 +126,8 @@ Orice câmp intern poate fi citit; modificarea directă a stării interne e perm
 
 ### 5.1 Contracte de comportament pentru sisteme NPC și automatizare
 
+Modelul oficial pentru piloți este **BOTH**: API-ul trebuie să suporte simultan piloți-coloniști aflați la bord, piloți-coloniști care controlează de la distanță și control autonom pentru vehicule fără echipaj. Acestea sunt moduri complementare, nu alternative exclusive.
+
 - Primarii și piloții sunt extensibili prin registre, evenimente și hook-uri; modurile pot adăuga roluri, politici, algoritmi de navigație, priorități și comportamente AI.
 - API-ul de control al vehiculelor este generic: un vehicul de bază sau adăugat de un mod poate fi pilotat dacă expune capabilitățile necesare (propulsie, orientare, control, comunicații, andocare/aterizare). Nu există o piesă universală obligatorie de autopilot.
 - `Autopilot.evaluate(vehicle, plan)` trebuie să întoarcă un rezultat structurat: `feasible`, `risky` sau `impossible`, cu motive, cerințe lipsă și estimări de combustibil/delta-v. Execuția folosește motorul fizic comun, nu o simulare privilegiată.
