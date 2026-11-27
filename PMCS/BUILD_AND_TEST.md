@@ -28,12 +28,12 @@
 ## Native GDExtension validation (M2)
 - Native source lives in `native/dream_runtime/`; Godot source remains untouched.
 - `.github/scripts/build_dream_runtime.sh` checks out the official `godot-cpp 10.0.0-stable` pin and builds the requested target with SCons.
-- CI builds Linux x86_64 for headless runtime validation and Android arm64-v8a for the phone target.
-- `tests/native_extension_smoke.gd` must instantiate `DreamRuntimeProbe`, verify the exact probe string, and verify `20 + 22 = 42`.
-- CI must capture and check the extension initialization/shutdown logs.
+- CI compiles Linux x86_64 and Android arm64-v8a native libraries, then exports an Android ARM64 debug APK.
+- CI deliberately does not execute Godot headless runtime smoke tests; runtime validation is deferred to the user's physical Android device.
+- `tests/native_extension_smoke.gd` remains a manual/development diagnostic; it is not run by the build-only CI workflow.
 - The Android export must include the Android GDExtension binary and preserve package/ABI validation.
 - User device test must confirm the boot-screen native status says `Native C++: OK · 20 + 22 = 42`.
-- A Linux host smoke test and Android cross-compile do not prove the Android loader works on an actual device.
+- A successful compile and APK export do not prove the Android loader works; the user validates loading and runtime behavior on the actual device.
 
 ## GDScript mod validation
 - Verify script source can be loaded/compiled at runtime in the exact exported Godot configuration.
