@@ -1,6 +1,12 @@
 # Roadmap
 
 All milestones are PLANNED until evidence is recorded in CURRENT_STATE.md.
+## Release scope — D-020
+
+The first playable v1 is a coherent local-system game slice: one starting planet, its Moon, nearby asteroids, a basic functional orbital station, the colony/economy/research loop, a first spacecraft, and basic orbital flight. The v1 exit gate requires these systems to build, save/load, and pass automated tests, plus a user-confirmed Android ARM64 device test.
+
+Interstellar travel, additional star systems, multi-system autonomous fleets/colonization, and full-scale mobile-colony megaships are v2+ work. They remain in the long-term design; do not make them prerequisites for v1. Keep M1 (official Godot Android baseline) and M2 (separate GDExtension proof) as distinct early gates. M1 must not require a custom Godot source build; M2 proves the separate C++ extension can load without modifying Godot.
+
 
 ## M0 — Clean baseline and PMCS
 - [x] Empty source branches intentionally on 2026-11-27.
