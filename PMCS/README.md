@@ -20,3 +20,5 @@ Persistent project memory for Dream Engine. Keep these documents separate; do no
 - ANDROID_INTEGRATION.md — AndroidX GameActivity host-app setup and backend contract
 
 Status labels: ACCEPTED, PROPOSED, RESEARCH, IMPLEMENTED, VERIFIED, BLOCKED. Never call something VERIFIED without reproducible evidence.
+
+- THIRD_PARTY_NOTICES.md — pinned external dependencies and license/attribution inventory.

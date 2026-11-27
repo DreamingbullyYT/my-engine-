@@ -117,3 +117,18 @@ The live engine now has these additional service boundaries and composition path
 - **Android:** AndroidX GameActivity app and native host build an ARM64 APK; the host currently validates platform Application/window/surface/input loop only. EngineRuntime and bgfx still need to be attached to that loop.
 
 Native modules are trusted same-process code. They may mutate engine state directly and are not isolated from host memory or operating-system capabilities.
+
+
+## Android wgpu-native backend — 2026-11-27
+
+The Android host now binds the backend-neutral `RenderDevice` to `dream::render::WgpuNativeBackend` (`engine/render/wgpu_native/`). The implementation stays behind `IRenderBackend`; the active host does not expose WebGPU types to the rest of the engine.
+
+1. GameActivity owns the app lifecycle and Android native window. `RenderDevice` acquires the native-surface lease, keeping the `ANativeWindow` valid while the backend uses it.
+2. The backend creates `WGPUInstance`, chains `WGPUSurfaceSourceAndroidNativeWindow` into `WGPUSurfaceDescriptor`, creates the surface, and requests an adapter compatible with it.
+3. It requests a device/queue, queries surface capabilities, chooses an sRGB surface format when available, and configures FIFO presentation.
+4. The current frame path obtains the current surface texture, creates a view/encoder/render pass, clears the color attachment and presents the frame. Adapter/device callbacks are processed on the initialization thread with a bounded 15-second timeout; WebGPU validation/log output is forwarded to Android Logcat.
+5. Surface destruction shuts down the wgpu objects before releasing the platform surface lease; re-creation reinitializes the RenderDevice/backend against the new native surface.
+
+The Android CMake option is `DREAM_BUILD_WGPU_NATIVE_BACKEND` and consumes the verified package root through `WGPU_NATIVE_ROOT`. The app CMake enables this backend and disables bgfx. The bgfx engine module remains optional and may still be used by other targets; it is not the active Android renderer.
+
+**Current capability boundary:** only clear/present is implemented. `supports_2d`, `supports_3d` and instancing remain false; no GPU texture, mesh or material resources are created; draw packets are rejected. The magenta clear frame is a diagnostic to validate surface presentation, not a game scene. Add the WGSL shader/pipeline and resource layers incrementally without leaking wgpu handles into engine-facing APIs.

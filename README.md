@@ -54,3 +54,14 @@ This update is authoritative over older checklist/status text above where they c
 ## 2026-11-26 implementation note
 
 Latest source now includes indexed 2D/3D broadphase queries, limited opt-in circle/sphere bullet CCD, OBJ concave ear clipping plus MTL parsing, queued asset lifecycle hooks, ECS mutation hooks and reproducible GLES shader binaries. The first Android host/APK path exists, but physical GPU/audio/IME verification and several production roadmap systems remain explicitly open; read [PMCS/ROADMAP.md](PMCS/ROADMAP.md) and [PMCS/CURRENT_STATE.md](PMCS/CURRENT_STATE.md) for the exact status.
+
+
+## Android renderer update — 2026-11-27
+
+The Android arm64-v8a host now uses the C++ `WgpuNativeBackend` through the upstream `wgpu-native` C API. The previous bgfx path remains an optional engine backend, but it is no longer linked by the Android host. The engine itself remains C++20; the upstream Rust implementation is consumed as a prebuilt native dependency.
+
+- Pinned Android ARM64 package: `wgpu-native v29.0.1.1`, downloaded by the Android workflow and checked against SHA-256 `721741f1b05a20c1738166bedf7a5efb2ba4b382da689526d3fc33de22bdd573`.
+- The first implementation milestone creates the WebGPU instance, Android `ANativeWindow` surface, adapter, device and queue, configures the swapchain surface and submits a magenta clear/present frame.
+- **This is not yet a 2D or 3D renderer.** The current backend advertises no 2D/3D draw capabilities and does not upload textures, meshes or materials. Those WGSL pipelines are next.
+- Android build/package verification passed in [APK workflow run 91](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45949435994); the full [Dream Engine CI run 479](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45949436000) passed all six jobs. This is cross-compilation/package evidence only; visual correctness, lifecycle behavior and GPU output still require the user's physical-device test.
+- The verified APK was uploaded as artifact `dream-engine-android-arm64-debug` (artifact ID `15175493449`, expires 2026-12-11). See [third-party notices](THIRD_PARTY_NOTICES.md) and [PMCS](PMCS/README.md).

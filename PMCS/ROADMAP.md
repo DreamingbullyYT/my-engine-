@@ -158,3 +158,18 @@ This update is authoritative over older checklist/status text above where they c
 ## Concurrency status — 2026-11-26
 
 The native mod manager now serializes its public state and callback-lifetime operations, supports same-thread callback re-entry, and has a multithreaded dispatch regression test plus a targeted ThreadSanitizer CI job. The broader stability work remains open: test the full engine for cross-subsystem races, verify TSan in Actions, and validate mod-owned worker-thread shutdown/resource lifetime. A green Android cross-build does not replace execution on a physical phone.
+
+
+## P3 renderer migration status — 2026-11-27
+
+- [x] Select `wgpu-native` as the Android host backend while preserving the engine-owned `IRenderBackend` contract.
+- [x] Pin and SHA-256 verify the official Android AArch64 `wgpu-native v29.0.1.1` release in GitHub Actions.
+- [x] Compile/link/package the C++ Android host plus `libwgpu_native.so` for `arm64-v8a`; APK workflow run 91 passed.
+- [x] Create the Android native-window surface, request adapter/device/queue, configure the surface and submit clear/present frames at the code/build level.
+- [ ] Physical-device proof that the magenta clear frame is visible, including surface destroy/recreate and app pause/resume.
+- [ ] Build WGSL 2D pipeline: colored/textured quads, camera/projection, blend modes, batching, bind groups, texture upload and GPU resource lifetime.
+- [ ] Build WGSL 3D pipeline: vertex/index buffers, transforms, camera, depth texture/testing, materials, texture/sampler bindings and draw ordering.
+- [ ] Complete GPU asset residency, device-loss recovery and robust native resource teardown; test on multiple Android GPU vendors.
+- [ ] Rebuild the previous 2D/UI/3D host demo on wgpu after the above capabilities exist. The active wgpu diagnostic host is not feature-equivalent to the prior bgfx demo.
+
+The bgfx backend and its existing 2D/3D code remain optional engine-side implementation/reference paths. The current Android app explicitly disables bgfx and links `DreamEngine::RenderWgpuNative`; do not silently restore bgfx as the Android renderer. The native dependency choice is settled for this Android milestone, but future desktop backends and cross-platform packaging remain open to separate evidence.

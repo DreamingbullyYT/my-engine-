@@ -1,9 +1,9 @@
 # Current State
 
-**Last checked:** 2026-11-26  
+**Last checked:** 2026-11-27  
 **Repository:** DreamingbullyYT/my-engine-  
 **Default branch:** main  
-**Latest verified implementation commit:** eb96be230f5ce6ad53bf8703db939a449764b6ed
+**Latest verified source milestone commit:** 95f57b5807a022b94017fbf42f43758f11a1c575
 
 ## Implemented
 
@@ -186,3 +186,15 @@ This update is authoritative over older checklist/status text above where they c
 - Added a multithreaded regression test (8 threads × 128 dispatches) that checks every original operation is run, every hook is invoked, and callbacks do not overlap.
 - Added a focused Linux ThreadSanitizer workflow for the native DMod runtime test. Its result must be checked in Actions; adding the job is not itself proof of a clean TSan run.
 - This is not a claim that arbitrary mod-created threads are automatically safe. Trusted native mods must still stop/join their own threads before disable/destroy returns. Broader engine-wide race/soak testing and phone validation remain open.
+
+
+## Renderer migration — 2026-11-27 (authoritative update)
+
+- **Verified source milestone:** `95f57b5807a022b94017fbf42f43758f11a1c575`.
+- **Android APK:** [workflow run 45949435994 / run 91](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45949435994) completed successfully. Artifact `dream-engine-android-arm64-debug`, ID `15175493449`, expires 2026-12-11. The APK is 14,422,330 bytes; SHA-256 `0f6afb54dfff7626bf5fbc91c6c15cbcedf73b74c8948528dd8419427e42571f`. It contains `lib/arm64-v8a/libdream_engine_android_host.so` and `lib/arm64-v8a/libwgpu_native.so`.
+- **Engine CI:** [run 45949436000 / run 479](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45949436000) passed all six jobs: Linux GCC, Linux Clang, Linux Clang ASan+UBSan, Android arm64-v8a, DMod AST proof and DMod ThreadSanitizer.
+- The Android host now constructs `WgpuNativeBackend`, creates a WebGPU instance and Android native-window surface, requests adapter/device/queue, selects a supported surface format and presents a magenta clear frame. The lifecycle continues to use GameActivity and EngineRuntime; AAudio is still wired.
+- The Android build pins `wgpu-native v29.0.1.1` package SHA-256 `721741f1b05a20c1738166bedf7a5efb2ba4b382da689526d3fc33de22bdd573`. Rusty-survival's renderer uses wgpu 30.0.1; it is a reference only and no Rust renderer code was copied.
+- **Explicit limitation:** the current backend reports `supports_2d=false` and `supports_3d=false`; it accepts empty draw lists and only clears/presents. Texture/mesh/material upload, WGSL 2D/3D pipelines, depth buffers and GPU resource restoration are not implemented in this backend yet. bgfx remains optional in CMake but is disabled in the active Android host.
+- **Not yet verified:** installing/running this APK on the user's phone and seeing the magenta frame. A successful CI run is not physical-device proof. The first phone check should confirm magenta presentation; if still black, capture Logcat tag `DreamEngineWgpu`, `DreamEngineBoot` and `DreamEngine` plus `logs/engine.log` if available.
+- **Next implementation order:** (1) phone validation of surface creation/presentation; (2) WGSL 2D textured/sprite pipeline and GPU upload/lifetime; (3) WGSL 3D mesh/material/depth pipeline; (4) device-loss and surface recreation/resource restoration tests; (5) wider device/GPU validation.

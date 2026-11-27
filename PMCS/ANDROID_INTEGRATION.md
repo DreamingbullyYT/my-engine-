@@ -154,3 +154,14 @@ The original launch log is not enough to conclude that GameActivity failed to ca
 - Artifact: `dream-engine-android-arm64-debug`, ID `15156625840`, ZIP size 5,275,148 bytes, SHA-256 `e7252d11782dd4ad25083cc617243248573075fc6c76ede2fe6576b01861e734`, expires 2026-12-10.
 - The downloaded APK was independently inspected: Java `DreamEngineBoot` and `MainActivity.onCreate` markers are present in DEX; native `android_main entered` and surface/loop markers are present in `libdream_engine_android_host.so`. APK SHA-256: `87f68498633494cffb26e0046f5abab9f1d09946f385438f2f2852f6cc056717`.
 - This confirms correct packaging of diagnostics, **not** that the app now renders correctly on the phone. Physical-device retest is still required. Engine CI run `45901326785` was still running when this note was written.
+
+
+## Current wgpu host — 2026-11-27
+
+The Android APK no longer links bgfx. The host now links `DreamEngine::RenderWgpuNative` and downloads the pinned `wgpu-native v29.0.1.1` Android AArch64 shared library during the GitHub Actions build. The archive is verified using SHA-256 before CMake is configured.
+
+The current native loop initializes EngineRuntime when a GameActivity surface is created, creates the WebGPU surface from the leased `ANativeWindow`, requests the adapter and device, configures the surface, then submits a magenta clear/present frame. Surface destruction releases wgpu objects before the platform's native-window lease is released; a new surface causes backend reinitialization. AAudio remains connected to the engine mixer.
+
+This APK is deliberately a presentation diagnostic, not yet the previous demo. The active backend currently has no 2D/3D draw capabilities, WGSL pipelines, GPU resource uploads or material system. Do not use the old bgfx/ESSL shader instructions above as instructions for the current host; those sections describe the superseded bgfx implementation. The next steps are real-device presentation validation, then wgpu 2D and 3D pipelines.
+
+Build/package evidence: [Android APK workflow run 91](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45949435994). Full engine CI: [run 479](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45949436000). Both passed on source milestone `95f57b5807a022b94017fbf42f43758f11a1c575`; physical-device validation remains pending.

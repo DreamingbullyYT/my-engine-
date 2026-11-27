@@ -100,3 +100,17 @@
 - Begin-render hooks can change clear color and clear flags before the frame packet is built; render-frame hooks observe or modify the result.
 - The Scene scheduler's individual system invocation, World/ECS mutation and asset lifecycle still require their own explicit hook points.
 - Hooks remain unrestricted in-process native callbacks; no sandbox or capability system is introduced.
+
+
+## ADR-0015 — Adopt wgpu-native for the Android render backend
+**Status:** ACCEPTED; Android clear/present backend IMPLEMENTED and CI-VERIFIED (2026-11-27). Physical-device rendering remains unverified.
+
+**Decision:** Use the upstream `wgpu-native` C API behind Dream Engine's existing C++20 `IRenderBackend` contract as the active Android rendering backend. Pin the Android AArch64 release to v29.0.1.1 and verify the release archive SHA-256 in GitHub Actions. Keep the engine source and public render contracts in C++; do not port the Rust renderer from Rusty-survival. Keep bgfx optional for non-Android/legacy work, but disable it in the current Android host.
+
+**Rationale:** wgpu-native gives the C++ host access to the WebGPU API while preserving the backend abstraction and Android GameActivity surface lifecycle. Rusty-survival is useful as a reference for renderer architecture and WGSL use, but its wgpu 30.0.1 renderer is too large and is not source to copy. The available Android package is v29.0.1.1 (wgpu-core 29.0.1), so the version difference must remain explicit.
+
+**Consequences and limits:**
+- Initial scope is native surface/device creation and clear/present only. 2D/3D/instancing stay disabled until real pipelines/resources exist.
+- Vulkan and GL backends are enabled; Android Vulkan is the primary target and GL/GLES remains best-effort.
+- The dependency carries MIT/Apache-2.0 notices; the pinned WebGPU native headers submodule carries BSD-3-Clause. Preserve notices in `third_party/`; do not change the repository root MIT license.
+- Android CI proves cross-compilation and APK packaging, not physical GPU correctness. The user must verify visible output on a phone.

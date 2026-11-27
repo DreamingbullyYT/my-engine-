@@ -1,6 +1,6 @@
 # Project Memory — Dream Engine
 
-**Updated:** 2026-11-26
+**Updated:** 2026-11-27
 
 ## Identity
 Dream Engine is a reusable, general-purpose C++ game engine. The initial planet/colony game is a validation project, not the engine's purpose. A different 3D game must not require an engine fork.
@@ -49,3 +49,12 @@ The reusable engine provides generic core services, platform adapters, rendering
 - DMods register their hooks during create() but remain inactive until enable() succeeds. Their hook registrations are disabled/removed before library unload. Host/game-owned hook registrations are active by default.
 - All four GitHub Actions jobs passed in run 45811326053 on implementation commit e65ee68289c874297b5267599a997d1bb06f5901.
 - Remaining hook integration: individual Scene system invocations, World/ECS mutations and asset lifecycle.
+
+
+## Renderer direction — accepted 2026-11-27
+- The Android host's selected renderer backend is `wgpu-native`, called through its C API from a C++20 `IRenderBackend` implementation. Engine subsystems remain C++; the upstream Rust implementation is a packaged dependency, not a Rust rewrite of Dream Engine.
+- `DreamingbullyYT/Rusty-survival-` is a technical reference: its `horizon-client-render` crate uses Rust `wgpu 30.0.1` and contains a much larger 3D renderer. Do not copy that renderer into this repository; preserve its useful rendering concepts while implementing native C++/WGSL pipelines against Dream Engine's own contracts.
+- The available Android ARM64 package is pinned to `wgpu-native v29.0.1.1` (wgpu-core 29.0.1), not the same version as Rusty-survival's wgpu 30.0.1. Keep the difference explicit and upgrade deliberately.
+- Pin and verify the release archive with SHA-256 in the workflow. Preserve the upstream wgpu-native MIT/Apache-2.0 notices and the WebGPU native headers BSD-3-Clause notice under `third_party/`; do not replace the repository's root MIT license.
+- First verified milestone is Android surface/device creation and clear/present only. 2D and 3D capabilities must remain disabled until their WGSL pipelines, resources, validation and lifecycle behavior are implemented and tested.
+- Android CI proves arm64 compilation and APK packaging, not physical GPU correctness. Phone validation remains an explicit gate.

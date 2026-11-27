@@ -308,3 +308,24 @@ This update is authoritative over older checklist/status text above where they c
 - **Android host:** GameActivity host, EngineRuntime, bgfx GLES 3 renderer, 2D/3D demo, retained touch UI, basic software-keyboard/IME bridge, AAudio output connection, pause/surface recreation handling and rotating logs are present. CI proves cross-compilation/package layout only, not physical-device rendering/audio/IME behavior.
 - **Sleeping:** not yet implemented; no public sleep/wake state is exposed. It remains open rather than being marked complete.
 - **Remaining production work:** general CCD for non-circular shapes and dynamic-vs-dynamic pairs; sleeping/waking; joints; multiple fixtures and robust contact manifolds; complete MTL texture handling and glTF/GLB/image/audio import; GPU asset residency/device-loss policy beyond renderer resource reinitialization; full IME composition/selection; full font shaping/atlas and UI clipping; animation blends/events/curves; native mod resource/job/thread ownership and hot reload; package signatures/trust; profiler/editor; two real-game integration tests; physical-device verification.
+
+
+## wgpu-native Android integration audit — 2026-11-27
+
+### Dependency and platform
+- The technical reference repository `DreamingbullyYT/Rusty-survival-` uses Rust `wgpu 30.0.1` in `crates/horizon-client-render`; that renderer is not copied into Dream Engine.
+- The packaged native C API used here is the official `gfx-rs/wgpu-native v29.0.1.1` Android AArch64 release. Its archive asset is `wgpu-android-aarch64-release.zip`; workflow SHA-256 is `721741f1b05a20c1738166bedf7a5efb2ba4b382da689526d3fc33de22bdd573`.
+- The release contains `include/webgpu/webgpu.h`, `include/webgpu/wgpu.h` and `lib/libwgpu_native.so`; Actions verifies all three before CMake configuration.
+- wgpu-native exposes a C API for a C++ host. Android native-window surface creation uses `WGPUSurfaceSourceAndroidNativeWindow`. Vulkan and GL backends are enabled; Vulkan is the primary Android route while GLES/GL is a best-effort fallback.
+- License review recorded: wgpu-native `MIT OR Apache-2.0`; pinned WebGPU native headers submodule commit `673658bc2bd70ec39fc55ebe6bb0173cf6d0a603` uses BSD-3-Clause. Exact texts are retained under `third_party/wgpu-native/` and `third_party/webgpu-headers/`; repository root MIT remains unchanged.
+
+### Implementation and evidence
+- `WgpuNativeBackend` implements `IRenderBackend` and owns the wgpu instance, surface, adapter, device and queue. Initialization checks the Android surface and extent, processes asynchronous adapter/device callbacks with a 15-second timeout, queries supported surface formats, configures FIFO presentation and logs adapter/validation messages.
+- The current frame path submits a clear-only render pass and presents it. This proves native build/link/package integration only, not real GPU output.
+- [Android host APK run 91](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45949435994) passed: clean Android ARM64 configure/compile/link, APK contains both `libdream_engine_android_host.so` and `libwgpu_native.so`, startup diagnostic strings checked and artifact upload succeeded.
+- [Dream Engine CI run 479](https://github.com/DreamingbullyYT/my-engine-/actions/runs/45949436000) passed all six jobs: GCC, Clang, ASan/UBSan, Android arm64-v8a, DMod AST proof and ThreadSanitizer.
+
+### Known gaps / required proof
+- 2D/3D draw support is intentionally false; no WGSL shader modules/pipelines, bind groups, vertex/index buffers, texture uploads, depth attachment, material system or GPU resource restoration are implemented in the wgpu backend.
+- The first physical-device check must confirm the magenta clear frame appears. If it does not, inspect Logcat tags `DreamEngineBoot`, `DreamEngineWgpu` and `DreamEngine`, plus `logs/engine.log`; CI cannot determine runtime surface compatibility on the user's exact device.
+- Next: phone validation, 2D pipeline/resources, 3D pipeline/depth/materials, device-loss/recreation and multi-GPU-driver validation. Do not mark the renderer complete until these gates pass.
