@@ -39,3 +39,9 @@ Until then, keep PMCS/CODE_MAP.md updated, add module READMEs for non-obvious su
 19. Prefer the smallest cohesive module/file change and focused tests. Split a file when it has multiple responsibilities or independent change/test reasons; avoid both giant files and needless one-function-per-file fragmentation. No arbitrary line-count target.
 20. Do not create empty future modules during early milestones. Add modules with the first real vertical slice that needs them.
 21. Once a module becomes substantial, add/update PMCS/modules/<module>.md with ownership, entry points, dependencies, invariants, tests, limitations, and the source commit it describes.
+
+## Main-only development rule — user instruction, 2026-11-27
+22. All future implementation, fixes, documentation, tests, and workflow changes must be committed directly to the `main` branch. Do not create feature branches or pull requests for normal work.
+23. Before each change, inspect the latest `main`; commit small, tested increments to `main` and update PMCS in the same commit/change where practical.
+24. Do not merge unrelated or pre-existing pull requests automatically. The already-open M2 PR is a one-time transition exception: wait for its required CI checks, fix failures on its existing branch if needed, then merge it into `main`. After that transition, return to the main-only rule.
+25. Never merge while required checks are pending or failing. If CI cannot be made green, report the blocker instead of bypassing checks. Physical-device validation remains a separate gate and must not be falsely marked complete.
