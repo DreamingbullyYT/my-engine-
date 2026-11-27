@@ -9,7 +9,7 @@ diff --git a/third_party/godot/main/main.cpp b/third_party/godot/main/main.cpp
  #include "core/config/engine.h"
  #include "core/config/project_settings.h"
  #include "core/core_globals.h"
-@@ -4896,6 +4897,35 @@
+@@ -4896,6 +4897,30 @@
  bool Main::force_redraw_requested = false;
  int Main::iterating = 0;
  
@@ -53,7 +53,7 @@ diff --git a/third_party/godot/main/main.cpp b/third_party/godot/main/main.cpp
  #ifndef PHYSICS_3D_DISABLED
  			PhysicsServer3D::get_singleton()->end_sync();
  #endif // PHYSICS_3D_DISABLED
-@@ -5066,12 +5100,20 @@
+@@ -5066,11 +5100,15 @@
  #ifndef PHYSICS_3D_DISABLED
  		GodotProfileZoneGrouped(_physics_zone, "3D physics");
  		PhysicsServer3D::get_singleton()->end_sync();
@@ -71,7 +71,7 @@ diff --git a/third_party/godot/main/main.cpp b/third_party/godot/main/main.cpp
 +		dream_physics_2d_context["delta"] = physics_step * time_scale;
 +		DreamModRuntime::dispatch_hook("godot.physics.server2d.step", dream_physics_2d_context, dream_physics_server_2d_step_original, PhysicsServer2D::get_singleton());
  #endif // PHYSICS_2D_DISABLED
-@@ -5110,9 +5152,13 @@
+@@ -5110,7 +5152,11 @@
  	uint64_t process_begin = OS::get_singleton()->get_ticks_usec();
  
  	GodotProfileZoneGrouped(_profile_zone, "process");
@@ -95,7 +95,7 @@ diff --git a/third_party/godot/scene/main/scene_tree.cpp b/third_party/godot/sce
  STATIC_ASSERT_INCOMPLETE_TYPE(class, RenderingServer);
  
  #include "core/config/engine.h"
-@@ -152,7 +153,15 @@
+@@ -152,7 +153,16 @@
  }
  
  void SceneTree::node_added(Node *p_node) {
@@ -113,7 +113,7 @@ diff --git a/third_party/godot/scene/main/scene_tree.cpp b/third_party/godot/sce
  }
  
  void SceneTree::node_removed(Node *p_node) {
-@@ -161,7 +170,15 @@
+@@ -161,8 +170,17 @@
  	if (current_scene == p_node) {
  		current_scene = nullptr;
  	}
