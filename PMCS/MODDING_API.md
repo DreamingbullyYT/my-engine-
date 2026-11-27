@@ -66,3 +66,25 @@ Version Godot integration, Dream Runtime, and Dream Mod API independently. Use i
 8. Let two mods communicate through public contracts.
 9. Reload a script mod with defined state/save semantics.
 10. Connect two clients and sync a mod-owned entity in a host with networking.
+
+
+## Colony governance and remote simulation integration (planned host API)
+The host may expose a colony-governance facade to trusted mods:
+- Observe colony oversight state and mayor advice/actions.
+- Register mayor roles, advice providers, priorities, and policy types.
+- Subscribe to recommendation, delegation, colony-report, crisis, and mayor-action events.
+- Extend decision rules through documented hooks while respecting host resource/workforce constraints unless a mod intentionally overrides those rules.
+- Read an auditable history of mayor decisions so the player can understand what happened while away.
+
+The intended base-game mayor behavior is gradual: adviser first, then increasing routine responsibility as player oversight decreases. Do not model this as an obligatory mayor appointment or assume all colonies are permanently autonomous.
+
+## Space settlement API surface (planned host API)
+Expose extensible registries and runtime interfaces for:
+- satellite/probe and payload definitions — functional orbital craft and scientific/communication equipment.
+- orbital stations, station modules, and docking ports — large modular stations, docking, expansion, and installed systems.
+- mobile colony ships, habitat modules, life support, food production, power, storage, and shipyard modules — mobile settlements and their required capabilities.
+- asteroid bases, orbital habitats, and industrial platforms — additional non-planetary settlement types.
+
+The API should let mods add modules, components, station types, and mobile habitats without modifying Godot source or rebuilding the host for ordinary GDScript content mods. A station or colony ship must only provide capabilities supported by its installed modules and available resources. Docking, population capacity, power, food, life support, and propulsion must be modeled as explicit capabilities/constraints.
+
+Do not collapse all these entities into a cosmetic satellite category. Satellites, stations, and mobile colonies have different gameplay roles and lifecycle needs.
