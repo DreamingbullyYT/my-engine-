@@ -99,3 +99,5 @@ theme_override_colors/font_color = Color(0.63, 0.78, 0.91, 1)
 theme_override_font_sizes/font_size = 14
 text = "Ready. Tap the button to test input."
 horizontal_alignment = 1
+
+[connection signal="pressed" from="Panel/Content/TestTouchButton" to="." method="_on_test_touch_pressed"]
