@@ -59,3 +59,14 @@ All core content and rules should be data-driven and extensible through the Drea
 ## Citizen visual representation and distance LOD — D-016
 
 Citizens are persistent simulated individuals, but their on-screen representation is deliberately simple: pixel-scale people. Their visual movement and animation are reduced progressively as the camera moves away. At close range, individual pixel people can move and animate; at medium/far range, visual movement/animation updates become less frequent and details are simplified; when an individual is too small to be meaningfully visible, its sprite is no longer drawn. This does not remove the citizen from the simulation or save: identity, population membership, job, skills, needs, health, happiness, and other authoritative state remain intact. Off-screen citizens likewise stop consuming visual animation work, while their simulation continues at the appropriate simulation tier. See PERFORMANCE_AND_SIMULATION.md and D-016.
+
+
+## Terrain, minimal vegetation, mining, and underground colonies — D-017
+
+Planetary terrain uses a simple, readable side-view presentation guided by Spaceflight Simulator's broad design principles, adapted to Dream Engine's spherical/radial worlds. Do not copy reference-game assets, code, names, or distinctive UI. Vegetation is intentionally sparse and visually restrained, guided by The Final Earth 2; gameplay-relevant plants must still be represented as real resources/entities with simulation state.
+
+The terrain supports local excavation and underground settlement through a hybrid model. Players can create traversable tunnels and chambers and establish underground colonies with suitable buildings and infrastructure. These are persistent gameplay spaces, not merely painted holes in a texture. Their exact construction rules, structural stability, support requirements, cave-in behavior, geology, and environmental hazards remain to be specified separately.
+
+The engine does not need to simulate every rock fragment at full resolution. It may simplify distant, hidden, or irrelevant underground details while preserving authoritative tunnel connectivity, collision/navigation where needed, resources, structures, and colony state. Excavation and mining update only affected terrain regions and dependent data; they must not force a full-planet rebuild. Visual caches are never authoritative for terrain, resources, movement, or building placement.
+
+Planetary surface/underground mining and asteroid mining both contribute to resource progression, but remain distinct systems with their own environment and interaction rules. All extraction must respect actual deposits, quantities, tools, infrastructure, workforce, energy, and transport capacity.
