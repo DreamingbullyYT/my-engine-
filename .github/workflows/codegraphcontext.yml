@@ -65,7 +65,7 @@ jobs:
           end
           EOF
 
-          cgc index "$fixture" --force --summarize 2>&1 | tee "$RUNNER_TEMP/codegraph-smoke-index.log"
+          cgc index "$fixture" --force 2>&1 | tee "$RUNNER_TEMP/codegraph-smoke-index.log"
           cgc stats "$fixture" 2>&1 | tee "$RUNNER_TEMP/codegraph-smoke-stats.log"
           cgc analyze calls calculate 2>&1 | tee "$RUNNER_TEMP/codegraph-smoke-calls.log"
           cgc bundle export "$RUNNER_TEMP/codegraph-smoke.cgc" --repo "$fixture"
