@@ -144,6 +144,27 @@ Consequences and validation:
 - Represent excavated passages/chambers as persistent logical world data with stable coordinates and connectivity; do not treat a baked texture as the authoritative tunnel.
 - Update terrain visuals and collision locally after excavation, while retaining unaffected valid caches.
 - Use distance/visibility-aware simplification for underground rendering and simulation, without losing persistent colony, resource, or structural state.
-- Keep structural stability, cave-ins, support materials, detailed geology, and exact excavation tools as open gameplay specifications; this decision does not silently settle their rules.
-- Profile excavation updates, collision changes, underground rendering, memory, and save/load on Android ARM64 before choosing numeric limits.
+- D-018 resolves the initial gameplay rules for tunnel stability, structural supports, and excavation/material differences; see D-018.
+- Profile local excavation updates, collision changes, underground rendering, memory, and save/load on Android ARM64 before choosing numeric limits.
 - This is a design decision only; no terrain engine, mining, or underground-colony implementation is implied.
+
+
+## D-018 — Simplified underground stability, no support structures, and uniform excavation
+Status: ACCEPTED — 2026-11-27.
+
+The initial game does not simulate structural stability or cave-ins for ordinary excavated tunnels and chambers. Tunnels remain stable by default; there is no per-segment rock-pressure, structural-strength, or collapse-risk simulation.
+
+Underground tunnels and chambers do not require structural supports. The initial design includes no support beams, pillars, reinforcement structures, or automatically generated support decorations. This deliberately avoids an additional construction, rendering, resource, and simulation system.
+
+All terrain uses the same basic excavation rule in the initial game. Do not implement a complex per-material hardness or digging-resistance simulation. Different terrain/material types may still contain different resource deposits and therefore produce different mining yields or discoveries; material identity and resource content remain meaningful without changing the basic excavation mechanic.
+
+Rationale:
+- Keep CPU cost and implementation complexity under control as the game already has many planned simulation systems.
+- Preserve underground construction and mining gameplay without introducing a detailed geology/structural-engineering simulation.
+- Leave room for future expansion through mods or a separately accepted design change, without making it part of the initial baseline.
+
+Consequences:
+- No routine cave-in simulation, structural support placement, automatic support decoration, or material-specific digging physics in the initial implementation.
+- Excavation still updates authoritative terrain geometry/topology, collision/navigation, deposits, and affected local visual data as specified by D-017.
+- This decision does not remove resource differences between materials or deposits.
+- This is a design decision only; no excavation or terrain implementation is implied.
