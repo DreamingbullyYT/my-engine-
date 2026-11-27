@@ -33,8 +33,14 @@ target_link_libraries(dream_engine_android_host PRIVATE
     DreamEngine::PlatformAndroidGameActivity
     DreamEngine::AudioAndroidAAudio
     DreamEngine::RenderWgpuNative
+    # Keep the runtime dependency explicit on the final shared object. The
+    # host creates WgpuNativeBackend and calls its WebGPU-backed implementation.
+    dream_wgpu_native_android
     ${ANDROID_SYSTEM_LIB}
     ${ANDROID_LOG_LIB}
+)
+target_link_options(dream_engine_android_host PRIVATE
+    -Wl,--no-as-needed
 )
 set_target_properties(dream_engine_android_host PROPERTIES
     CXX_EXTENSIONS OFF
