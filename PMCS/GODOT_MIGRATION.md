@@ -1,53 +1,56 @@
 # Godot Migration — Dream Engine
 
-**Status:** ACCEPTED DIRECTION; source-build integration in progress
+**Status:** Android bootstrap validated on a physical device; full engine integration in progress
 **Updated:** 2026-11-27
-**Target:** Godot 4.7.2-stable, Android arm64-v8a, GitHub Actions
+**Target:** Godot 4.7.2-stable, Android arm64-v8a, C++ native modules
 
-## Direction override
+## Accepted foundation and source pin
 
-The user explicitly approved adopting the upstream Godot source as the new Dream Engine foundation. This supersedes the earlier direction to continue building every foundational engine subsystem independently in `engine/`.
+The user approved using the real Godot source as the new Dream Engine foundation.
 
-Pin:
-- Repository: https://github.com/godotengine/godot
+- Upstream: https://github.com/godotengine/godot
 - Tag: `4.7.2-stable`
-- Exact commit: `ed1daf0bf001b61586d9930840f2f1394092c079`
-- License: MIT. Preserve the upstream LICENSE and every third-party notice in the source tree and distributions.
+- Exact upstream commit: `ed1daf0bf001b61586d9930840f2f1394092c079`
+- The commit is verified as the signed upstream 4.7.2-stable release commit.
+- **Required repository layout:** all tracked Godot source files are committed directly under `third_party/godot/`. A git submodule is explicitly not acceptable.
+- `third_party/GODOT_SOURCE_COMMIT` records the upstream SHA. CI checks the marker, the source version and that `third_party/godot` is not a gitlink.
+- Preserve upstream `LICENSE`, `COPYRIGHT.txt`, `AUTHORS.md` and third-party notices when present. Keep the project's own third-party notices current.
 
-Do not delete the existing `engine/`, `android-host/`, tests or historical CI during migration. Keep them available as source/reference until replacements are built and verified.
+The one-time `.github/workflows/vendor-godot-source.yml` workflow converts the current gitlink to normal tracked files at the exact pinned commit. It also starts the Android build workflow after the vendor commit.
 
-## Active architecture
+## Active engine architecture
 
-Godot owns the scene tree, resources, rendering, physics, input, audio and Android platform/runtime where its facilities meet requirements. Dream-specific engine internals belong in small C++ modules/patches; game content belongs in Godot projects/resources. C++ remains the default language for engine extensions and native modules; GDScript may be used for project/game scripting.
+Godot owns the mature platform and general-purpose engine systems: scene tree, resources, rendering, physics, input, audio, animation, UI and Android platform/runtime. Dream Engine-specific behavior is implemented as C++ modules and minimal patches inside the vendored source. Game-specific content remains in Godot projects and resources. C++ is the primary language for engine internals and native mods; GDScript is available for project/game scripting.
 
-The old GameActivity/wgpu-native host is legacy/reference code on this branch, not the new Godot host. `godot-project/` is only a validation target (visible UI, FPS readout and touch-input response), not the final game or finished engine product.
+The existing standalone C++ engine, GameActivity host, wgpu/bgfx experiments and tests remain in the repository as legacy/reference material until replacements have evidence and are intentionally retired.
 
-## Native mod requirement
+## Deep native mod requirement
 
-The former DMod requirement remains: trusted native mods execute in-process, without a sandbox, and can affect engine/game state. GDExtension is suitable for supported public extension points but must not be presented as arbitrary access to every private Godot internal. Evaluate a small maintained Godot module/patch layer for deep internal hooks, replace/around behavior and stable hook contexts. No native compilation should be required on the user's phone. Native mods are fully trusted code and may corrupt state or crash the process.
+The old DMod requirement remains mandatory:
 
-## Android ARM64 source-build milestone
+- Native mods are prebuilt shared libraries loaded at runtime; no compilation on the user's phone and no APK rebuild for installation.
+- Native code executes in-process without a sandbox or capability enforcement. It has the application's process privileges and can crash or corrupt the engine. Only trusted packages should be installed.
+- GDExtension remains useful for its public supported interface but is not treated as unrestricted private-engine access.
+- The active implementation direction is a built-in Dream Engine C++ Godot module with an append-only versioned native ABI, direct access to live engine objects, owner-tracked native hooks and explicit `Before`, `Around`, `Replace`, and `After` stages.
+- Hook points must be integrated into real engine lifecycle/scene/physics/render/resource paths. A registry without engine call sites is not considered deep-hook completion.
+- Module unload must deactivate hooks and call mod shutdown before unloading its shared library. Mods are responsible for stopping their own threads and releasing owned resources before shutdown returns.
+
+## Android bootstrap milestone
 
 Workflow: `.github/workflows/godot-android-source.yml`
 
-1. Checkout the exact Godot submodule commit, including upstream nested submodules.
-2. Install JDK 17, Android SDK 36, Build Tools 36.1.0 and Godot 4.7.2-required NDK 29.0.14206865.
-3. Compile Godot's Android `template_debug` for `arm64` from source with SCons and generate the Android template/AAR with the upstream Gradle project.
-4. Use the matching Godot 4.7.2 Linux editor release only for project import/export; verify its archive SHA-256.
-5. Export the bootstrap project to an installable ARM64 debug APK.
-6. Compare the packaged `libgodot_android.so` byte-for-byte with the library compiled from the pinned source and upload the APK/templates as a GitHub Actions artifact.
+The workflow compiles the Android debug template from the pinned Godot source with SCons, imports/runs the validation project using the matching official editor archive, exports an ARM64 APK, verifies APK integrity/signature, and byte-compares the packaged `libgodot_android.so` against the source-built library.
 
-The official Linux editor zip SHA-256 used by the workflow is `cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4`. The Android runtime template itself is built from the pinned source.
+**Physical-device smoke test reported by the user on 2026-11-27:** the app displayed “DREAM ENGINE / Powered by Godot 4.7.2”, touch input responded, the presses counter reached 25, and the FPS counter showed 59 FPS. This proves app startup, visible rendering and basic touch delivery on that device. It does not yet prove full renderer, physics, lifecycle, audio or native-mod behavior.
 
-CI proves compilation and APK packaging, not physical GPU correctness. Phone testing (launch, visible first frame, touch, background/resume, rotation and logs) remains open until the user installs the artifact.
+## Remaining foundation work
 
-## Next stages
+1. Vendor the full Godot source directly into this repository at the SHA above and remove the `.gitmodules` entry.
+2. Build the first in-tree Dream Engine C++ module and connect real main-loop/physics/render/scene/resource hook sites.
+3. Integrate the native mod loader, package/manifest/dependency validation, raw engine interfaces, ownership and unload lifecycle.
+4. Build and install fresh Android ARM64 APKs from the vendored/modified source.
+5. Validate background/resume, rotation, touch, GPU output, audio and crash/log behavior on the phone.
+6. Extend and harden engine systems by relying on Godot's existing 2D/3D renderer, physics, animation, UI, assets and audio rather than duplicating them.
+7. Add full editor/tooling and validate with different game workloads.
 
-- Verify and fix the source-build workflow before merging the migration branch.
-- Install and test the bootstrap APK on the user's Galaxy S23 Ultra.
-- Define the Dream-specific module/patch boundary and implement the deep native mod/hook API.
-- Port game-facing systems incrementally; do not mechanically duplicate Godot's built-in systems.
-- Retire old standalone engine components only after validated replacements exist.
-- Add a repeatable desktop/editor source-build workflow after Android source template verification.
-
-Until the new workflow completes successfully, this migration is `IN_PROGRESS`, not VERIFIED.
+CI compilation is not a substitute for phone testing. Do not mark a feature complete without build/test evidence.
