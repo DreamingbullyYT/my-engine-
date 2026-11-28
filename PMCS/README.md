@@ -2,8 +2,8 @@
 
 Project: Dream Engine
 Repository: DreamingbullyYT/my-engine-
-Snapshot: 2026-11-27
-State: PMCS specification, M1 Android baseline, and M2 native GDExtension proof in progress; gameplay systems remain unimplemented.
+Snapshot: 2026-11-28
+State: M1–M4 foundation and colony/rocket domain logic exist; the accepted city-first continuous world presentation (D-023) is being implemented. The previous planet-first overview is rejected as the main view.
 
 This directory is the durable memory for humans and AI agents. It prevents repeated rediscovery, architecture drift, accidental reversals, and false implementation claims.
 
@@ -12,7 +12,7 @@ This directory is the durable memory for humans and AI agents. It prevents repea
 2. VISION.md — goals and non-goals.
 3. ARCHITECTURE.md — system boundaries and data flow.
 4. MODULES.md — game-module catalog, ownership, dependency rules, and modularity requirements.
-5. DECISIONS.md — accepted decisions D-001 through D-022.
+5. DECISIONS.md — accepted decisions D-001 through D-023.
 6. MODDING_API.md — .dmod package and GDScript API requirements.
 7. GAMEPLAY.md — citizens, colony economy, buildings, research, policies, and needs.
 8. ROCKETS_AND_PHYSICS.md — part-based vehicles, propulsion, orbital and atmospheric flight.
@@ -32,6 +32,9 @@ This directory is the durable memory for humans and AI agents. It prevents repea
 
 ## Reference-guided design baseline
 D-014 adapts colony-management principles from The Final Earth 2 and part-based orbital-flight principles from Spaceflight Simulator. It does not authorize copying code, art, names, distinctive UI, or exact balance values. See GAMEPLAY.md and ROCKETS_AND_PHYSICS.md.
+
+## City-first continuous world loop — D-023
+The player starts close to the city. The full planet stays hidden until the actual rocket-launch capability is unlocked; that milestone triggers a smooth reveal through the home planet to the nearest real celestial target. City, planet, and system are camera scales in one persistent world session, not independent screens or duplicated simulations. Internal code remains modular under D-022. See DECISIONS.md, GAMEPLAY.md, MOBILE_UX.md, and ARCHITECTURE.md.
 
 ## Current game-design clarifications
 The colony remains central. A mayor begins as an adviser and progressively takes on routine management as player oversight decreases; colonies can still fail or be destroyed. Space settlements include functional satellites, large modular orbital stations, and mobile colony ships that can act as planetless colonies. Mobile-colony mayors can plan fleets and, after player permission at roughly 5–6 explored star systems, autonomously found colonies only on genuinely habitable worlds or through explicitly engineered habitat solutions. See D-011 through D-013.
@@ -88,3 +91,5 @@ For every meaningful change:
 2026-11-27: D-010 through D-022 resolved the scripting, colony governance, space settlement, terrain, v1 scope, mobile UX, and modularity design contracts.
 2026-11-27: M1 official Godot 4.7.2 Android ARM64 CI build passed; physical-device validation remains pending.
 2026-11-27: M2 C++ GDExtension implementation started on `m2/gdextension-proof`; native build/runtime CI and phone validation remain pending.
+
+2026-11-28: D-023 accepted the city-first continuous world camera and corrected the earlier planet-first presentation; TEXTURES.md now enforces a strict 32×32 px maximum per image file.

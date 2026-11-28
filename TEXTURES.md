@@ -1,12 +1,13 @@
 # Lista de texturi (v1) — pentru tine să le desenezi
 
-- **1 tile = 32x32 px.** Clădirile și piesele mari sunt multipli (ex. 3x2 tile = 96x64 px).
-- Format: PNG cu transparență, **filtru "nearest"** (fără anti-aliasing). Stil: pixel art simplu / low-poly flat.
-- Calea implicită: `textures/<cale>.png`. Eu generez **placeholdere** pentru toate (culoare plată + contur + text cu id-ul). Tu înlocuiești fișierul cu același nume; **un dosar `textures/` are prioritate peste cele implicite, fără alt cod**.
-- Desenezi clădirile **drepte, cu baza jos**; jocul le rotește după unghiul de pe glob.
-- Opțional pe orice clădire: `<id>_night.png` (aceeași mărime, cu ferestrele aprinse). Dacă lipsește, se folosește imaginea normală.
-- Spritesheet-uri: cadre egale, pe orizontală, de la stânga la dreapta.
-- Total: **≈ 341 de fișiere**. Poți începe cu cele marcate ★ (esențiale pentru primele minute de joc).
+- **LIMITĂ STRICTĂ: fiecare fișier de imagine individual are maximum 32×32 px.** Nicio textură, foaie de sprite sau placeholder nu poate avea o latură mai mare de 32 px.
+- Entitățile mai mari (clădiri, arbori, piese de rachetă, module) sunt compuse din mai multe celule/segmente de maximum 32×32 px; nu se exportă un PNG unic de 64×64, 96×64 etc. Coloana `px` din tabelele vechi descrie amprenta vizuală compusă, NU dimensiunea unui fișier.
+- Animațiile folosesc cadre separate de maximum 32×32 px (sau resurse Godot care referă astfel de imagini); nu se folosesc spritesheet-uri mai mari de 32×32 px.
+- Format: PNG cu transparență, **filtru nearest** (fără anti-aliasing). Stil: pixel art simplu / low-poly flat.
+- Calea implicită: `textures/<cale>.png`. Placeholderele dezvoltatorului rămân extrem de simple, din forme/culori plate și la maximum 32×32 px. Utilizatorul desenează toate asset-urile finale.
+- Clădirile mari sunt compuse din segmente/celule aliniate; fiecare imagine-sursă rămâne în limita 32×32 px. Desenează segmentele drepte, cu baza jos; jocul le rotește după unghiul suprafeței.
+- Opțional pe orice segment: `<id>_night...png` cu aceeași dimensiune (maximum 32×32 px).
+- Înregistrările de mai jos păstrează ID-urile și amprentele logice existente; dimensiunile compuse mai mari trebuie descompuse în imagini multiple conforme. Numărul de fișiere efective poate depăși numărul de ID-uri logice.
 
 ---
 
@@ -152,7 +153,7 @@
 
 ## I. Cetățeni — `textures/citizens/` — 14
 
-**Spritesheet-uri 192x32** (6 cadre de 32x32: 4 de mers + 2 de repaus), 6 fișiere: `adult_a`, `adult_b`, `adult_c`, `adult_d`, `child`, `astronaut`.
+**Cadre separate de 32×32 px**, 6 tipuri de cetățean (`adult_a`, `adult_b`, `adult_c`, `adult_d`, `child`, `astronaut`); fiecare cadru de mers/repaus este un fișier distinct de maximum 32×32 px. Fără spritesheet 192×32.
 **Portrete 32x32**, 8 fișiere: `portrait_01` … `portrait_08`.
 
 ## J. Piese de rachetă — `textures/parts/` — 51
@@ -193,7 +194,7 @@ Desenate cu **vârful în sus**. Pe lățime folosim 32/64/96 px (1/2/3 tile).
 
 **Energie și echipament (8):** `solar_s` (64x16), `solar_l` (128x16), `battery_s` (32x32), `battery_l` (64x32), `antenna` (16x32), `cargo_bay` (64x64), `drill` (32x64), `science_pod` (32x32).
 
-**Flăcări de motor (4, spritesheet 4 cadre):** `flame_small` (128x64), `flame_medium` (128x96), `flame_large` (256x128), `flame_ion` (128x64) — `textures/effects/`.
+**Flăcări de motor (4 tipuri, cadre separate ≤32×32 px):** `flame_small`, `flame_medium`, `flame_large`, `flame_ion` — `textures/effects/`. Cadrele nu se unesc într-o foaie mare.
 
 ## K. Corpuri cerești, cer, hartă — `textures/space/` — 33
 

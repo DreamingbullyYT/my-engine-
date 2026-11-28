@@ -101,3 +101,17 @@ The game is modular by default. The concrete gameplay/module catalog, suggested 
 At minimum: each domain owns its authoritative state and rules; UI does not own gameplay; rendering is presentation-only; physics and simulation are shared services; modules use explicit contracts and avoid circular dependencies; the bootstrap only wires components; and no all-purpose manager or catch-all script may accumulate unrelated game systems. Prefer cohesive feature modules and small changes over repeated patches to a central file. Do not create empty future modules during M1, and do not split trivial functions into needless files.
 
 The existing module list in this document (Dream Runtime, Mod Manager, API, events, registries, hooks, networking, and Android integration) describes runtime/modding boundaries. PMCS/MODULES.md expands the catalog to the actual colony, planet, vehicle, physics, exploration, infrastructure, automation, rendering, save, and UI game domains. All are plans until source and tests exist.
+
+
+## Persistent world session and single continuous presentation — D-023
+
+The player-facing game is one continuous world experience:
+- `app` owns one persistent main world scene/session for normal play.
+- A world/camera presentation module reads the authoritative world, colony, vehicle, and celestial data and renders the currently visible scale.
+- The same camera can show the city close-up, the local planetary surface, the full home planet, and the local system. It may follow a vehicle during flight and return to the same colony.
+- Camera zoom/pan/follow transitions do not swap to a separate gameplay scene, duplicate domain state, reload a second simulation, or mutate physical/world coordinates.
+- Build menus, citizen/building inspectors, rocket construction, map/orbit planning, and diagnostics are overlays or focused panels owned by UI; they do not become independent gameplay modes with their own copy of game data.
+- The camera starts city-close and hides the full planetary globe until the real rocket-launch capability is unlocked. That milestone triggers the automatic city → home planet → nearest actual catalogue planet/system-target reveal specified by D-023.
+- Rendering LOD follows D-016 and the planet/city surface uses D-017–D-019 authoritative geometry/topology. UI hit-testing and selection always resolve to stable world/entity IDs rather than rendered pixels.
+
+This presentation requirement does not weaken D-022. Internal domains remain modular: the world/session composition root wires modules but does not own colony economics, flight physics, exploration, rendering policy, or save formats. Do not build one giant GameManager just to achieve a single continuous player-facing loop.

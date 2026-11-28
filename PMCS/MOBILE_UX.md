@@ -74,3 +74,20 @@ The game may have deep simulation, but the default mobile experience must be eas
 - The language can be changed at any time in Settings. Romanian and English are the minimum launch languages.
 
 These defaults are accepted design requirements. Exact control layout, assistance strength, and localization coverage remain implementation/testing tasks.
+
+
+## Persistent world camera and progressive scale reveal — D-023
+
+The main gameplay view is a single continuous world camera. Do not make separate City, Planet, and Space screens/scenes with independent state.
+
+- **Default camera:** close to the player's city, showing individual buildings, citizens, paths, and local surface details. The full planet must not appear on the first-launch screen.
+- **Before rocket unlock:** allow local panning/zooming, but clamp the maximum zoom-out to the city/local region. The whole planet/system overview remains hidden.
+- **At first real rocket-launch unlock:** automatically animate the same camera outward from the city, reveal the curved planetary surface and full home planet, then move focus toward the nearest actual planet in the celestial-body catalogue. If no additional planet exists in the v1 system data, focus the nearest real Moon/asteroid/destination instead; do not fake a celestial body.
+- **After reveal:** allow free zoom/pan between city, planet, and unlocked system scales. Rocket flight may temporarily make the camera follow the craft, but it remains in the same world session. Returning to the city must reveal the same state.
+- Use touch-friendly pinch zoom and drag panning with sensible bounds and adjustable sensitivity. Keep build/select taps distinct from camera gestures so a pinch or pan cannot accidentally place a building.
+- Use smooth interpolation/hysteresis to avoid abrupt popping between distance LOD levels. The transition can be interrupted/reversed safely; it must never move gameplay entities.
+- Respect reduced-motion and camera-sensitivity settings. Provide a clear way to re-centre on the colony and to focus the active vehicle/target.
+- Keep the main HUD minimal. Context panels for buildings, citizens, rockets, and celestial bodies appear over the same world; full statistics remain on-demand.
+- The world and all game systems continue to use their normal simulation/time policy while the camera moves. Camera scale is presentation only, not a gameplay tick or loading transition.
+
+This is an approved interaction/product requirement. Exact zoom ranges, transition duration, and thresholds remain subject to Android device testing and profiling.

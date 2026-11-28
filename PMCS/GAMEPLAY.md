@@ -91,3 +91,34 @@ The initial playable implementation is intentionally a small foundation, not the
 ## Art budget and temporary visuals — user decision, 2026-11-28
 
 The user will create all final textures and sprites. **32×32 pixels is the maximum size for any individual final sprite/texture.** Temporary visuals must follow the same maximum and stay extremely basic. Use flat colours and primitive pixel shapes that are straightforward to replace. Do not spend development effort on detailed textures, polished illustrations, or large texture atlases. The current planet presentation uses code-drawn markers rather than external texture assets.
+
+
+## One continuous city-to-space gameplay loop — D-023
+
+The game is presented as one persistent world, not as separate city, planet, and space modes. The same world session, colony, citizens, buildings, resources, vehicles, and simulation remain active while the camera changes scale.
+
+### Starting experience: city first
+- Start zoomed close to the settlement. Buildings, citizens, paths/streets, and local surface details occupy the view.
+- Do not show the full planet/globe in the initial scene or default camera framing.
+- Until rocket launch capability is genuinely unlocked, camera limits keep the view at city/local-region scale.
+- Keep the spherical/radial world model authoritative underneath this close-up view; the camera presents the local surface, it does not turn the world into a separate flat level.
+
+### Rocket milestone: reveal the world
+When the player unlocks the real ability to build and launch rockets, run a one-time automatic camera reveal:
+1. Pull back from detailed buildings and citizens to the wider settlement.
+2. Continue through the local curved planetary surface to reveal the whole home planet.
+3. Continue to the local-system view and guide focus to the nearest actual planet in the celestial-body catalogue. If the v1 system has no additional planet, use the nearest real Moon/asteroid/destination available in the v1 world data rather than inventing a decorative body.
+
+The transition is a camera animation only. It does not change the simulation, teleport the craft, grant technology/resources, or load a different gameplay scene. It must be possible to zoom back into the same city and see the same buildings and citizens.
+
+### Connected progression loop
+City survival/economy → construction/research → rocket capability → spacecraft/launch → local-space exploration and infrastructure → returned resources/data or supported settlement growth → city economy and new capabilities. All later v1 systems (Moon, nearby asteroids, orbital station, research, spacecraft, cargo, and colony expansion) must connect to this same persistent loop and use the owning domain modules from MODULES.md. They must not be implemented as unrelated sample screens or independent demos.
+
+The city remains the player's home and the centre of progression. Space activity should create useful consequences for the same colony; it does not replace colony management.
+
+### Presentation and simulation invariants
+- One world session and one persistent main world scene; use overlays for contextual UI rather than switching between separate city/planet/space scenes.
+- Zoom/pan/follow-camera changes never create or destroy gameplay entities and never change authoritative simulation values.
+- Building/citizen visual LOD follows D-016 while all identities, jobs, needs, production, and save data remain persistent.
+- Use the radial/polar planetary surface and persistent underground topology from D-017–D-019. The local city is a close-up of this surface, not a separate disconnected map.
+- Keep the game clock paused while the app is closed, per D-014. A camera transition must not advance hidden/offline time.

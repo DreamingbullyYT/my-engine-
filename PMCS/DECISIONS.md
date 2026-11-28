@@ -248,3 +248,42 @@ Consequences:
 - M1 stays small and establishes the official Godot Android foundation; it does not create every future module in advance.
 - Implementation proceeds as small vertical slices, with tests and module memory added as the real code appears.
 - This is an accepted architecture decision only; no source modules are implemented by this documentation change.
+
+
+## D-023 — One continuous city-to-space world loop and city-first camera
+Status: ACCEPTED — 2026-11-28.
+
+The player experiences one persistent game world and one continuous gameplay loop. The city, the planetary surface, the home planet, and the local planetary system are different camera scales/areas of the same world, not separate gameplay modes or separate scenes with duplicated state.
+
+### Opening view
+- A new game starts with the camera close to the colony/city. Individual buildings, citizens, streets/paths, and local surface details are the primary view.
+- The full planetary disc/globe must not be visible on first launch or in the default city view.
+- Before the first rocket-launch capability is genuinely unlocked, the camera is constrained to the city/local-region scale. It may pan and zoom locally, but it does not reveal the whole planet or system map.
+- This is a presentation rule only. The planet, its coordinates, celestial data, and simulation state already exist in the authoritative world model; they are not created, reset, or loaded as a different game when revealed.
+
+### Rocket unlock and automatic reveal
+- When progression first grants the actual capability to build and launch a rocket (not merely when the player opens a menu), trigger one automatic, smooth camera transition.
+- The transition reveals scale in order: detailed city → wider local surface/curvature → full home planet → local-system context.
+- At system scale, focus/guide the camera toward the nearest real planet recorded by the current celestial-body catalogue. Resolve the target from world data and its actual position; never place a fake decorative planet to satisfy the camera animation. If the current v1 system has no additional planet entry, keep the home planet and the nearest real v1 destination/body visible instead.
+- The transition changes camera position/zoom only. It must not teleport the rocket, change orbital state, advance extra simulation time, reset the city, or grant resources.
+- After this first reveal, the player can freely navigate between city, planetary, and unlocked system scales in the same world view. The camera may follow a rocket during flight and return to the colony without replacing the game session.
+
+### Continuous gameplay loop
+The intended player-facing loop is: maintain and grow the city → build/research the capabilities needed for expansion → unlock and construct rockets → launch and explore the local system → return with useful resources/knowledge or establish supported infrastructure → feed those results back into the same colony. The city remains central; space is an extension of the city's economy and progression, not a detached minigame.
+
+### Architecture and presentation constraints
+- Use one persistent game-world scene/session and one authoritative world/simulation state. Camera zoom/pan reveals different scales; it does not change to separate City, Planet, and Space gameplay scenes.
+- Context panels, build menus, rocket construction panels, map overlays, and diagnostics may appear as UI overlays, but they must not instantiate a second copy of the world or switch to a disconnected simulation.
+- Keep internal code modular under D-022. "One loop" does **not** mean one giant script or a catch-all GameManager. World, colony, vehicles, physics, exploration, rendering, UI, and saving retain their module ownership and explicit contracts.
+- Rendering LOD follows D-016. Near-city detail is drawn individually; more distant buildings/citizens are simplified gradually. Visual disappearance never deletes authoritative entities.
+- Planetary/radial coordinates and underground topology follow D-017–D-019. Camera coordinates are presentation transforms and must not replace authoritative world coordinates.
+- On Android, transitions must be touch-friendly, smooth, interruptible/reversible where safe, and compatible with the reduced-motion/accessibility preference. Numeric zoom thresholds and performance budgets are set by profiling, not guessed.
+
+### Rationale
+The colony is the player's home and the centre of progression. Showing the whole planet before the player has any reason to leave the city weakens the intended sense of scale and hides the detail of settlement life. A continuous camera reveal makes the first rocket milestone visibly meaningful while keeping all gameplay connected.
+
+### Migration and compatibility
+- The previous planet-first circular overview in `rendering/planet_view.gd` is a rejected opening presentation and must not be treated as the approved main game view.
+- Replace that presentation with a city-first world view and a persistent camera controller; keep colony, citizen, building, rocket, and save data authoritative in their existing domains.
+- Preserve the existing D-020 v1 content boundary. The camera may focus the nearest available catalogue target, but it does not by itself authorize a new star system, full interplanetary content, or any v2 feature.
+- No save-data migration is required merely to change the opening camera. If persistent camera preferences are later saved, version them separately from authoritative simulation data.

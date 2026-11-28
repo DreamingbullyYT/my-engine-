@@ -11,7 +11,7 @@ Repository: DreamingbullyYT/my-engine-
 - Run #24 Android ARM64 artifact: dream-engine-m2-b7ae7e6b829bd71be60d1b8b2b644a309ca931ba-android-arm64, artifact ID 15230074820, 29,650,481 bytes; expires 2026-12-27.
 - M1 physical-device launch, visible UI, touch, pause/resume remain pending user confirmation.
 - GDScript is the accepted primary language for ordinary `.dmod` mods (D-010). Mods are trusted code, not sandboxed.
-- Modular-by-default architecture is accepted (D-022). The first playable colony-to-orbit slice is implemented in source at commit d2d564b700bba816eb1bc991199afa778f57406e. The corrected headless gameplay smoke test passed on commit 51e2fc43bacba6432c8d841a0e28e7ec426cac2b (Actions run 46136155425); Android export is still in progress.
+- Modular-by-default architecture is accepted (D-022). The colony/production/rocket domain logic exists, and the headless gameplay smoke test passed on commit 51e2fc43bacba6432c8d841a0e28e7ec426cac2b (Actions run 46136155425). However, the planet-first circular overview in rendering/planet_view.gd is now explicitly REJECTED as the main player view under D-023. The city-first persistent-world camera and connected gameplay loop are not yet implemented; do not describe the current screen as the approved playable presentation.
 - All work after the one-time M2 transition PR is committed directly to `main`.
 
 ## M2 — Dream Runtime GDExtension
@@ -53,16 +53,25 @@ Repository: DreamingbullyYT/my-engine-
 | External GDScript runtime loading | IMPLEMENTED; BUILD/DEVICE TEST PENDING | `mods/mod_runtime.gd`; boot-screen M3 control |
 | .dmod package manager/runtime | INITIAL IMPLEMENTATION; CI APK EXPORT VERIFIED; DEVICE TEST PENDING | `mods/mod_package_manager.gd`; M4 boot-screen control |
 | Stable public mod API, registries, events and hooks | NOT IMPLEMENTED | M5 |
-| First playable colony-to-orbit slice | SOURCE IMPLEMENTED; GAMEPLAY SMOKE PASS; ANDROID APK EXPORT IN PROGRESS; DEVICE TEST PENDING | colony/colony_simulation.gd, vehicles/rocket_flight.gd, rendering/planet_view.gd, saves/save_service.gd, ui/screens/game_screen.gd; commit d2d564b... |
+| Colony/production/rocket domain foundation | SOURCE IMPLEMENTED; HEADLESS SMOKE PASS; DEVICE TEST PENDING | colony/colony_simulation.gd, vehicles/rocket_flight.gd, saves/save_service.gd; Actions run 46136155425 |
+| Approved city-first continuous world presentation (D-023) | DESIGN ACCEPTED; IMPLEMENTATION PENDING; CURRENT planet_view.gd REJECTED AS MAIN VIEW | PMCS/DECISIONS.md D-023, PMCS/MOBILE_UX.md, PMCS/GAMEPLAY.md |
 
 ## Next milestones
-1. Gameplay smoke test passed on commit 51e2fc43bacba6432c8d841a0e28e7ec426cac2b in Actions run 46136155425; finish and record its Android ARM64 export.
-2. Install that APK on the physical Android phone and verify the colony view, building placement, production, save/load, rocket ascent, orbit, and return.
-3. Separately finish M2/M3/M4 device checks. Starting gameplay does not mark those runtime/modding gates complete.
-4. Expand the first slice only after build and device feedback; keep Moon, asteroid operations, research depth, advanced citizen needs, excavation, and interstellar systems outside this first implementation.
+1. Replace the rejected planet-first player presentation with the D-023 city-first persistent world camera; review D-016–D-019 and D-022 before each relevant change.
+2. Implement and test the camera reveal trigger tied to the real rocket-launch capability unlock; verify the same colony/vehicle state survives city → planet → system → city navigation.
+3. Connect the colony, rocket, local exploration, and return-to-colony consequences in one loop; keep v1 scope D-020 and actual celestial-body catalogue data authoritative.
+4. Export the corrected Android ARM64 APK and have the user validate the city-first view, touch gestures, zoom transition, save/load, and flight loop on the phone.
+5. Separately finish M2/M3/M4 device checks. Continue to defer interstellar travel, complex needs, deep excavation, and other later systems until the local continuous loop is stable.
 
 ## Main-only development policy
 The user requires all future implementation, fixes, documentation, tests, and workflow changes to be committed directly to `main`; no feature branches or routine PRs. PR #1 was the one-time M2 transition exception and is now merged. Never bypass protections. Continue with small, focused commits and inspect latest `main` before each change.
 
 ## Historical/design authority
 Earlier source branches were intentionally emptied on 2026-11-27. Historical C++/Lua experiments, packers, and previous engine code are not current implementation and must not be restored without reviewing exact commits, licenses, dependencies, and tests. Accepted decisions D-001 through D-022 and detailed game requirements remain in PMCS. These are design contracts, not claims that gameplay systems already exist.
+
+
+## D-023 presentation correction — 2026-11-28
+- User rejected the first planet-first circular view. It must not be treated as the approved main game presentation.
+- Accepted direction: one persistent world session and one continuous city-first camera. Opening view is close to the city; the full planet stays hidden until the actual rocket-launch capability unlock, which triggers a smooth camera reveal to the home planet and the nearest real catalogue target.
+- This is not a request for a monolithic script. Internal module ownership remains as D-022.
+- Current colony/production/rocket domain smoke test remains valid evidence for those domain rules only. It does not validate the rejected screen or the new camera progression.
