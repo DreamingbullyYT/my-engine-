@@ -1,11 +1,11 @@
 # GDScript Code Map
 
-- Source commit: af7d2d80b2f70293528211a34346758895741303
-- Generated (UTC): 2026-11-28T10:37:44Z
+- Source commit: 51e2fc43bacba6432c8d841a0e28e7ec426cac2b
+- Generated (UTC): 2026-11-28T10:39:25Z
 - Parser: tree-sitter-gdscript 6.1.0
 - Files: **11**
 - Script/nested classes: **0**
-- Functions: **85**
+- Functions: **86**
 - Files with syntax errors: **0**
 
 > Syntax-derived navigation only. Source and tests remain authoritative.
@@ -76,7 +76,8 @@
 ## tests/gameplay_smoke.gd
 
 - Functions:
-  - _initialize() — line 7
+  - _initialize() — line 9; calls _check()
+  - _check() — line 59
 
 ## tests/native_extension_smoke.gd
 
