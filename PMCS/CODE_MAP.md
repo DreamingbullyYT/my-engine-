@@ -1,13 +1,13 @@
 # Dream Engine Code Map
 
-- Source commit: 82873e2601c5d4f0da934a1ec4ae3d8343c65afc
-- Generated: 2026-11-28T11:54:20Z
+- Source commit: a46c4386f59764b5c52fbbc46e3928b888507ef8
+- Generated: 2026-11-28T11:55:25Z
 
 ## GDScript
 # GDScript Code Map
 
-- Source commit: 82873e2601c5d4f0da934a1ec4ae3d8343c65afc
-- Generated (UTC): 2026-11-28T11:54:20Z
+- Source commit: a46c4386f59764b5c52fbbc46e3928b888507ef8
+- Generated (UTC): 2026-11-28T11:55:25Z
 - Parser: tree-sitter-gdscript 6.1.0
 - Files: **14**
 - Script/nested classes: **0**
@@ -130,7 +130,7 @@
 
 - Functions:
   - _initialize() — line 10; calls _check()
-  - _check() — line 115
+  - _check() — line 114
 
 ## tests/native_extension_smoke.gd
 
@@ -206,8 +206,8 @@
 ## CodeGraphContext (supported native/script languages)
 # CodeGraphContext Code Map
 
-- Commit: 82873e2601c5d4f0da934a1ec4ae3d8343c65afc
-- Generated: 2026-11-28T11:54:17Z
+- Commit: a46c4386f59764b5c52fbbc46e3928b888507ef8
+- Generated: 2026-11-28T11:55:22Z
 - Indexer: CodeGraphContext 0.5.1
 
 ## Index statistics
