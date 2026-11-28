@@ -61,8 +61,8 @@ Repository: DreamingbullyYT/my-engine-
 | .dmod package manager/runtime | INITIAL IMPLEMENTATION; CI APK EXPORT VERIFIED; DEVICE TEST PENDING | `mods/mod_package_manager.gd`; M4 boot-screen control |
 | Stable public mod API, registries, events and hooks | NOT IMPLEMENTED | M5 |
 | Colony domain foundation | INITIAL CITY PROTOTYPE; CITY-ONLY SMOKE/DEVICE REVALIDATION PENDING | colony/colony_simulation.gd; PMCS/modules/colony.md |
-| City-first continuous world view (D-023/D-024) | SIDE-ON CITY VIEW (D-025) IN SOURCE; LOCAL HEADLESS TESTS PASS; CI/DEVICE VALIDATION PENDING | rendering/world_view.gd; rendering/city/; ui/screens/game_screen.gd; tests/gameplay_smoke.gd; tests/city_view_smoke.gd |
-| Building footprints and tap-to-place construction | SOURCE IMPLEMENTED; LOCAL HEADLESS TESTS PASS; CI/DEVICE VALIDATION PENDING | colony/placement.gd; colony/colony_simulation.gd (`can_place`, `build_at`); tests/city_view_smoke.gd |
+| City-first continuous world view (D-023/D-024) | SIDE-ON CITY VIEW (D-025) CI VERIFIED (SMOKE TESTS + APK EXPORT, run 46158593081); DEVICE TEST PENDING | rendering/world_view.gd; rendering/city/; ui/screens/game_screen.gd; tests/gameplay_smoke.gd; tests/city_view_smoke.gd |
+| Building footprints and tap-to-place construction | SOURCE IMPLEMENTED; CI VERIFIED (run 46158593081); DEVICE TEST PENDING | colony/placement.gd; colony/colony_simulation.gd (`can_place`, `build_at`); tests/city_view_smoke.gd |
 | Shared starting-body definition | SOURCE IMPLEMENTED; CI PENDING | world/home_world_definition.gd; consumed by renderer and rocket physics |
 | Nearest additional celestial target and exploration return rewards | NOT IMPLEMENTED | No authored celestial-body catalogue or exploration service exists yet; do not invent decorative target bodies or free rewards |
 
@@ -72,6 +72,7 @@ Repository: DreamingbullyYT/my-engine-
 - Fixed a GDScript parse error in `ui/screens/boot_screen.gd` (tab/space mix in `_on_close_pressed`).
 - Mouse events that Android emulates from touch are now ignored by the world view to avoid double panning.
 - Evidence (local, Godot 4.7.2-stable headless on Linux, not CI): `tests/gameplay_smoke.gd` passes; `tests/city_view_smoke.gd` passes 49 checks, including placement overlap rules, tap-to-build through the real main scene, citizen day/night behavior and draw passes. `tests/native_extension_smoke.gd` was not meaningful locally because the native library is only built in CI.
+- CI evidence: M1 run 46158593081 (commit 61d7b897c1d4b11c0e2e421592ef6bf16554d727) succeeded, including both smoke tests, native library build and Android debug APK export. Artifact `dream-engine-playable-slice-61d7b897c1d4b11c0e2e421592ef6bf16554d727-android-arm64`, ID 15269078077, 29,765,167 bytes, expires 2026-12-28. Physical-device launch of this APK is still unconfirmed.
 - Screenshots were rendered with Godot on a software OpenGL driver in a virtual display. This is NOT a phone: performance, touch feel and notch/safe-area behavior are unverified.
 - Not done: demolition, construction time, a tutorial, real art, sound, and any space content.
 
