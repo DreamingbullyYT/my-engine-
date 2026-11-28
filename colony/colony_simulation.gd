@@ -4,6 +4,7 @@ signal changed
 signal message_changed(message: String)
 
 const CitizenModelScript = preload("res://colony/citizens/citizen_model.gd")
+const PlacementScript = preload("res://colony/placement.gd")
 
 const DAY_LENGTH_SECONDS := 8.0
 const MAX_RESOURCE_STOCK := 999
@@ -11,11 +12,26 @@ const CITY_CENTER_ANGLE := -PI * 0.5
 const BUILDING_ANGLE_SPACING := 0.06
 
 const BUILDING_TYPES: Dictionary = {
-	"habitat": {"label": "Habitat", "cost": {"metal": 18}, "housing": 20, "worker_slots": 0, "job": "Resident"},
-	"solar": {"label": "Solar Array", "cost": {"metal": 14}, "housing": 0, "worker_slots": 1, "job": "Technician"},
-	"farm": {"label": "Farm", "cost": {"metal": 16}, "housing": 0, "worker_slots": 3, "job": "Farmer"},
-	"water_pump": {"label": "Water Pump", "cost": {"metal": 18}, "housing": 0, "worker_slots": 2, "job": "Water Technician"},
-	"mine": {"label": "Mine", "cost": {"metal": 20}, "housing": 0, "worker_slots": 4, "job": "Miner"}
+	"habitat": {
+		"label": "Habitat", "cost": {"metal": 18}, "housing": 20, "worker_slots": 0, "job": "Resident",
+		"width_tiles": 3, "summary": "Homes for 20 colonists."
+	},
+	"solar": {
+		"label": "Solar Array", "cost": {"metal": 14}, "housing": 0, "worker_slots": 1, "job": "Technician",
+		"width_tiles": 3, "summary": "Makes 24 energy per day when staffed."
+	},
+	"farm": {
+		"label": "Farm", "cost": {"metal": 16}, "housing": 0, "worker_slots": 3, "job": "Farmer",
+		"width_tiles": 3, "summary": "Grows food. Uses 4 energy per day."
+	},
+	"water_pump": {
+		"label": "Water Pump", "cost": {"metal": 18}, "housing": 0, "worker_slots": 2, "job": "Water Technician",
+		"width_tiles": 2, "summary": "Pumps water. Uses 4 energy per day."
+	},
+	"mine": {
+		"label": "Mine", "cost": {"metal": 20}, "housing": 0, "worker_slots": 4, "job": "Miner",
+		"width_tiles": 3, "summary": "Digs up metal. Uses 6 energy per day."
+	}
 }
 
 const FIRST_NAMES: PackedStringArray = [
@@ -95,18 +111,72 @@ func build(building_type: String) -> bool:
 	if not BUILDING_TYPES.has(building_type):
 		_set_message("Unknown or unavailable city building.")
 		return false
-	var definition: Dictionary = BUILDING_TYPES[building_type]
-	if not try_spend(definition.get("cost", {})):
-		_set_message("Not enough metal for %s." % String(definition.get("label", building_type)))
+	var center_tile: float = PlacementScript.nearest_free_center(
+		0.0, float(get_building_width(building_type)), get_building_intervals())
+	if is_nan(center_tile):
+		_set_message("There is no free space left in the city.")
 		return false
-	var building_id := "%s-%d" % [building_type, buildings.size() + 1]
-	var angle := CITY_CENTER_ANGLE + (float(buildings.size()) - 1.0) * BUILDING_ANGLE_SPACING
-	buildings.append({"id": building_id, "type": building_type, "angle": angle, "workers": 0})
+	return build_at(building_type, PlacementScript.tile_to_angle(center_tile))
+
+
+## Footprint width of a building type, in tiles.
+func get_building_width(building_type: String) -> int:
+	if not BUILDING_TYPES.has(building_type):
+		return 0
+	return int(BUILDING_TYPES[building_type].get("width_tiles", 3))
+
+
+## Occupied tile intervals of every placed building, as Vector2(left, right).
+func get_building_intervals() -> Array:
+	var intervals: Array = []
+	for building in buildings:
+		var width := get_building_width(String(building.get("type", "")))
+		if width <= 0:
+			continue
+		intervals.append(PlacementScript.interval_for(float(building.get("angle", 0.0)), float(width)))
+	return intervals
+
+
+func can_place(building_type: String, angle: float) -> bool:
+	if not BUILDING_TYPES.has(building_type):
+		return false
+	return PlacementScript.is_free(
+		PlacementScript.angle_to_tile(angle),
+		float(get_building_width(building_type)),
+		get_building_intervals())
+
+
+func build_at(building_type: String, angle: float) -> bool:
+	if not BUILDING_TYPES.has(building_type):
+		_set_message("Unknown or unavailable city building.")
+		return false
+	var definition: Dictionary = BUILDING_TYPES[building_type]
+	var label := String(definition.get("label", building_type))
+	if not can_place(building_type, angle):
+		_set_message("%s does not fit there." % label)
+		return false
+	if not can_spend(definition.get("cost", {})):
+		_set_message("Not enough metal for %s." % label)
+		return false
+	try_spend(definition.get("cost", {}))
+	buildings.append({
+		"id": _next_building_id(building_type),
+		"type": building_type,
+		"angle": angle,
+		"workers": 0
+	})
 	_assign_homes()
 	_assign_workers()
-	_set_message("%s constructed." % String(definition.get("label", building_type)))
+	_set_message("%s constructed." % label)
 	changed.emit()
 	return true
+
+
+func find_building(building_id: String) -> Dictionary:
+	for building in buildings:
+		if String(building.get("id", "")) == building_id:
+			return building
+	return {}
 
 
 func has_building(building_type: String) -> bool:
@@ -354,6 +424,13 @@ func _assign_workers() -> void:
 			assigned += 1
 		building["workers"] = assigned
 		buildings[building_index] = building
+
+
+func _next_building_id(building_type: String) -> String:
+	var serial := buildings.size() + 1
+	while not find_building("%s-%d" % [building_type, serial]).is_empty():
+		serial += 1
+	return "%s-%d" % [building_type, serial]
 
 
 func _set_message(message: String) -> void:

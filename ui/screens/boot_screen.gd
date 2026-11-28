@@ -94,7 +94,7 @@ func _on_application_resumed() -> void:
 
 
 func _on_close_pressed() -> void:
-	close_requested.emit()
+    close_requested.emit()
 
 
 func _update_touch_count() -> void:

@@ -287,3 +287,14 @@ The colony is the player's home and the centre of progression. Showing the whole
 - Replace that presentation with a city-first world view and a persistent camera controller; keep colony, citizen, building, rocket, and save data authoritative in their existing domains.
 - Preserve the existing D-020 v1 content boundary. The camera may focus the nearest available catalogue target, but it does not by itself authorize a new star system, full interplanetary content, or any v2 feature.
 - No save-data migration is required merely to change the opening camera. If persistent camera preferences are later saved, version them separately from authoritative simulation data.
+
+
+## D-025 — Side-on 2D city presentation with tap-to-place building
+Status: ACCEPTED — 2026-11-28 (user request: the city should look and play like the reference colony builder, space comes later).
+
+- The city phase is shown side-on: flat ground, sky with a day/night cycle, distant hills, pixel buildings standing on the ground, and small pixel citizens who walk, go to work and go home. The radial world model (D-017–D-019) is unchanged; the flat ground is a presentation mapping of the same surface coordinates and bends back onto the globe during the later D-023 reveal.
+- Layout follows the genre, not the reference title's assets: resource bar on top, build cards on the bottom, tap a card, tap the ground to position a ghost, tap again or press Build to construct. Tapping a building or a citizen opens a small info panel. D-014 still applies: all art, names and UI are original code-drawn placeholders; the user's own 32×32 textures replace them later.
+- Buildings occupy a footprint measured in tiles (`width_tiles` in the colony building definitions; 1 tile = 0.02 rad = 12 world units on the prototype world). Placement is validated by the colony module (`can_place`, `build_at`); the renderer only previews. Saves keep the existing `angle` field, so older saves load unchanged.
+- The day/night clock is presentation-only for now and does not affect simulation rules.
+- Space controls stay hidden (D-024).
+
