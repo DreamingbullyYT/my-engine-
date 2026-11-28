@@ -1,13 +1,13 @@
 # Dream Engine Code Map
 
-- Source commit: 9f81103ff5ae3572b787223d0da2458046d49cb7
-- Generated: 2026-11-28T10:40:08Z
+- Source commit: d9f3183aa3505d7e4e17b081ce3fa3ecb81b9585
+- Generated: 2026-11-28T10:41:18Z
 
 ## GDScript
 # GDScript Code Map
 
-- Source commit: 9f81103ff5ae3572b787223d0da2458046d49cb7
-- Generated (UTC): 2026-11-28T10:40:08Z
+- Source commit: d9f3183aa3505d7e4e17b081ce3fa3ecb81b9585
+- Generated (UTC): 2026-11-28T10:41:18Z
 - Parser: tree-sitter-gdscript 6.1.0
 - Files: **11**
 - Script/nested classes: **0**
@@ -150,8 +150,8 @@
 ## CodeGraphContext (supported native/script languages)
 # CodeGraphContext Code Map
 
-- Commit: 9f81103ff5ae3572b787223d0da2458046d49cb7
-- Generated: 2026-11-28T10:40:04Z
+- Commit: d9f3183aa3505d7e4e17b081ce3fa3ecb81b9585
+- Generated: 2026-11-28T10:41:14Z
 - Indexer: CodeGraphContext 0.5.1
 
 ## Index statistics
