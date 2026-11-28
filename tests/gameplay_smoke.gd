@@ -103,7 +103,6 @@ func _initialize() -> void:
 	colony_copy.free()
 	legacy_colony.free()
 	world_view.free()
-	citizen_model.free()
 
 	if failures.is_empty():
 		print("CITY_SMOKE_OK: citizen profiles, individual needs, housing, water service, jobs/skills, shortages, save migration, city-only camera")
