@@ -200,7 +200,7 @@ func _gui_input(event: InputEvent) -> void:
 			var points: Array = _touch_points.keys()
 			var other_id: int = int(points[0]) if int(points[1]) == event.index else int(points[1])
 			var other_position: Vector2 = _touch_points[other_id]
-			var new_distance := event.position.distance_to(other_position)
+			var new_distance: float = event.position.distance_to(other_position)
 			if _last_pinch_distance > 0.0 and new_distance > 0.0:
 				_apply_zoom(new_distance / _last_pinch_distance)
 			_last_pinch_distance = new_distance
@@ -357,7 +357,7 @@ func _draw_building(base: Vector2, radial: Vector2, tangent: Vector2, building_t
 
 	var window_color := Color(0.92, 0.8, 0.52, opacity)
 	for side in [-1.0, 1.0]:
-		var window_center := base + radial * 11.0 + tangent * side * 5.0
+		var window_center: Vector2 = base + radial * 11.0 + tangent * side * 5.0
 		var window_points := PackedVector2Array([
 			window_center - tangent * 1.5 - radial * 2.0,
 			window_center + tangent * 1.5 - radial * 2.0,
@@ -422,4 +422,4 @@ func _draw_view_label() -> void:
 	var label := get_camera_scale_name()
 	draw_string(ThemeDB.fallback_font, Vector2(18.0, 122.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 16, Color(0.97, 0.98, 0.95, 0.92))
 	if not _launch_capability_unlocked:
-		draw_string(ThemeDB.fallback_font, Vector2(18.0, 144.0), "Build the launch pad to reveal the planet", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 12, Color(0.94, 0.96, 0.93, 0.82))
+		draw_string(ThemeDB.fallback_font, Vector2(18.0, 144.0), "City phase · build and grow your settlement", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 12, Color(0.94, 0.96, 0.93, 0.82))

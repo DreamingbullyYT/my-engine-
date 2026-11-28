@@ -2,7 +2,6 @@ extends Node
 
 signal changed
 signal message_changed(message: String)
-signal rocket_capability_unlocked
 
 const DAY_LENGTH_SECONDS := 8.0
 const MAX_RESOURCE_STOCK := 999
@@ -37,13 +36,6 @@ const BUILDING_TYPES: Dictionary = {
 		"housing": 0,
 		"worker_slots": 4,
 		"job": "Miner"
-	},
-	"launchpad": {
-		"label": "Launch Pad",
-		"cost": {"metal": 30},
-		"housing": 0,
-		"worker_slots": 2,
-		"job": "Flight Crew"
 	}
 }
 
@@ -56,8 +48,7 @@ var day: int = 1
 var resources: Dictionary = {}
 var citizens: Array = []
 var buildings: Array = []
-var last_message: String = "Colony ready."
-var launch_capability_unlocked: bool = false
+var last_message: String = "Settlement ready."
 
 var _day_timer: Timer
 
@@ -74,12 +65,10 @@ func _ready() -> void:
 
 func start_new_game() -> void:
 	day = 1
-	launch_capability_unlocked = false
 	resources = {
 		"metal": 60,
 		"food": 100,
-		"energy": 80,
-		"fuel": 30
+		"energy": 80
 	}
 	citizens.clear()
 	buildings = [
@@ -96,7 +85,7 @@ func start_new_game() -> void:
 			"health": 100
 		})
 	_assign_workers()
-	_set_message("Landing complete. Build and sustain your city before beginning the space program.")
+	_set_message("Settlement established. Build and sustain your city.")
 
 
 func can_spend(cost: Dictionary) -> bool:
@@ -124,7 +113,7 @@ func can_build(building_type: String) -> bool:
 
 func build(building_type: String) -> bool:
 	if not BUILDING_TYPES.has(building_type):
-		_set_message("Unknown building type.")
+		_set_message("Unknown or unavailable city building.")
 		return false
 	var definition: Dictionary = BUILDING_TYPES[building_type]
 	var cost: Dictionary = definition.get("cost", {})
@@ -141,9 +130,6 @@ func build(building_type: String) -> bool:
 	})
 	_assign_workers()
 	_set_message("%s constructed." % String(definition.get("label", building_type)))
-	if building_type == "launchpad" and not launch_capability_unlocked:
-		launch_capability_unlocked = true
-		rocket_capability_unlocked.emit()
 	changed.emit()
 	return true
 
@@ -202,9 +188,6 @@ func advance_day() -> void:
 				if workers > 0:
 					power_demand += 6
 					potential_metal += 8.0 * minf(1.0, float(workers) / 4.0)
-			"launchpad":
-				if workers > 0:
-					power_demand += 1
 
 	var available_energy := int(resources.get("energy", 0)) + solar_generation
 	var power_ratio := 1.0
@@ -251,8 +234,7 @@ func get_snapshot() -> Dictionary:
 		"day": day,
 		"resources": resources.duplicate(true),
 		"citizens": citizens.duplicate(true),
-		"buildings": buildings.duplicate(true),
-		"launch_capability_unlocked": launch_capability_unlocked
+		"buildings": buildings.duplicate(true)
 	}
 
 
@@ -288,9 +270,8 @@ func restore_snapshot(data: Dictionary) -> bool:
 	resources = incoming_resources.duplicate(true)
 	citizens = safe_citizens
 	buildings = safe_buildings
-	launch_capability_unlocked = bool(data.get("launch_capability_unlocked", has_building("launchpad"))) or has_building("launchpad")
 	_assign_workers()
-	_set_message("Saved colony loaded.")
+	_set_message("Saved settlement loaded.")
 	changed.emit()
 	return true
 

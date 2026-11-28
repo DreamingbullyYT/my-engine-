@@ -1,10 +1,10 @@
 extends Node
 
 const SAVE_PATH := "user://saves/colony_slot_1.json"
-const SAVE_SCHEMA := 1
+const SAVE_SCHEMA := 2
 
 
-func save_game(colony_snapshot: Dictionary, rocket_snapshot: Dictionary) -> bool:
+func save_game(colony_snapshot: Dictionary) -> bool:
 	var directory_path := ProjectSettings.globalize_path("user://saves")
 	var directory_error := DirAccess.make_dir_recursive_absolute(directory_path)
 	if directory_error != OK and directory_error != ERR_ALREADY_EXISTS:
@@ -18,8 +18,7 @@ func save_game(colony_snapshot: Dictionary, rocket_snapshot: Dictionary) -> bool
 
 	var payload := {
 		"schema": SAVE_SCHEMA,
-		"colony": colony_snapshot,
-		"rocket": rocket_snapshot
+		"colony": colony_snapshot
 	}
 	file.store_string(JSON.stringify(payload, "\t"))
 	var write_error := file.get_error()
@@ -46,8 +45,12 @@ func load_game() -> Dictionary:
 		return {"ok": false, "error": "Save file root must be an object."}
 
 	var payload: Dictionary = json.data
-	if int(payload.get("schema", 0)) != SAVE_SCHEMA:
+	var schema := int(payload.get("schema", 0))
+	if schema < 1 or schema > SAVE_SCHEMA:
 		return {"ok": false, "error": "Unsupported save schema."}
-	if not (payload.get("colony", null) is Dictionary) or not (payload.get("rocket", null) is Dictionary):
-		return {"ok": false, "error": "Save file is missing required game data."}
-	return {"ok": true, "data": payload}
+	if not (payload.get("colony", null) is Dictionary):
+		return {"ok": false, "error": "Save file is missing required colony data."}
+
+	# Schema 1 saves also contained a dormant rocket snapshot. The city phase
+	# intentionally ignores that space payload while preserving the colony.
+	return {"ok": true, "data": {"schema": SAVE_SCHEMA, "colony": payload["colony"]}}

@@ -7,7 +7,7 @@ config_version=5
 
 config/name="Dream Engine"
 config/icon="res://icon.svg"
-config/description="A modular mobile colony and space exploration game."
+config/description="An Android-first, modular colony management game with future space expansion."
 run/main_scene="res://app/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 

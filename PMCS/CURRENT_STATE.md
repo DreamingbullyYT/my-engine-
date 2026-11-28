@@ -60,8 +60,8 @@ Repository: DreamingbullyYT/my-engine-
 | External GDScript runtime loading | IMPLEMENTED; BUILD/DEVICE TEST PENDING | `mods/mod_runtime.gd`; boot-screen M3 control |
 | .dmod package manager/runtime | INITIAL IMPLEMENTATION; CI APK EXPORT VERIFIED; DEVICE TEST PENDING | `mods/mod_package_manager.gd`; M4 boot-screen control |
 | Stable public mod API, registries, events and hooks | NOT IMPLEMENTED | M5 |
-| Colony/production/rocket domain foundation | SOURCE IMPLEMENTED; HEADLESS SMOKE PASS; DEVICE TEST PENDING | colony/colony_simulation.gd, vehicles/rocket_flight.gd, saves/save_service.gd; Actions run 46136155425 |
-| City-first continuous world camera (D-023) | SOURCE IMPLEMENTED; UPDATED CI SMOKE + APK EXPORT PENDING; DEVICE VISUAL TEST PENDING | rendering/world_view.gd; ui/screens/game_screen.gd; tests/gameplay_smoke.gd |
+| Colony domain foundation | INITIAL CITY PROTOTYPE; CITY-ONLY SMOKE/DEVICE REVALIDATION PENDING | colony/colony_simulation.gd; PMCS/modules/colony.md |
+| City-first continuous world view (D-023/D-024) | CITY-ONLY PRESENTATION PATCH IN SOURCE; CI/DEVICE VALIDATION PENDING | rendering/world_view.gd; ui/screens/game_screen.gd; tests/gameplay_smoke.gd |
 | Shared starting-body definition | SOURCE IMPLEMENTED; CI PENDING | world/home_world_definition.gd; consumed by renderer and rocket physics |
 | Nearest additional celestial target and exploration return rewards | NOT IMPLEMENTED | No authored celestial-body catalogue or exploration service exists yet; do not invent decorative target bodies or free rewards |
 
@@ -99,3 +99,13 @@ Earlier source branches were intentionally emptied on 2026-11-27. Historical C++
 - `world/home_world_definition.gd` is the single source for the prototype's normalized home-world radius and gravitational parameter; the values are simulation units, not real-world measurements. Rendering and rocket physics consume this definition instead of duplicating constants.
 - The current world data contains only the starting body definition. There is no additional authored planet/Moon/asteroid catalogue or exploration/reward service yet. The camera therefore reveals the home planet only. The next local-system target must come from real catalogue data; no decorative planet or unearned resource reward is to be fabricated.
 - All visuals in this source slice are code-drawn primitive placeholders; no large texture/image assets are introduced. User art remains capped at 32×32 px per image file.
+
+
+## D-024 city-only alignment — source patch pending CI
+- The playable city screen no longer exposes the launch pad, rocket construction, launch, or return controls. Space/vehicle source is retained but dormant.
+- Colony build definitions are limited to city buildings (habitat, solar, farm, mine); fuel and rocket capability are removed from the active colony simulation.
+- The city camera remains locked to its close local view; no gameplay action in the city screen triggers the D-023 planet reveal during this phase.
+- The M1 smoke test is focused on city-only start, housing, staffing, construction, production, no active launchpad, city camera lock, and colony snapshot restoration.
+- Fixed the two confirmed GDScript type-inference errors in rendering/world_view.gd by explicitly typing new_distance as float and window_center as Vector2.
+- Save schema 2 now stores colony state only; schema 1 saves remain readable while legacy dormant rocket payload is ignored.
+- This change does not implement the full City Completion Gate. Citizen needs/routines, services, advanced buildings, logistics, research, policies/events, mayor, underground construction, analytics, tutorial, and robust saves remain future city-phase work.

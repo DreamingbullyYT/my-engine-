@@ -76,17 +76,17 @@ The initial excavation model is deliberately lightweight (D-018):
 Planetary surface/underground mining and asteroid mining both contribute to resource progression, but remain distinct systems with their own environment and interaction rules. Extraction respects actual deposits, quantities, tools, infrastructure, workforce, energy, and transport capacity.
 
 
-## First playable colony-to-orbit slice — 2026-11-28
+## Earlier colony-to-orbit prototype — 2026-11-28 (space portion dormant under D-024)
 
-The initial playable implementation is intentionally a small foundation, not the complete v1 design above.
+The earlier prototype is a small foundation, not the complete v1 design above. Under D-024, the rocket/launch portion is now hidden and dormant while the city phase is developed. The city-only player experience must not expose space capabilities until the City Completion Gate.
 
-- The player starts with a close view of the city on the curved radial planetary surface. The full planet stays hidden until the rocket-launch capability is unlocked by constructing the launch pad; the same camera then reveals the home planet. There is no separate city/planet scene.
+- The player starts with a close view of the city on the curved radial planetary surface. The full planet stays hidden for the entire D-024 city phase. The eventual D-023 reveal remains reserved for real rocket capability in the later space phase; there is no separate city/planet scene.
 - Five building types are implemented: habitat (housing), solar array (energy generation), farm (food production), mine (metal production), and launch pad (rocket access).
 - A new colony starts with 20 named citizen records. Each record has a stable local ID, current job, health, and happiness. Worker assignment is automatic and intentionally simple in this slice.
 - The day loop consumes food, produces food/metal, generates and consumes energy, and updates citizen happiness when food is insufficient. Offline progression remains paused; no catch-up simulation occurs while the app is closed.
-- The player can construct a rocket using colony metal and fuel, launch it, allow simplified radial thrust/gravity guidance to insert it into a circular orbit, observe orbital motion, and begin a return/descent.
-- Save/load stores colony resources, citizens, buildings, day, and rocket flight state in a local JSON save slot.
-- This slice does not yet include Moon/asteroid operations, research, complex citizen needs/routines, excavation, advanced rocket staging/vehicle assembly, or full orbital maneuver controls. The flight model is a deliberately simplified first gameplay implementation, not a complete orbital simulator.
+- The previous prototype included a simplified rocket path, but it is not exposed as playable UI during D-024. Its source is dormant until the later space phase.
+- The current city-phase save stores colony resources, citizens, buildings, and day in a local JSON save slot; the city phase persists only the state it actively owns.
+- This earlier slice does not yet include the broader city feature set in CITY_PHASE.md: detailed needs/routines, services, research, policies/events, logistics, population growth, excavation, and related systems. Space is also explicitly deferred until the city gate. The flight model is a deliberately simplified first gameplay implementation, not a complete orbital simulator.
 
 ## Art budget and temporary visuals — user decision, 2026-11-28
 

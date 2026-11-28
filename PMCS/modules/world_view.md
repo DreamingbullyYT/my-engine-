@@ -1,7 +1,7 @@
 # World view / rendering module
 
-Status: **CITY-FIRST CAMERA FOUNDATION IMPLEMENTED IN SOURCE; CI AND DEVICE VALIDATION PENDING.**
-Decision references: D-016, D-017–D-019, D-022, D-023.
+Status: **CITY-ONLY PRESENTATION ACTIVE IN SOURCE; D-023 SPACE-SCALE REVEAL DEFERRED BY D-024; CI AND DEVICE VALIDATION PENDING.**
+Decision references: D-016, D-017–D-019, D-022, D-023, D-024.
 Entry point: `rendering/world_view.gd`.
 
 ## Ownership
@@ -11,14 +11,14 @@ Presentation only. It displays the colony's radial surface and reads building/ci
 - `rendering/world_view.gd`: one full-screen Control used by `ui/screens/game_screen.gd`.
 - `ui/screens/game_screen.gd`: persistent main game screen, HUD/build controls, diagnostic overlay, and adapter that passes read-only presentation values from ColonySimulation and RocketFlight.
 - `world/home_world_definition.gd`: shared starting-body geometry/gravity prototype values consumed by renderer and flight simulation.
-- `vehicles/rocket_flight.gd`: provides simple `has_rocket()`, `is_flight_active()`, and `is_on_surface()` facts to the presentation adapter.
+- `vehicles/rocket_flight.gd`: retained as dormant space-phase source; the current city UI does not read or advance it.
 
 ## Camera behavior
 1. New-game camera starts close to the colony on the radial surface. It does not show the full planet.
 2. Before rocket-launch capability is unlocked, zoom-out is clamped to city/local-region scale.
-3. In the current prototype, constructing the launch pad emits the rocket-capability unlock; GameScreen tells the same WorldView to animate from the city to a home-planet overview sized to fit the viewport.
-4. The player can pinch zoom and drag to pan. A City button recentres to the same colony.
-5. On rocket flight, the camera follows the craft; a user pan/pinch cancels automatic following. On landing after a flight, the camera recentres on the same city.
+3. During D-024's city phase, no buildable launch pad or rocket UI is exposed. The full planet remains hidden and city zoom remains clamped to the local region.
+4. The player can pinch zoom and drag to pan locally. A City button recentres to the same colony.
+5. Vehicle follow and the D-023 city → planet → nearest real target reveal are reserved for the later space integration phase; do not activate them until the City Completion Gate passes.
 6. Diagnostics are shown as an overlay on GameScreen; they do not replace the game scene/session.
 
 ## Visual LOD
@@ -35,9 +35,10 @@ Presentation only. It displays the colony's radial surface and reads building/ci
 - Do not add a monolithic world/game manager. Keep responsibilities as in MODULES.md.
 
 ## Known limitations / next steps
-- The current starting-body definition contains only the home world. There is no celestial-body catalogue; therefore the additional nearest-planet/system-target phase is not yet implemented. Do not generate a fake body. Add authored v1 body records before implementing target selection.
-- City economy and rocket ascent/orbit/return exist, but there is no local exploration scan/mission outcome or returned resource/science reward yet. This is required to complete the continuous city↔space gameplay loop.
+- The current starting-body definition contains only the home world. There is no celestial-body catalogue. Do not generate a fake body; add authored v1 body records before implementing target selection in the later space phase.
+- The current presentation intentionally does not expose rocket ascent/orbit/return or space controls. These remain dormant source, not part of the D-024 city phase.
+- Touch selection/build placement on the world, detailed building footprints/streets, real sprites, reduced-motion settings, accessible pan/zoom controls, and rendering/performance profiling remain future work.
 - Touch selection/build placement on the world, detailed building footprints/streets, real sprites, reduced-motion settings, accessible pan/zoom controls, and rendering/performance profiling remain future work.
 - Headless smoke tests verify states and wiring, not visual layout. A physical Android test is required.
 
-Last source revision: this PMCS update; CI validation pending.
+Last source revision: D-024 city-only UI alignment; CI validation pending.
