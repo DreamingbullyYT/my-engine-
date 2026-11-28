@@ -8,3 +8,8 @@ dist/
 # Operating system noise
 .DS_Store
 Thumbs.db
+
+# Editor-generated resource metadata (not tracked in this repo)
+*.gd.uid
+*.gdextension.uid
+*.import
