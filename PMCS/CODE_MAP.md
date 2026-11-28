@@ -1,41 +1,57 @@
 # Dream Engine Code Map
 
-- Source commit: 043abc13cd4f00bc2cfe1904b40716d0b8272fed
-- Generated: 2026-11-28T11:43:51Z
+- Source commit: 90d793f7a86ca5cb61a1d8aa98cd273b8eddc218
+- Generated: 2026-11-28T11:51:43Z
 
 ## GDScript
 # GDScript Code Map
 
-- Source commit: 043abc13cd4f00bc2cfe1904b40716d0b8272fed
-- Generated (UTC): 2026-11-28T11:43:51Z
+- Source commit: 90d793f7a86ca5cb61a1d8aa98cd273b8eddc218
+- Generated (UTC): 2026-11-28T11:51:43Z
 - Parser: tree-sitter-gdscript 6.1.0
-- Files: **13**
+- Files: **14**
 - Script/nested classes: **0**
-- Functions: **118**
+- Functions: **130**
 - Files with syntax errors: **0**
 
 > Syntax-derived navigation only. Source and tests remain authoritative.
 > Call edges are included only for direct calls to functions declared in the same file.
 
+## colony/citizens/citizen_model.gd
+
+- Functions:
+  - create_citizen() — line 62
+  - normalize_citizen() — line 87; calls _update_summary(), create_citizen()
+  - advance_daily_needs() — line 127; calls _apply_supply(), _update_summary()
+  - record_work_day() — line 174
+  - get_happiness_breakdown() — line 195
+  - get_balance_data() — line 214
+  - _apply_supply() — line 218
+  - _update_summary() — line 223; calls get_happiness_breakdown()
+  - _merge_balance() — line 236
+
 ## colony/colony_simulation.gd
 
 - Functions:
-  - _ready() — line 56; calls start_new_game()
-  - start_new_game() — line 66; calls _assign_workers(), _set_message()
-  - can_spend() — line 91
-  - try_spend() — line 98; calls can_spend()
-  - can_build() — line 107; calls can_spend()
-  - build() — line 114; calls _assign_workers(), _set_message(), try_spend()
-  - has_building() — line 137
-  - get_housing_capacity() — line 144
-  - get_employed_count() — line 153
-  - get_average_happiness() — line 161
-  - advance_day() — line 170; calls _set_message()
-  - get_population_summary() — line 222; calls get_average_happiness(), get_employed_count(), get_housing_capacity()
-  - get_snapshot() — line 231
-  - restore_snapshot() — line 241; calls _assign_workers(), _set_message()
-  - _assign_workers() — line 279
-  - _set_message() — line 309
+  - _ready() — line 40; calls start_new_game()
+  - start_new_game() — line 50; calls _assign_homes(), _assign_workers(), _set_message()
+  - can_spend() — line 71
+  - try_spend() — line 78; calls can_spend()
+  - can_build() — line 87; calls can_spend()
+  - build() — line 94; calls _assign_homes(), _assign_workers(), _set_message(), try_spend()
+  - has_building() — line 112
+  - get_housing_capacity() — line 119
+  - get_housed_count() — line 128
+  - get_employed_count() — line 136
+  - get_average_happiness() — line 144
+  - get_population_summary() — line 153; calls get_average_happiness(), get_employed_count(), get_housed_count(), get_housing_capacity()
+  - get_citizen_inspection() — line 160
+  - advance_day() — line 169; calls _set_message()
+  - get_snapshot() — line 234
+  - restore_snapshot() — line 244; calls _assign_homes(), _assign_workers(), _set_message()
+  - _assign_homes() — line 292
+  - _assign_workers() — line 326
+  - _set_message() — line 359
 
 ## core/app_lifecycle.gd
 
@@ -100,9 +116,9 @@
   - _draw_buildings() — line 319; calls _building_color(), _draw_building()
   - _draw_building() — line 339; calls _building_color()
   - _building_color() — line 370
-  - _draw_citizens() — line 385
-  - _draw_rocket_marker() — line 408
-  - _draw_view_label() — line 421; calls get_camera_scale_name()
+  - _draw_citizens() — line 387
+  - _draw_rocket_marker() — line 410
+  - _draw_view_label() — line 423; calls get_camera_scale_name()
 
 ## saves/save_service.gd
 
@@ -113,8 +129,8 @@
 ## tests/gameplay_smoke.gd
 
 - Functions:
-  - _initialize() — line 9; calls _check()
-  - _check() — line 58
+  - _initialize() — line 10; calls _check()
+  - _check() — line 115
 
 ## tests/native_extension_smoke.gd
 
@@ -144,19 +160,19 @@
   - _ready() — line 17; calls _build_interface(), _build_world_view(), _refresh()
   - _build_world_view() — line 31
   - _build_interface() — line 38; calls _make_button(), _make_panel_style()
-  - _make_panel_style() — line 120
-  - _make_button() — line 133
-  - _on_build_pressed() — line 143; calls _refresh()
-  - _on_city_pressed() — line 148
-  - _on_save_pressed() — line 152; calls _on_message_changed()
-  - _on_load_pressed() — line 157; calls _on_message_changed(), _refresh()
-  - _on_diagnostics_pressed() — line 171
-  - _close_diagnostics_overlay() — line 179
-  - _on_camera_scale_changed() — line 185; calls _refresh()
-  - _on_message_changed() — line 189
-  - _on_application_paused() — line 194; calls _on_message_changed()
-  - _on_application_resumed() — line 198; calls _on_message_changed()
-  - _refresh() — line 202
+  - _make_panel_style() — line 121
+  - _make_button() — line 134
+  - _on_build_pressed() — line 144; calls _refresh()
+  - _on_city_pressed() — line 149
+  - _on_save_pressed() — line 153; calls _on_message_changed()
+  - _on_load_pressed() — line 158; calls _on_message_changed(), _refresh()
+  - _on_diagnostics_pressed() — line 172
+  - _close_diagnostics_overlay() — line 180
+  - _on_camera_scale_changed() — line 186; calls _refresh()
+  - _on_message_changed() — line 190
+  - _on_application_paused() — line 195; calls _on_message_changed()
+  - _on_application_resumed() — line 199; calls _on_message_changed()
+  - _refresh() — line 203
 
 ## vehicles/rocket_flight.gd
 
@@ -190,8 +206,8 @@
 ## CodeGraphContext (supported native/script languages)
 # CodeGraphContext Code Map
 
-- Commit: 043abc13cd4f00bc2cfe1904b40716d0b8272fed
-- Generated: 2026-11-28T11:43:48Z
+- Commit: 90d793f7a86ca5cb61a1d8aa98cd273b8eddc218
+- Generated: 2026-11-28T11:51:40Z
 - Indexer: CodeGraphContext 0.5.1
 
 ## Index statistics
@@ -203,7 +219,7 @@ Services initialized.
 ┏━━━━━━━━━━━━━━━━━━┳━━━━━━━┓
 ┃ Metric           ┃ Count ┃
 ┡━━━━━━━━━━━━━━━━━━╇━━━━━━━┩
-│ Files            │    38 │
+│ Files            │    39 │
 │ Functions        │     9 │
 │ Classes          │     1 │
 │ Imported Modules │     7 │
