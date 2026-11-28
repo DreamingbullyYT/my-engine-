@@ -139,6 +139,12 @@ jobs:
           echo "Android SDK: $ANDROID_HOME"
           echo "Android NDK: $ANDROID_NDK_ROOT"
 
+      - name: Run colony and orbital gameplay smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT_BIN" --headless --path . --script res://tests/gameplay_smoke.gd
+
       - name: Build Linux and Android Dream Runtime libraries
         shell: bash
         run: |
@@ -193,7 +199,7 @@ jobs:
       - name: Upload APK and validation report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: dream-engine-m2-${{ github.sha }}-android-arm64
+          name: dream-engine-playable-slice-${{ github.sha }}-android-arm64
           path: |
             build/android/dream-engine-debug.apk
             build/android/apk-badging.txt
