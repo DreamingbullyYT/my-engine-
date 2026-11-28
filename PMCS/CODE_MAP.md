@@ -1,17 +1,17 @@
 # Dream Engine Code Map
 
-- Source commit: 18312379cc8045986a512e284116f199fb69eb15
-- Generated: 2026-11-28T11:07:57Z
+- Source commit: d1b710ac67edb9df6102167ca533dd190e425786
+- Generated: 2026-11-28T11:24:11Z
 
 ## GDScript
 # GDScript Code Map
 
-- Source commit: 18312379cc8045986a512e284116f199fb69eb15
-- Generated (UTC): 2026-11-28T11:07:57Z
+- Source commit: d1b710ac67edb9df6102167ca533dd190e425786
+- Generated (UTC): 2026-11-28T11:24:11Z
 - Parser: tree-sitter-gdscript 6.1.0
-- Files: **11**
+- Files: **13**
 - Script/nested classes: **0**
-- Functions: **86**
+- Functions: **122**
 - Files with syntax errors: **0**
 
 > Syntax-derived navigation only. Source and tests remain authoritative.
@@ -20,22 +20,22 @@
 ## colony/colony_simulation.gd
 
 - Functions:
-  - _ready() — line 61; calls start_new_game()
-  - start_new_game() — line 71; calls _assign_workers(), _set_message()
-  - can_spend() — line 97
-  - try_spend() — line 104; calls can_spend()
-  - can_build() — line 113; calls can_spend()
-  - build() — line 120; calls _assign_workers(), _set_message(), try_spend()
-  - has_building() — line 143
-  - get_housing_capacity() — line 150
-  - get_employed_count() — line 159
-  - get_average_happiness() — line 167
-  - advance_day() — line 176; calls _set_message()
-  - get_population_summary() — line 231; calls get_average_happiness(), get_employed_count(), get_housing_capacity()
-  - get_snapshot() — line 240
-  - restore_snapshot() — line 250; calls _assign_workers(), _set_message()
-  - _assign_workers() — line 288
-  - _set_message() — line 318
+  - _ready() — line 65; calls start_new_game()
+  - start_new_game() — line 75; calls _assign_workers(), _set_message()
+  - can_spend() — line 102
+  - try_spend() — line 109; calls can_spend()
+  - can_build() — line 118; calls can_spend()
+  - build() — line 125; calls _assign_workers(), _set_message(), try_spend()
+  - has_building() — line 151
+  - get_housing_capacity() — line 158
+  - get_employed_count() — line 167
+  - get_average_happiness() — line 175
+  - advance_day() — line 184; calls _set_message()
+  - get_population_summary() — line 239; calls get_average_happiness(), get_employed_count(), get_housing_capacity()
+  - get_snapshot() — line 248
+  - restore_snapshot() — line 259; calls _assign_workers(), _set_message(), has_building()
+  - _assign_workers() — line 298
+  - _set_message() — line 328
 
 ## core/app_lifecycle.gd
 
@@ -67,11 +67,42 @@
 ## rendering/planet_view.gd
 
 - Functions:
-  - set_world() — line 11
-  - _draw() — line 18; calls _draw_building(), _draw_citizens(), _draw_rocket()
-  - _draw_building() — line 49
-  - _draw_citizens() — line 75
-  - _draw_rocket() — line 83
+  - set_world() — line 12
+  - _draw() — line 19; calls _draw_building(), _draw_citizens(), _draw_rocket()
+  - _draw_building() — line 50
+  - _draw_citizens() — line 76
+  - _draw_rocket() — line 84
+
+## rendering/world_view.gd
+
+- Functions:
+  - _ready() — line 41
+  - set_world() — line 48; calls focus_city()
+  - set_launch_capability_unlocked() — line 74; calls _start_home_planet_reveal()
+  - reveal_home_planet() — line 99; calls set_launch_capability_unlocked()
+  - is_planetary_zoom_unlocked() — line 103
+  - is_full_planet_visible() — line 107
+  - get_camera_zoom() — line 111
+  - get_target_camera_zoom() — line 115
+  - get_target_camera_focus() — line 119
+  - is_camera_transition_active() — line 123
+  - focus_city() — line 127; calls _clamp_camera_focus()
+  - get_camera_scale_name() — line 136
+  - _start_home_planet_reveal() — line 144
+  - _process() — line 155; calls get_camera_scale_name()
+  - _gui_input() — line 182; calls _apply_zoom(), _clamp_camera_focus()
+  - _apply_zoom() — line 239; calls _clamp_camera_focus()
+  - _clamp_camera_focus() — line 247
+  - _draw() — line 260; calls _draw_buildings(), _draw_citizens(), _draw_city_surface(), _draw_home_planet(), _draw_rocket_marker(), _draw_sky(), _draw_view_label()
+  - _draw_sky() — line 281
+  - _draw_city_surface() — line 300
+  - _draw_home_planet() — line 310
+  - _draw_buildings() — line 319; calls _building_color(), _draw_building()
+  - _draw_building() — line 339; calls _building_color()
+  - _building_color() — line 370
+  - _draw_citizens() — line 385
+  - _draw_rocket_marker() — line 408
+  - _draw_view_label() — line 421; calls get_camera_scale_name()
 
 ## saves/save_service.gd
 
@@ -82,8 +113,8 @@
 ## tests/gameplay_smoke.gd
 
 - Functions:
-  - _initialize() — line 9; calls _check()
-  - _check() — line 59
+  - _initialize() — line 11; calls _check()
+  - _check() — line 85
 
 ## tests/native_extension_smoke.gd
 
@@ -94,64 +125,77 @@
 ## ui/screens/boot_screen.gd
 
 - Functions:
-  - _ready() — line 13; calls _check_native_runtime(), _update_touch_count()
-  - _check_native_runtime() — line 25
-  - _on_test_touch_pressed() — line 52; calls _update_touch_count()
-  - _on_test_external_script_pressed() — line 58
-  - _on_external_probe_finished() — line 63
-  - _on_install_sample_mod_pressed() — line 71
-  - _on_package_finished() — line 76
-  - _on_disable_sample_mod_pressed() — line 81
-  - _on_application_paused() — line 86
-  - _on_application_resumed() — line 90
-  - _update_touch_count() — line 94
+  - _ready() — line 15; calls _check_native_runtime(), _update_touch_count()
+  - _check_native_runtime() — line 27
+  - _on_test_touch_pressed() — line 54; calls _update_touch_count()
+  - _on_test_external_script_pressed() — line 60
+  - _on_external_probe_finished() — line 65
+  - _on_install_sample_mod_pressed() — line 73
+  - _on_package_finished() — line 78
+  - _on_disable_sample_mod_pressed() — line 83
+  - _on_application_paused() — line 88
+  - _on_application_resumed() — line 92
+  - _on_close_pressed() — line 96
+  - _update_touch_count() — line 100
 
 ## ui/screens/game_screen.gd
 
 - Functions:
-  - _ready() — line 17; calls _build_interface(), _refresh()
-  - _build_interface() — line 28; calls _make_button()
-  - _make_button() — line 123
-  - _on_build_pressed() — line 133; calls _refresh()
-  - _on_build_rocket_pressed() — line 138; calls _on_message_changed(), _refresh()
-  - _on_launch_pressed() — line 150; calls _on_message_changed(), _refresh()
-  - _on_return_pressed() — line 156; calls _on_message_changed(), _refresh()
-  - _on_save_pressed() — line 162; calls _on_message_changed()
-  - _on_load_pressed() — line 167; calls _on_message_changed(), _refresh()
-  - _on_diagnostics_pressed() — line 185
-  - _on_message_changed() — line 189
-  - _on_application_paused() — line 194; calls _on_message_changed()
-  - _on_application_resumed() — line 198; calls _on_message_changed()
-  - _refresh() — line 202
+  - _ready() — line 21; calls _build_interface(), _build_world_view(), _refresh()
+  - _build_world_view() — line 39
+  - _build_interface() — line 46; calls _make_button(), _make_panel_style()
+  - _make_panel_style() — line 138
+  - _make_button() — line 151
+  - _on_build_pressed() — line 161; calls _refresh()
+  - _on_build_rocket_pressed() — line 166; calls _on_message_changed(), _refresh()
+  - _on_launch_pressed() — line 178; calls _on_message_changed(), _refresh()
+  - _on_return_pressed() — line 184; calls _on_message_changed(), _refresh()
+  - _on_city_pressed() — line 190
+  - _on_save_pressed() — line 194; calls _on_message_changed()
+  - _on_load_pressed() — line 199; calls _on_message_changed(), _refresh()
+  - _on_diagnostics_pressed() — line 218
+  - _close_diagnostics_overlay() — line 226
+  - _on_rocket_capability_unlocked() — line 232; calls _on_message_changed()
+  - _on_camera_scale_changed() — line 237; calls _refresh()
+  - _on_message_changed() — line 241
+  - _on_application_paused() — line 246; calls _on_message_changed()
+  - _on_application_resumed() — line 250; calls _on_message_changed()
+  - _refresh() — line 254
 
 ## vehicles/rocket_flight.gd
 
 - Functions:
-  - _process() — line 29; calls advance_simulation()
-  - construct() — line 39; calls _emit_message()
-  - can_launch() — line 51
-  - can_return() — line 55
-  - is_unbuilt() — line 59
-  - is_on_surface() — line 63
-  - is_in_orbit() — line 67
-  - launch() — line 71; calls _emit_message(), can_launch()
-  - begin_return() — line 82; calls _emit_message(), can_return()
-  - advance_simulation() — line 93; calls _step_physics()
-  - get_altitude() — line 101
-  - get_orbital_speed() — line 105
-  - get_circular_speed() — line 109
-  - get_orbital_period_seconds() — line 113
-  - get_status_text() — line 118; calls get_altitude(), get_orbital_period_seconds(), get_orbital_speed()
-  - get_snapshot() — line 135
-  - restore_snapshot() — line 147
-  - _step_physics() — line 169; calls _emit_message(), get_circular_speed()
-  - _emit_message() — line 201
+  - _process() — line 30; calls advance_simulation()
+  - construct() — line 40; calls _emit_message()
+  - can_launch() — line 52
+  - can_return() — line 56
+  - is_unbuilt() — line 60
+  - is_on_surface() — line 64
+  - is_in_orbit() — line 68
+  - has_rocket() — line 72
+  - is_flight_active() — line 76
+  - launch() — line 80; calls _emit_message(), can_launch()
+  - begin_return() — line 91; calls _emit_message(), can_return()
+  - advance_simulation() — line 102; calls _step_physics()
+  - get_altitude() — line 110
+  - get_orbital_speed() — line 114
+  - get_circular_speed() — line 118
+  - get_orbital_period_seconds() — line 122
+  - get_status_text() — line 127; calls get_altitude(), get_orbital_period_seconds(), get_orbital_speed()
+  - get_snapshot() — line 144
+  - restore_snapshot() — line 156
+  - _step_physics() — line 178; calls _emit_message(), get_circular_speed()
+  - _emit_message() — line 210
+
+## world/home_world_definition.gd
+
+- Functions: none detected
 
 ## CodeGraphContext (supported native/script languages)
 # CodeGraphContext Code Map
 
-- Commit: 18312379cc8045986a512e284116f199fb69eb15
-- Generated: 2026-11-28T11:07:54Z
+- Commit: d1b710ac67edb9df6102167ca533dd190e425786
+- Generated: 2026-11-28T11:24:08Z
 - Indexer: CodeGraphContext 0.5.1
 
 ## Index statistics
@@ -163,7 +207,7 @@ Services initialized.
 ┏━━━━━━━━━━━━━━━━━━┳━━━━━━━┓
 ┃ Metric           ┃ Count ┃
 ┡━━━━━━━━━━━━━━━━━━╇━━━━━━━┩
-│ Files            │    34 │
+│ Files            │    36 │
 │ Functions        │     9 │
 │ Classes          │     1 │
 │ Imported Modules │     7 │
