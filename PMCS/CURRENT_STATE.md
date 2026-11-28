@@ -11,7 +11,7 @@ Repository: DreamingbullyYT/my-engine-
 - Run #24 Android ARM64 artifact: dream-engine-m2-b7ae7e6b829bd71be60d1b8b2b644a309ca931ba-android-arm64, artifact ID 15230074820, 29,650,481 bytes; expires 2026-12-27.
 - M1 physical-device launch, visible UI, touch, pause/resume remain pending user confirmation.
 - GDScript is the accepted primary language for ordinary `.dmod` mods (D-010). Mods are trusted code, not sandboxed.
-- Modular-by-default architecture is accepted (D-022). The first playable colony-to-orbit slice is implemented in source at commit d2d564b700bba816eb1bc991199afa778f57406e; its new CI smoke test and Android export are pending.
+- Modular-by-default architecture is accepted (D-022). The first playable colony-to-orbit slice is implemented in source at commit d2d564b700bba816eb1bc991199afa778f57406e. The corrected headless gameplay smoke test passed on commit 51e2fc43bacba6432c8d841a0e28e7ec426cac2b (Actions run 46136155425); Android export is still in progress.
 - All work after the one-time M2 transition PR is committed directly to `main`.
 
 ## M2 — Dream Runtime GDExtension
@@ -53,10 +53,10 @@ Repository: DreamingbullyYT/my-engine-
 | External GDScript runtime loading | IMPLEMENTED; BUILD/DEVICE TEST PENDING | `mods/mod_runtime.gd`; boot-screen M3 control |
 | .dmod package manager/runtime | INITIAL IMPLEMENTATION; CI APK EXPORT VERIFIED; DEVICE TEST PENDING | `mods/mod_package_manager.gd`; M4 boot-screen control |
 | Stable public mod API, registries, events and hooks | NOT IMPLEMENTED | M5 |
-| First playable colony-to-orbit slice | SOURCE IMPLEMENTED; NEW CI SMOKE + APK EXPORT PENDING; DEVICE TEST PENDING | colony/colony_simulation.gd, vehicles/rocket_flight.gd, rendering/planet_view.gd, saves/save_service.gd, ui/screens/game_screen.gd; commit d2d564b... |
+| First playable colony-to-orbit slice | SOURCE IMPLEMENTED; GAMEPLAY SMOKE PASS; ANDROID APK EXPORT IN PROGRESS; DEVICE TEST PENDING | colony/colony_simulation.gd, vehicles/rocket_flight.gd, rendering/planet_view.gd, saves/save_service.gd, ui/screens/game_screen.gd; commit d2d564b... |
 
 ## Next milestones
-1. Run the new gameplay smoke test and Android ARM64 export for the first playable slice; record the exact workflow result and fix any failures.
+1. Gameplay smoke test passed on commit 51e2fc43bacba6432c8d841a0e28e7ec426cac2b in Actions run 46136155425; finish and record its Android ARM64 export.
 2. Install that APK on the physical Android phone and verify the colony view, building placement, production, save/load, rocket ascent, orbit, and return.
 3. Separately finish M2/M3/M4 device checks. Starting gameplay does not mark those runtime/modding gates complete.
 4. Expand the first slice only after build and device feedback; keep Moon, asteroid operations, research depth, advanced citizen needs, excavation, and interstellar systems outside this first implementation.

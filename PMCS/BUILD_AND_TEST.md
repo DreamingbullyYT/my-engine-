@@ -70,3 +70,11 @@ The Android build workflow must run when Godot project code, scenes, resources, 
 - .github/workflows/android-m1.yml runs this smoke test with the official Godot executable before building the native libraries and exporting the Android ARM64 APK.
 - A successful smoke test and APK export verify the tested domain path and package creation only. They do not prove on-device rendering, touch usability, lifecycle behavior, save persistence on Android, or real performance; the user must validate those on the phone.
 - CI does not run the game as an interactive visual session and must never be reported as a physical-device test.
+
+
+### Gameplay smoke-test evidence — 2026-11-28
+
+- The isolated headless smoke test passed in Actions run 46136155425 on commit 51e2fc43bacba6432c8d841a0e28e7ec426cac2b: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46136155425
+- The passing checks cover the 20-citizen start, starter buildings, mine construction/metal production, food supply, housing capacity, rocket construction and launch, orbit insertion, positive orbital period, return to surface, and colony/rocket snapshot restoration.
+- The smoke test keeps domain Nodes outside the live SceneTree so gameplay timers cannot hold the headless process open on failure. The workflow command is bounded by a 120-second timeout.
+- Android ARM64 native compilation/export and physical-device validation are tracked separately and are not implied by this smoke-test pass.

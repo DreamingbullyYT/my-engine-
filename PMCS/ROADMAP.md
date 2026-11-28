@@ -18,7 +18,8 @@ The first implementation slice is deliberately smaller than all of v1. It must f
 - [x] Basic housing, worker assignment, food consumption/production, metal production, and energy balance.
 - [x] Build a rocket from colony resources, launch with simplified radial thrust and gravity, insert into a circular orbit, simulate orbital motion, and return to the surface.
 - [x] Save/load colony, citizens, buildings, resources, and rocket state to one local JSON slot.
-- [ ] Pass the new automated gameplay smoke test and Android ARM64 export.
+- [x] Pass the automated gameplay smoke test (Actions run 46136155425, commit 51e2fc43bacba6432c8d841a0e28e7ec426cac2b).
+- [ ] Complete Android ARM64 APK export for the playable slice.
 - [ ] User confirms the APK runs and the full loop works on a physical Android device.
 
 Do not expand this slice into advanced needs, detailed citizen routines, excavation, underground colonies, research trees, Moon/asteroid gameplay, interstellar travel, or multiplayer before the core loop is stable. Those remain planned features.
