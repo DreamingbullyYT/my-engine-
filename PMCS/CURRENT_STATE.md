@@ -120,3 +120,5 @@ Earlier source branches were intentionally emptied on 2026-11-27. Historical C++
 - Colony snapshot schema is now 2. Schema-1 colony snapshots remain migratable; old launch-pad entities and fuel are discarded, and a starter water reserve is created when missing.
 - City smoke coverage now includes citizens, essential needs, water production/shortages, skills/workplace links, happiness breakdown, citizen inspection, snapshot restore, legacy migration, and city camera lock.
 - This remains an early city slice. Social/recreation services, complete routines/movement, medical/sanitation/education/safety buildings, population growth, advanced production/logistics, research, policies/events, mayor, underground construction, and complete city UX remain incomplete.
+
+- Static scope audit after the C2 source commit identified repeated local names in the second home-allocation loop; the names were made unique before accepting the city build. CI validation remains pending.

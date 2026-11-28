@@ -314,12 +314,12 @@ func _assign_homes() -> void:
 		for building in buildings:
 			if String(building.get("type", "")) != "habitat":
 				continue
-			var habitat_id := String(building.get("id", ""))
-			var capacity := int(BUILDING_TYPES["habitat"].get("housing", 0))
-			var current_occupancy := int(occupied.get(habitat_id, 0))
-			if current_occupancy < capacity:
-				citizen["home_id"] = habitat_id
-				occupied[habitat_id] = current_occupancy + 1
+			var new_habitat_id := String(building.get("id", ""))
+			var new_capacity := int(BUILDING_TYPES["habitat"].get("housing", 0))
+			var new_occupancy := int(occupied.get(new_habitat_id, 0))
+			if new_occupancy < new_capacity:
+				citizen["home_id"] = new_habitat_id
+				occupied[new_habitat_id] = new_occupancy + 1
 				break
 
 
