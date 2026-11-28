@@ -377,6 +377,8 @@ func _building_color(building_type: String) -> Color:
 			return Color(0.36, 0.62, 0.36, 1.0)
 		"mine":
 			return Color(0.57, 0.48, 0.37, 1.0)
+		"water_pump":
+			return Color(0.24, 0.62, 0.72, 1.0)
 		"launchpad":
 			return Color(0.71, 0.43, 0.34, 1.0)
 	return Color(0.63, 0.66, 0.68, 1.0)

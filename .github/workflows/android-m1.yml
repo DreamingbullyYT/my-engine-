@@ -135,7 +135,7 @@ jobs:
           echo "Android SDK: $ANDROID_HOME"
           echo "Android NDK: $ANDROID_NDK_ROOT"
 
-      - name: Run colony and orbital gameplay smoke tests
+      - name: Run city and citizen gameplay smoke tests
         shell: bash
         run: |
           set -euo pipefail

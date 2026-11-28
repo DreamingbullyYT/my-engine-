@@ -109,3 +109,14 @@ Earlier source branches were intentionally emptied on 2026-11-27. Historical C++
 - Fixed the two confirmed GDScript type-inference errors in rendering/world_view.gd by explicitly typing new_distance as float and window_center as Vector2.
 - Save schema 2 now stores colony state only; schema 1 saves remain readable while legacy dormant rocket payload is ignored.
 - This change does not implement the full City Completion Gate. Citizen needs/routines, services, advanced buildings, logistics, research, policies/events, mayor, underground construction, analytics, tutorial, and robust saves remain future city-phase work.
+
+
+## City phase C2 — citizen profiles and essential needs (source commit pending CI)
+- Added a dedicated `CitizenModel` domain helper under `colony/citizens/citizen_model.gd`; balance values live in `colony/data/citizen_balance.json`.
+- Citizens now have persistent age, home, job/workplace, skill levels, work history, trait list, food/water/rest/housing/social/recreation/safety needs, health, happiness, status, and activity fields.
+- Happiness is computed from weighted citizen needs and health, with an inspectable factor/contribution breakdown. The weights and daily need rates are data-driven JSON, not renderer/UI assumptions.
+- Added a water pump as a staffed, power-limited producer and a water stock/consumption path. Food/water shortages now reduce individual satisfaction; prolonged critical shortages damage health.
+- Added citizen home allocation across habitat capacity, job-to-building links, small skill progress per worked day, and schema-1 citizen normalization.
+- Colony snapshot schema is now 2. Schema-1 colony snapshots remain migratable; old launch-pad entities and fuel are discarded, and a starter water reserve is created when missing.
+- City smoke coverage now includes citizens, essential needs, water production/shortages, skills/workplace links, happiness breakdown, citizen inspection, snapshot restore, legacy migration, and city camera lock.
+- This remains an early city slice. Social/recreation services, complete routines/movement, medical/sanitation/education/safety buildings, population growth, advanced production/logistics, research, policies/events, mayor, underground construction, and complete city UX remain incomplete.

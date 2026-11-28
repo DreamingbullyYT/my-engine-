@@ -1,6 +1,6 @@
 # Colony module
 
-Status: **INITIAL CITY SIMULATION FOUNDATION IMPLEMENTED; D-024 CITY FEATURE SET IN PROGRESS.**
+Status: **CITY FOUNDATION + CITIZEN ESSENTIAL-NEEDS SLICE IMPLEMENTED IN SOURCE; CI VALIDATION PENDING; D-024 CITY FEATURE SET IN PROGRESS.**
 Decision references: D-011, D-014–D-019, D-022, D-024.
 Entry point: `colony/colony_simulation.gd`.
 
@@ -13,18 +13,20 @@ It does not own screen layout, visual rendering, camera transforms, rocket physi
 ## Current implementation
 
 - `ColonySimulation` is registered as an autoload in `project.godot`.
-- Starting state: 20 named citizen records, habitat/solar/farm starter buildings, metal/food/energy stocks, day counter.
-- Buildable city baseline: habitat, solar array, farm, and mine.
+- Starting state: 20 named individual citizen records, habitat/solar/farm/water-pump starter buildings, metal/food/water/energy stocks, and a day counter.
+- Citizen records include age, home, job/workplace, skills, work history, traits, needs, health, happiness, status, and activity. Legacy records are normalized when loaded.
+- `colony/citizens/citizen_model.gd` owns citizen creation, migration normalization, daily needs updates, skill gain, health/status updates, and happiness contribution breakdowns. Balance defaults are stored in `colony/data/citizen_balance.json.
+- Buildable city baseline: habitat, solar array, farm, water pump, and mine.
 - Workers are automatically assigned to available building slots in building order.
-- A simple day tick calculates solar generation, farm food, mine metal, energy demand, food consumption, and a basic happiness adjustment for food availability.
+- A simple day tick calculates solar generation, farm food, water-pump output, mine metal, power limits, and food/water consumption. Individual needs respond to supply ratios; prolonged food/water shortages reduce health. Happiness is calculated from data-driven weighted factors with an inspectable contribution breakdown.
 - `get_snapshot()` / `restore_snapshot()` preserve the current colony prototype state.
 
 ## City-phase boundary
 
 - D-024 makes city/colony management the active development phase. Space launch pads, rocket construction, launch, orbit, Moon/asteroid activity, and the planet reveal are not available in the city UI.
 - Vehicle and space-related source is not owned by this module and must not be added here.
-- The current simulation is only a prototype: citizen records lack full needs, age, traits, skills, routines, homes, health/service coverage, and detailed activity; jobs are only simple string assignments.
-- Building definitions are currently a small embedded dictionary. They do not yet model formal footprints, placement constraints, build time, inputs/outputs, storage, maintenance, access, service radii, upgrades, repair, or demolition.
+- Citizen records now include the first essential needs and persistent identity/home/job/skills/activity fields. Full citizen routines, movement, skills specialization, social service coverage, disease/medical systems, and life-cycle population change are not yet implemented.
+- Building definitions remain a small embedded dictionary. The water pump is the first operational service building, but formal footprints, placement constraints, construction time, storage, maintenance, access/service radii, upgrades, repair, and demolition are not implemented.
 - Resource handling is currently global stock values, not spatial storage or logistics. The simple day tick is not a full production scheduler.
 - Research, policies, events, factions, mayor behavior, migration, population growth, and underground topology are not implemented.
 
@@ -45,7 +47,7 @@ It does not own screen layout, visual rendering, camera transforms, rocket physi
 
 ## Tests
 
-- `tests/gameplay_smoke.gd`: city-only headless smoke test for starting population, starter housing/jobs, mine construction/production, food, hidden planet zoom, and snapshot restoration.
+- `tests/gameplay_smoke.gd`: city-only headless smoke test for citizen data/needs, housing, food/water, pump output, job/skill history, shortage damage, citizen inspection, hidden planet zoom, current snapshot restore, and schema-1 migration.
 - CI runs it with official Godot before native build and Android export.
 - Physical Android tests must separately validate city rendering, touch controls, pause/resume, performance, and persistence.
 
@@ -53,4 +55,4 @@ It does not own screen layout, visual rendering, camera transforms, rocket physi
 
 Follow `PMCS/CITY_PHASE.md` in order: stable citizen state and need system; worker/job priorities; data-driven buildings/services; inventories/recipes/logistics; population growth; research; policies/events/mayor; surface/underground construction; analytics/tutorial/localization; robust saves/mod integration; profiling and device validation.
 
-Last source revision: pending first city-only CI pass.
+Last source revision: citizen essential-needs slice; CI validation pending.

@@ -3,40 +3,19 @@ extends Node
 signal changed
 signal message_changed(message: String)
 
+const CitizenModelScript = preload("res://colony/citizens/citizen_model.gd")
+
 const DAY_LENGTH_SECONDS := 8.0
 const MAX_RESOURCE_STOCK := 999
 const CITY_CENTER_ANGLE := -PI * 0.5
 const BUILDING_ANGLE_SPACING := 0.06
 
 const BUILDING_TYPES: Dictionary = {
-	"habitat": {
-		"label": "Habitat",
-		"cost": {"metal": 18},
-		"housing": 20,
-		"worker_slots": 0,
-		"job": "Resident"
-	},
-	"solar": {
-		"label": "Solar Array",
-		"cost": {"metal": 14},
-		"housing": 0,
-		"worker_slots": 1,
-		"job": "Technician"
-	},
-	"farm": {
-		"label": "Farm",
-		"cost": {"metal": 16},
-		"housing": 0,
-		"worker_slots": 3,
-		"job": "Farmer"
-	},
-	"mine": {
-		"label": "Mine",
-		"cost": {"metal": 20},
-		"housing": 0,
-		"worker_slots": 4,
-		"job": "Miner"
-	}
+	"habitat": {"label": "Habitat", "cost": {"metal": 18}, "housing": 20, "worker_slots": 0, "job": "Resident"},
+	"solar": {"label": "Solar Array", "cost": {"metal": 14}, "housing": 0, "worker_slots": 1, "job": "Technician"},
+	"farm": {"label": "Farm", "cost": {"metal": 16}, "housing": 0, "worker_slots": 3, "job": "Farmer"},
+	"water_pump": {"label": "Water Pump", "cost": {"metal": 18}, "housing": 0, "worker_slots": 2, "job": "Water Technician"},
+	"mine": {"label": "Mine", "cost": {"metal": 20}, "housing": 0, "worker_slots": 4, "job": "Miner"}
 }
 
 const FIRST_NAMES: PackedStringArray = [
@@ -51,6 +30,11 @@ var buildings: Array = []
 var last_message: String = "Settlement ready."
 
 var _day_timer: Timer
+var _citizen_model
+
+
+func _init() -> void:
+	_citizen_model = CitizenModelScript.new()
 
 
 func _ready() -> void:
@@ -65,27 +49,23 @@ func _ready() -> void:
 
 func start_new_game() -> void:
 	day = 1
-	resources = {
-		"metal": 60,
-		"food": 100,
-		"energy": 80
-	}
+	resources = {"metal": 60, "food": 100, "water": 100, "energy": 80}
 	citizens.clear()
 	buildings = [
 		{"id": "habitat-1", "type": "habitat", "angle": CITY_CENTER_ANGLE - BUILDING_ANGLE_SPACING, "workers": 0},
 		{"id": "solar-1", "type": "solar", "angle": CITY_CENTER_ANGLE, "workers": 0},
-		{"id": "farm-1", "type": "farm", "angle": CITY_CENTER_ANGLE + BUILDING_ANGLE_SPACING, "workers": 0}
+		{"id": "farm-1", "type": "farm", "angle": CITY_CENTER_ANGLE + BUILDING_ANGLE_SPACING, "workers": 0},
+		{"id": "water-pump-1", "type": "water_pump", "angle": CITY_CENTER_ANGLE + BUILDING_ANGLE_SPACING * 2.0, "workers": 0}
 	]
 	for index in range(FIRST_NAMES.size()):
-		citizens.append({
-			"id": "citizen-%02d" % (index + 1),
-			"name": FIRST_NAMES[index],
-			"job": "Unassigned",
-			"happiness": 72,
-			"health": 100
-		})
+		citizens.append(_citizen_model.create_citizen(
+			"citizen-%02d" % (index + 1),
+			FIRST_NAMES[index],
+			18 + ((index * 7) % 45)
+		))
+	_assign_homes()
 	_assign_workers()
-	_set_message("Settlement established. Build and sustain your city.")
+	_set_message("Settlement established. Keep food, water, housing, and city services supplied.")
 
 
 func can_spend(cost: Dictionary) -> bool:
@@ -116,18 +96,13 @@ func build(building_type: String) -> bool:
 		_set_message("Unknown or unavailable city building.")
 		return false
 	var definition: Dictionary = BUILDING_TYPES[building_type]
-	var cost: Dictionary = definition.get("cost", {})
-	if not try_spend(cost):
+	if not try_spend(definition.get("cost", {})):
 		_set_message("Not enough metal for %s." % String(definition.get("label", building_type)))
 		return false
 	var building_id := "%s-%d" % [building_type, buildings.size() + 1]
 	var angle := CITY_CENTER_ANGLE + (float(buildings.size()) - 1.0) * BUILDING_ANGLE_SPACING
-	buildings.append({
-		"id": building_id,
-		"type": building_type,
-		"angle": angle,
-		"workers": 0
-	})
+	buildings.append({"id": building_id, "type": building_type, "angle": angle, "workers": 0})
+	_assign_homes()
 	_assign_workers()
 	_set_message("%s constructed." % String(definition.get("label", building_type)))
 	changed.emit()
@@ -150,6 +125,14 @@ func get_housing_capacity() -> int:
 	return capacity
 
 
+func get_housed_count() -> int:
+	var housed := 0
+	for citizen in citizens:
+		if not String(citizen.get("home_id", "")).is_empty():
+			housed += 1
+	return housed
+
+
 func get_employed_count() -> int:
 	var employed := 0
 	for citizen in citizens:
@@ -167,10 +150,27 @@ func get_average_happiness() -> int:
 	return int(round(float(total) / float(citizens.size())))
 
 
+func get_population_summary() -> String:
+	return "%d colonists · %d/%d housed · %d employed · %d%% happiness" % [
+		citizens.size(), get_housed_count(), get_housing_capacity(),
+		get_employed_count(), get_average_happiness()
+	]
+
+
+func get_citizen_inspection(citizen_id: String) -> Dictionary:
+	for citizen in citizens:
+		if String(citizen.get("id", "")) == citizen_id:
+			var inspection: Dictionary = citizen.duplicate(true)
+			inspection["happiness_breakdown"] = _citizen_model.get_happiness_breakdown(citizen)
+			return inspection
+	return {}
+
+
 func advance_day() -> void:
 	var solar_generation := 0
 	var power_demand := 0
 	var potential_food := 0.0
+	var potential_water := 0.0
 	var potential_metal := 0.0
 
 	for building in buildings:
@@ -184,6 +184,10 @@ func advance_day() -> void:
 				if workers > 0:
 					power_demand += 4
 					potential_food += 26.0 * minf(1.0, float(workers) / 3.0)
+			"water_pump":
+				if workers > 0:
+					power_demand += 4
+					potential_water += 28.0 * minf(1.0, float(workers) / 2.0)
 			"mine":
 				if workers > 0:
 					power_demand += 6
@@ -196,41 +200,40 @@ func advance_day() -> void:
 	resources["energy"] = clampi(available_energy - power_demand, 0, MAX_RESOURCE_STOCK)
 
 	var food_produced := int(floor(potential_food * power_ratio))
+	var water_produced := int(floor(potential_water * power_ratio))
 	var metal_produced := int(floor(potential_metal * power_ratio))
 	resources["food"] = clampi(int(resources.get("food", 0)) + food_produced, 0, MAX_RESOURCE_STOCK)
+	resources["water"] = clampi(int(resources.get("water", 0)) + water_produced, 0, MAX_RESOURCE_STOCK)
 	resources["metal"] = clampi(int(resources.get("metal", 0)) + metal_produced, 0, MAX_RESOURCE_STOCK)
 
 	var food_required := citizens.size()
+	var water_required := citizens.size()
 	var food_available := int(resources.get("food", 0))
-	var fed := food_available >= food_required
-	resources["food"] = max(0, food_available - food_required)
+	var water_available := int(resources.get("water", 0))
+	var food_ratio := 1.0 if food_required <= 0 else minf(1.0, float(food_available) / float(food_required))
+	var water_ratio := 1.0 if water_required <= 0 else minf(1.0, float(water_available) / float(water_required))
+	resources["food"] = maxi(0, food_available - mini(food_required, food_available))
+	resources["water"] = maxi(0, water_available - mini(water_required, water_available))
 
 	for citizen in citizens:
-		var happiness := int(citizen.get("happiness", 72))
-		if fed:
-			happiness = mini(100, happiness + 1)
-		else:
-			happiness = maxi(0, happiness - 4)
-		citizen["happiness"] = happiness
+		var has_home := not String(citizen.get("home_id", "")).is_empty()
+		_citizen_model.advance_daily_needs(citizen, food_ratio, water_ratio, has_home)
+		_citizen_model.record_work_day(citizen)
 
 	day += 1
-	var food_note := "Food supply stable." if fed else "Food shortage! Farm capacity or power is insufficient."
-	_set_message("Day %d: +%d metal, +%d food. %s" % [day, metal_produced, food_produced, food_note])
+	var supply_notes: PackedStringArray = []
+	if food_ratio < 0.999:
+		supply_notes.append("Food shortage")
+	if water_ratio < 0.999:
+		supply_notes.append("Water shortage")
+	var supply_note := "Food and water supply stable." if supply_notes.is_empty() else " · ".join(supply_notes)
+	_set_message("Day %d: +%d metal, +%d food, +%d water. %s" % [day, metal_produced, food_produced, water_produced, supply_note])
 	changed.emit()
-
-
-func get_population_summary() -> String:
-	return "%d colonists / %d housing · %d assigned · %d%% average happiness" % [
-		citizens.size(),
-		get_housing_capacity(),
-		get_employed_count(),
-		get_average_happiness()
-	]
 
 
 func get_snapshot() -> Dictionary:
 	return {
-		"schema": 1,
+		"schema": 2,
 		"day": day,
 		"resources": resources.duplicate(true),
 		"citizens": citizens.duplicate(true),
@@ -239,7 +242,8 @@ func get_snapshot() -> Dictionary:
 
 
 func restore_snapshot(data: Dictionary) -> bool:
-	if int(data.get("schema", 0)) != 1:
+	var snapshot_schema := int(data.get("schema", 0))
+	if snapshot_schema < 1 or snapshot_schema > 2:
 		return false
 	if not (data.get("resources", null) is Dictionary):
 		return false
@@ -255,30 +259,75 @@ func restore_snapshot(data: Dictionary) -> bool:
 		return false
 
 	var safe_citizens: Array = []
-	for citizen_data in incoming_citizens:
+	for index in range(incoming_citizens.size()):
+		var citizen_data: Variant = incoming_citizens[index]
 		if citizen_data is Dictionary:
-			safe_citizens.append(citizen_data.duplicate(true))
+			safe_citizens.append(_citizen_model.normalize_citizen(citizen_data, index))
 	if safe_citizens.is_empty():
 		return false
 
 	var safe_buildings: Array = []
 	for building_data in incoming_buildings:
 		if building_data is Dictionary:
-			safe_buildings.append(building_data.duplicate(true))
+			var building_type := String(building_data.get("type", ""))
+			if BUILDING_TYPES.has(building_type):
+				safe_buildings.append(building_data.duplicate(true))
+
+	var safe_resources: Dictionary = incoming_resources.duplicate(true)
+	safe_resources.erase("fuel")
+	if not safe_resources.has("water"):
+		safe_resources["water"] = maxi(20, safe_citizens.size() * 5)
 
 	day = maxi(1, int(data.get("day", 1)))
-	resources = incoming_resources.duplicate(true)
+	resources = safe_resources
 	citizens = safe_citizens
 	buildings = safe_buildings
+	_assign_homes()
 	_assign_workers()
 	_set_message("Saved settlement loaded.")
 	changed.emit()
 	return true
 
 
+func _assign_homes() -> void:
+	var occupied: Dictionary = {}
+	for citizen in citizens:
+		var assigned := false
+		var current_home := String(citizen.get("home_id", ""))
+		for building in buildings:
+			if String(building.get("type", "")) != "habitat":
+				continue
+			var habitat_id := String(building.get("id", ""))
+			if habitat_id != current_home:
+				continue
+			var capacity := int(BUILDING_TYPES["habitat"].get("housing", 0))
+			var current_occupancy := int(occupied.get(habitat_id, 0))
+			if current_occupancy < capacity:
+				occupied[habitat_id] = current_occupancy + 1
+				assigned = true
+			break
+
+		if assigned:
+			continue
+
+		citizen["home_id"] = ""
+		for building in buildings:
+			if String(building.get("type", "")) != "habitat":
+				continue
+			var habitat_id := String(building.get("id", ""))
+			var capacity := int(BUILDING_TYPES["habitat"].get("housing", 0))
+			var current_occupancy := int(occupied.get(habitat_id, 0))
+			if current_occupancy < capacity:
+				citizen["home_id"] = habitat_id
+				occupied[habitat_id] = current_occupancy + 1
+				break
+
+
 func _assign_workers() -> void:
 	for citizen in citizens:
 		citizen["job"] = "Unassigned"
+		citizen["job_building_id"] = ""
+		citizen["activity"] = "idle"
 	for building in buildings:
 		building["workers"] = 0
 
@@ -301,6 +350,7 @@ func _assign_workers() -> void:
 				break
 			var chosen: Dictionary = citizens[next_citizen]
 			chosen["job"] = String(definition.get("job", "General"))
+			chosen["job_building_id"] = String(building.get("id", ""))
 			assigned += 1
 		building["workers"] = assigned
 		buildings[building_index] = building

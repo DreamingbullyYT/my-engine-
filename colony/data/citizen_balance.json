@@ -1,0 +1,37 @@
+{
+  "initial_needs": {
+    "food": 100.0,
+    "water": 100.0,
+    "rest": 90.0,
+    "housing": 100.0,
+    "social": 100.0,
+    "recreation": 100.0,
+    "safety": 100.0
+  },
+  "daily_need_decay": {
+    "food": 18.0,
+    "water": 20.0,
+    "housing": 15.0,
+    "social": 0.5,
+    "recreation": 0.5,
+    "safety": 0.0
+  },
+  "rest_recovery_per_day": 12.0,
+  "happiness_weights": {
+    "food": 0.20,
+    "water": 0.18,
+    "rest": 0.12,
+    "housing": 0.16,
+    "social": 0.10,
+    "recreation": 0.10,
+    "safety": 0.06,
+    "health": 0.08
+  },
+  "health_rules": {
+    "critical_need_threshold": 20.0,
+    "damage_per_day": 2.0,
+    "recovery_need_threshold": 60.0,
+    "recovery_per_day": 1.0
+  },
+  "skill_gain_per_work_day": 0.1
+}

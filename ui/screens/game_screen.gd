@@ -84,7 +84,7 @@ func _build_interface() -> void:
 	bottom_panel.add_child(bottom_content)
 
 	var build_grid := GridContainer.new()
-	build_grid.columns = 2
+	build_grid.columns = 3
 	build_grid.add_theme_constant_override("h_separation", 5)
 	build_grid.add_theme_constant_override("v_separation", 4)
 	bottom_content.add_child(build_grid)
@@ -93,9 +93,10 @@ func _build_interface() -> void:
 		"habitat": "Habitat · 18 M",
 		"solar": "Solar · 14 M",
 		"farm": "Farm · 16 M",
+		"water_pump": "Water Pump · 18 M",
 		"mine": "Mine · 20 M"
 	}
-	for building_type in ["habitat", "solar", "farm", "mine"]:
+	for building_type in ["habitat", "solar", "farm", "water_pump", "mine"]:
 		var button := _make_button(String(building_labels[building_type]), _on_build_pressed.bind(building_type), 38)
 		_building_buttons[building_type] = button
 		build_grid.add_child(button)
@@ -204,9 +205,10 @@ func _refresh() -> void:
 		return
 	_day_label.text = "DAY %d" % ColonySimulation.day
 	var stock: Dictionary = ColonySimulation.resources
-	_resource_label.text = "METAL %d   FOOD %d   ENERGY %d" % [
+	_resource_label.text = "METAL %d   FOOD %d   WATER %d   ENERGY %d" % [
 		int(stock.get("metal", 0)),
 		int(stock.get("food", 0)),
+		int(stock.get("water", 0)),
 		int(stock.get("energy", 0))
 	]
 	_population_label.text = ColonySimulation.get_population_summary()

@@ -92,3 +92,7 @@ The updated `tests/gameplay_smoke.gd` must check:
 - Existing colony economy, save snapshot, rocket ascent/orbit/return tests continue to pass.
 
 These headless checks verify state transitions and domain wiring only. They do not prove the visual transition looks correct, touch gesture behavior on the phone, frame pacing, or actual system-map targeting. Physical Android testing remains mandatory. The nearest additional celestial target test cannot be added until an authored body catalogue exists; do not mock a fake planet merely to pass a test.
+
+
+## City C2 smoke test — pending CI on the current source patch
+The city smoke test now checks the citizen profile contract, age/home/job/workplace/skills/traits/activity fields, individual food/water/rest/housing/social/recreation/safety values, data-driven happiness breakdown, staffed water-pump output, food/water shortage effects on health, citizen inspection, schema-2 snapshot restoration, and schema-1 migration. It also confirms that launchpads remain unavailable and the camera stays city-locked. These checks are a headless domain gate only; they do not prove mobile touch/rendering or the full City Completion Gate.
