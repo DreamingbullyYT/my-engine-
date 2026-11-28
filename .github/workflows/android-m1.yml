@@ -143,7 +143,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          "$GODOT_BIN" --headless --path . --script res://tests/gameplay_smoke.gd
+          timeout 120s "$GODOT_BIN" --headless --path . --script res://tests/gameplay_smoke.gd
 
       - name: Build Linux and Android Dream Runtime libraries
         shell: bash
