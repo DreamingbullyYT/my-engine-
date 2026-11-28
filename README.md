@@ -2,7 +2,7 @@
 
 Android-first game runtime and modding platform based on official, unmodified Godot 4.7.x, extended through a separate C++ GDExtension.
 
-> **Repository reset:** source branches were intentionally emptied on 2026-11-27. This repository currently contains project memory/specifications, not an engine implementation.
+> **Implementation status:** after the 2026-11-27 source reset, the main branch now contains the official Godot project foundation, a separate Dream Runtime GDExtension, GDScript mod-loading proofs, and the first playable colony-to-orbit slice. See PMCS/CURRENT_STATE.md for verified status and pending device checks.
 
 ## AI / contributor starting point
 1. Read PMCS/README.md.

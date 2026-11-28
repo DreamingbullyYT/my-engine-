@@ -7,6 +7,27 @@ The first playable v1 is a coherent local-system game slice: one starting planet
 
 Interstellar travel, additional star systems, multi-system autonomous fleets/colonization, and full-scale mobile-colony megaships are v2+ work. They remain in the long-term design; do not make them prerequisites for v1. Keep M1 (official Godot Android baseline) and M2 (separate GDExtension proof) as distinct early gates. M1 must not require a custom Godot source build; M2 proves the separate C++ extension can load without modifying Godot.
 
+## First playable vertical slice — immediate priority (approved 2026-11-28)
+
+The first implementation slice is deliberately smaller than all of v1. It must form a coherent playable loop on one starting planet and remain lightweight on Android.
+
+- [x] Main scene opens the playable colony screen; M1–M4 diagnostics remain reachable from that screen.
+- [x] One circular planet presentation with surface building markers.
+- [x] Five functional building types: habitat, solar array, farm, mine, and launch pad.
+- [x] Start with 20 persistent citizen records containing identity, job, health, and happiness.
+- [x] Basic housing, worker assignment, food consumption/production, metal production, and energy balance.
+- [x] Build a rocket from colony resources, launch with simplified radial thrust and gravity, insert into a circular orbit, simulate orbital motion, and return to the surface.
+- [x] Save/load colony, citizens, buildings, resources, and rocket state to one local JSON slot.
+- [ ] Pass the new automated gameplay smoke test and Android ARM64 export.
+- [ ] User confirms the APK runs and the full loop works on a physical Android device.
+
+Do not expand this slice into advanced needs, detailed citizen routines, excavation, underground colonies, research trees, Moon/asteroid gameplay, interstellar travel, or multiplayer before the core loop is stable. Those remain planned features.
+
+### Art and placeholder budget
+
+The user creates the final game textures/sprites. Every final sprite or texture must be no larger than **32×32 pixels**. Assistant-created temporary visuals must be extremely simple and obey the same maximum; prefer primitive pixel shapes and flat colours, avoid detailed texture work, and keep placeholders easy to replace. Do not generate or add elaborate art assets without a new request.
+
+
 ## M0 — Clean baseline and PMCS
 - [x] Empty source branches intentionally on 2026-11-27.
 - [x] Resolve scripting-language decision: GDScript is primary for .dmod (D-010).
@@ -84,6 +105,6 @@ Do not jump to multiplayer or advanced hooks before M1-M4 are proven. Prefer sma
 ## Development start authorization — 2026-11-27
 The project is approved to move from design/planning into implementation. This records authorization to begin; it does **not** claim that implementation or device validation has already happened.
 
-Execution starts with **M1 — Official Godot Android baseline**. Keep M1 narrow: official unmodified Godot 4.7.x, official Android export templates/toolchain, standard export pipeline, and a minimal installable APK. Validate visible rendering, touch, pause/resume, readable UI, and onboarding on the user's phone. M2 (separate C++ GDExtension proof) and M3 (external GDScript runtime-loading proof) remain separate gates. Continue in small, testable vertical slices; GitHub Actions performs repeatable builds/tests and the user performs physical-device validation after an APK is available.
+Execution began with M1 and continued through the M2–M4 implementation proofs. On 2026-11-28 the user explicitly authorized starting the first playable colony-to-orbit slice before physical-device validation of M1–M4 was complete. This authorization changes the implementation order only: it does not waive any CI or physical-device validation gate. The first-slice scope and 32×32 maximum art budget are defined above. Continue directly on main in small, testable increments; GitHub Actions performs repeatable builds/tests and the user performs physical-device validation after an APK is available.
 
 Do not start by implementing the entire game at once. The v1 scope and milestone exit criteria above remain authoritative.

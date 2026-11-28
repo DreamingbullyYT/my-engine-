@@ -1,16 +1,17 @@
 # Current State
 
-Snapshot: 2026-11-27
+Snapshot: 2026-11-28
 Default branch: `main`
 Repository: DreamingbullyYT/my-engine-
 
 ## Verified baseline
 - Official Godot 4.7.2-stable project; Godot source is not forked or modified.
-- M1 CI run #5 succeeded: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46042193393.
-- M1 APK: Android arm64-v8a, package `com.dreamingbully.dreamengine`, 28,431,521 bytes; artifact ID 15220028245.
+- M1 baseline run #5 succeeded: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46042193393.
+- Latest pre-gameplay M1 run #24 succeeded after removing the redundant editor-import process: https://github.com/DreamingbullyYT/my-engine-/actions/runs/46066459602.
+- Run #24 Android ARM64 artifact: dream-engine-m2-b7ae7e6b829bd71be60d1b8b2b644a309ca931ba-android-arm64, artifact ID 15230074820, 29,650,481 bytes; expires 2026-12-27.
 - M1 physical-device launch, visible UI, touch, pause/resume remain pending user confirmation.
 - GDScript is the accepted primary language for ordinary `.dmod` mods (D-010). Mods are trusted code, not sandboxed.
-- Modular-by-default architecture is accepted (D-022). The current project is still a boot/validation foundation, not the playable game.
+- Modular-by-default architecture is accepted (D-022). The first playable colony-to-orbit slice is implemented in source at commit d2d564b700bba816eb1bc991199afa778f57406e; its new CI smoke test and Android export are pending.
 - All work after the one-time M2 transition PR is committed directly to `main`.
 
 ## M2 — Dream Runtime GDExtension
@@ -42,6 +43,7 @@ Repository: DreamingbullyYT/my-engine-
 - Limitations: Android system file-picker import is not implemented yet; the current UI generates a sample archive internally. `ZIPReader.read_file()` decompresses an entire entry before GDScript can inspect its resulting size, so post-read size caps do not fully prevent a malicious ZIP decompression bomb. Do not describe this parser as hardened against hostile packages until pre-decompression size checks or a bounded native ZIP reader are added.
 - M4 Android ARM64 build/export passed in M2 workflow run #46065263621 on source commit `0649b81c786945b064293adb1fef64a11aa4665e`: artifact ID `15230941586`, 29,650,499 bytes. The separate M1 workflow on later workflow-only commit `e0a1e6a` compiled both native targets successfully but its redundant `--headless --editor --import --quit` validation process aborted with exit 134 after project import/editor initialization; no GDScript or scene error was printed. The same source commit had already exported successfully in the parallel M2 run. The dedicated editor-import step was removed; Android export itself remains the authoritative project import/parse validation gate.
 - **M4 status: INITIAL IMPLEMENTATION COMMITTED; ANDROID ARM64 APK EXPORT VERIFIED; physical-device execution PENDING.**
+- M1 run #24 succeeded with the corrected build-only workflow; the earlier exit-134 editor-import issue did not recur after removing the standalone editor-import step.
 
 ## Current implementation matrix
 | Area | Status | Evidence |
@@ -51,14 +53,13 @@ Repository: DreamingbullyYT/my-engine-
 | External GDScript runtime loading | IMPLEMENTED; BUILD/DEVICE TEST PENDING | `mods/mod_runtime.gd`; boot-screen M3 control |
 | .dmod package manager/runtime | INITIAL IMPLEMENTATION; CI APK EXPORT VERIFIED; DEVICE TEST PENDING | `mods/mod_package_manager.gd`; M4 boot-screen control |
 | Stable public mod API, registries, events and hooks | NOT IMPLEMENTED | M5 |
-| Gameplay systems | NOT IMPLEMENTED | v1 scope D-020 and gameplay/physics/infrastructure specifications |
+| First playable colony-to-orbit slice | SOURCE IMPLEMENTED; NEW CI SMOKE + APK EXPORT PENDING; DEVICE TEST PENDING | colony/colony_simulation.gd, vehicles/rocket_flight.gd, rendering/planet_view.gd, saves/save_service.gd, ui/screens/game_screen.gd; commit d2d564b... |
 
 ## Next milestones
-1. M2 physical-device validation: install the M2/M3 APK and confirm native status.
-2. M3 validation: press the external-script test button and confirm `External GDScript: OK · loaded from user://mods/`; inspect log for `[M3] EXTERNAL_GDSCRIPT_OK`.
-3. M4: physically test the sample `.dmod` install/execute flow; validate dependency failure and disable behavior. Android system file-picker import and pre-decompression ZIP size validation remain follow-up work.
-4. After M2–M4 implementations are ready, perform the planned device tests for M1/M2/M3/M4. Do not start gameplay implementation until these tests are complete and their outcomes recorded.
-5. Then begin the actual game in small, modular, tested vertical slices.
+1. Run the new gameplay smoke test and Android ARM64 export for the first playable slice; record the exact workflow result and fix any failures.
+2. Install that APK on the physical Android phone and verify the colony view, building placement, production, save/load, rocket ascent, orbit, and return.
+3. Separately finish M2/M3/M4 device checks. Starting gameplay does not mark those runtime/modding gates complete.
+4. Expand the first slice only after build and device feedback; keep Moon, asteroid operations, research depth, advanced citizen needs, excavation, and interstellar systems outside this first implementation.
 
 ## Main-only development policy
 The user requires all future implementation, fixes, documentation, tests, and workflow changes to be committed directly to `main`; no feature branches or routine PRs. PR #1 was the one-time M2 transition exception and is now merged. Never bypass protections. Continue with small, focused commits and inspect latest `main` before each change.

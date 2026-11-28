@@ -74,3 +74,20 @@ The initial excavation model is deliberately lightweight (D-018):
 - Terrain/material types may still differ in their resource deposits and the resources available through mining; simplifying excavation does not make resource geology identical.
 
 Planetary surface/underground mining and asteroid mining both contribute to resource progression, but remain distinct systems with their own environment and interaction rules. Extraction respects actual deposits, quantities, tools, infrastructure, workforce, energy, and transport capacity.
+
+
+## First playable colony-to-orbit slice — 2026-11-28
+
+The initial playable implementation is intentionally a small foundation, not the complete v1 design above.
+
+- One starting planet is shown as a circular body with surface building locations.
+- Five building types are implemented: habitat (housing), solar array (energy generation), farm (food production), mine (metal production), and launch pad (rocket access).
+- A new colony starts with 20 named citizen records. Each record has a stable local ID, current job, health, and happiness. Worker assignment is automatic and intentionally simple in this slice.
+- The day loop consumes food, produces food/metal, generates and consumes energy, and updates citizen happiness when food is insufficient. Offline progression remains paused; no catch-up simulation occurs while the app is closed.
+- The player can construct a rocket using colony metal and fuel, launch it, allow simplified radial thrust/gravity guidance to insert it into a circular orbit, observe orbital motion, and begin a return/descent.
+- Save/load stores colony resources, citizens, buildings, day, and rocket flight state in a local JSON save slot.
+- This slice does not yet include Moon/asteroid operations, research, complex citizen needs/routines, excavation, advanced rocket staging/vehicle assembly, or full orbital maneuver controls. The flight model is a deliberately simplified first gameplay implementation, not a complete orbital simulator.
+
+## Art budget and temporary visuals — user decision, 2026-11-28
+
+The user will create all final textures and sprites. **32×32 pixels is the maximum size for any individual final sprite/texture.** Temporary visuals must follow the same maximum and stay extremely basic. Use flat colours and primitive pixel shapes that are straightforward to replace. Do not spend development effort on detailed textures, polished illustrations, or large texture atlases. The current planet presentation uses code-drawn markers rather than external texture assets.

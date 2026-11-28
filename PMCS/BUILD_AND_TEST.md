@@ -29,7 +29,7 @@
 - Native source lives in `native/dream_runtime/`; Godot source remains untouched.
 - `.github/scripts/build_dream_runtime.sh` checks out the official `godot-cpp 10.0.0-stable` pin and builds the requested target with SCons.
 - CI compiles Linux x86_64 and Android arm64-v8a native libraries, then exports an Android ARM64 debug APK.
-- CI compiles both native targets and exports the Android APK; the export pipeline is the authoritative project resource/script parse validation. A separate `--headless --editor --import --quit` step was removed after Godot 4.7.2 aborted with exit 134 after completing import/editor initialization, while the parallel APK export from the same source commit succeeded. Do not reintroduce this redundant editor-launch step unless a reproducible engine/editor fix is found. CI does not launch the game or run runtime smoke tests; runtime validation is deferred to the physical Android device.
+- CI compiles both native targets and exports the Android APK; the export pipeline is the authoritative project resource/script parse validation. A separate `--headless --editor --import --quit` step was removed after Godot 4.7.2 aborted with exit 134 after completing import/editor initialization, while the parallel APK export from the same source commit succeeded. Do not reintroduce this redundant editor-launch step unless a reproducible engine/editor fix is found. The workflow now runs a separate headless gameplay-domain smoke test, but it still does not launch the interactive game or verify Android runtime loading; those checks remain on the physical device.
 - `tests/native_extension_smoke.gd` remains a manual/development diagnostic; it is not run by the build-only CI workflow.
 - The Android export must include the Android GDExtension binary and preserve package/ABI validation.
 - User device test must confirm the boot-screen native status says `Native C++: OK · 20 + 22 = 42`.
@@ -62,3 +62,11 @@ The Android build workflow must run when Godot project code, scenes, resources, 
 - Make small commits to `main`, with focused tests and PMCS updates. Inspect latest main before each change.
 - The one-time M2 transition PR #1 was merged after all required CI checks passed. Do not bypass protections.
 - The user's physical Android test remains distinct from CI and must still be recorded separately. The M1 workflow no longer runs the native runtime smoke script or `--quit-after` game launch.
+
+
+## First playable gameplay slice
+
+- tests/gameplay_smoke.gd is the focused headless smoke test for starting population, starter buildings, mine production, food supply, rocket construction/launch, orbit insertion, and surface return.
+- .github/workflows/android-m1.yml runs this smoke test with the official Godot executable before building the native libraries and exporting the Android ARM64 APK.
+- A successful smoke test and APK export verify the tested domain path and package creation only. They do not prove on-device rendering, touch usability, lifecycle behavior, save persistence on Android, or real performance; the user must validate those on the phone.
+- CI does not run the game as an interactive visual session and must never be reported as a physical-device test.
