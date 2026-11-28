@@ -11,9 +11,10 @@ enum FlightState {
 	RETURNING
 }
 
-const PLANET_RADIUS := 100.0
-const TARGET_ORBIT_RADIUS := 155.0
-const GRAVITATIONAL_PARAMETER := 100000.0
+const HomeWorldDefinition = preload("res://world/home_world_definition.gd")
+const PLANET_RADIUS: float = HomeWorldDefinition.RADIUS
+const TARGET_ORBIT_RADIUS := PLANET_RADIUS * 1.55
+const GRAVITATIONAL_PARAMETER: float = HomeWorldDefinition.GRAVITATIONAL_PARAMETER
 const ASCENT_ACCELERATION := 18.0
 const MAX_FRAME_CATCHUP := 0.25
 const PHYSICS_STEP := 0.05
@@ -66,6 +67,14 @@ func is_on_surface() -> bool:
 
 func is_in_orbit() -> bool:
 	return state == FlightState.ORBIT
+
+
+func has_rocket() -> bool:
+	return state != FlightState.NOT_BUILT
+
+
+func is_flight_active() -> bool:
+	return state == FlightState.ASCENDING or state == FlightState.ORBIT or state == FlightState.RETURNING
 
 
 func launch() -> bool:

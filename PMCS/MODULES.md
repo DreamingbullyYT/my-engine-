@@ -1,6 +1,6 @@
 # Module Catalog and Modularity Rules
 
-Status: **ACCEPTED ARCHITECTURE — planned, not implemented.**
+Status: **ACCEPTED ARCHITECTURE — partially implemented.** The catalog remains the design target; only the specific source modules listed in CURRENT_STATE.md exist today.
 Decision: D-022.
 Scope: Dream Engine and the game built on it.
 

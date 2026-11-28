@@ -1,5 +1,7 @@
 extends Control
 
+signal close_requested
+
 var _touch_count: int = 0
 
 @onready var _engine_version: Label = %EngineVersion
@@ -89,6 +91,10 @@ func _on_application_paused() -> void:
 
 func _on_application_resumed() -> void:
     _status_label.text = "Application resumed. UI state was retained."
+
+
+func _on_close_pressed() -> void:
+	close_requested.emit()
 
 
 func _update_touch_count() -> void:

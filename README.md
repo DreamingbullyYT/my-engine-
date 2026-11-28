@@ -2,7 +2,7 @@
 
 Android-first game runtime and modding platform based on official, unmodified Godot 4.7.x, extended through a separate C++ GDExtension.
 
-> **Implementation status:** after the 2026-11-27 source reset, the main branch now contains the official Godot project foundation, a separate Dream Runtime GDExtension, GDScript mod-loading proofs, and the first playable colony-to-orbit slice. See PMCS/CURRENT_STATE.md for verified status and pending device checks.
+> **Implementation status:** after the 2026-11-27 source reset, the main branch now contains the official Godot project foundation, a separate Dream Runtime GDExtension, GDScript mod-loading proofs, and the initial city-first continuous world camera/colony-to-orbit foundation. See PMCS/CURRENT_STATE.md for CI status, known gaps, and pending device checks.
 
 ## AI / contributor starting point
 1. Read PMCS/README.md.

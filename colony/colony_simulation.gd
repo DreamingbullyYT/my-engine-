@@ -2,9 +2,12 @@ extends Node
 
 signal changed
 signal message_changed(message: String)
+signal rocket_capability_unlocked
 
 const DAY_LENGTH_SECONDS := 8.0
 const MAX_RESOURCE_STOCK := 999
+const CITY_CENTER_ANGLE := -PI * 0.5
+const BUILDING_ANGLE_SPACING := 0.06
 
 const BUILDING_TYPES: Dictionary = {
 	"habitat": {
@@ -54,6 +57,7 @@ var resources: Dictionary = {}
 var citizens: Array = []
 var buildings: Array = []
 var last_message: String = "Colony ready."
+var launch_capability_unlocked: bool = false
 
 var _day_timer: Timer
 
@@ -70,6 +74,7 @@ func _ready() -> void:
 
 func start_new_game() -> void:
 	day = 1
+	launch_capability_unlocked = false
 	resources = {
 		"metal": 60,
 		"food": 100,
@@ -78,9 +83,9 @@ func start_new_game() -> void:
 	}
 	citizens.clear()
 	buildings = [
-		{"id": "habitat-1", "type": "habitat", "angle": -2.35, "workers": 0},
-		{"id": "solar-1", "type": "solar", "angle": -1.57, "workers": 0},
-		{"id": "farm-1", "type": "farm", "angle": -0.79, "workers": 0}
+		{"id": "habitat-1", "type": "habitat", "angle": CITY_CENTER_ANGLE - BUILDING_ANGLE_SPACING, "workers": 0},
+		{"id": "solar-1", "type": "solar", "angle": CITY_CENTER_ANGLE, "workers": 0},
+		{"id": "farm-1", "type": "farm", "angle": CITY_CENTER_ANGLE + BUILDING_ANGLE_SPACING, "workers": 0}
 	]
 	for index in range(FIRST_NAMES.size()):
 		citizens.append({
@@ -91,7 +96,7 @@ func start_new_game() -> void:
 			"health": 100
 		})
 	_assign_workers()
-	_set_message("Landing complete. Build a mine and a launch pad to begin the space program.")
+	_set_message("Landing complete. Build and sustain your city before beginning the space program.")
 
 
 func can_spend(cost: Dictionary) -> bool:
@@ -127,7 +132,7 @@ func build(building_type: String) -> bool:
 		_set_message("Not enough metal for %s." % String(definition.get("label", building_type)))
 		return false
 	var building_id := "%s-%d" % [building_type, buildings.size() + 1]
-	var angle := -2.35 + float(buildings.size()) * 0.46
+	var angle := CITY_CENTER_ANGLE + (float(buildings.size()) - 1.0) * BUILDING_ANGLE_SPACING
 	buildings.append({
 		"id": building_id,
 		"type": building_type,
@@ -136,6 +141,9 @@ func build(building_type: String) -> bool:
 	})
 	_assign_workers()
 	_set_message("%s constructed." % String(definition.get("label", building_type)))
+	if building_type == "launchpad" and not launch_capability_unlocked:
+		launch_capability_unlocked = true
+		rocket_capability_unlocked.emit()
 	changed.emit()
 	return true
 
@@ -243,7 +251,8 @@ func get_snapshot() -> Dictionary:
 		"day": day,
 		"resources": resources.duplicate(true),
 		"citizens": citizens.duplicate(true),
-		"buildings": buildings.duplicate(true)
+		"buildings": buildings.duplicate(true),
+		"launch_capability_unlocked": launch_capability_unlocked
 	}
 
 
@@ -279,6 +288,7 @@ func restore_snapshot(data: Dictionary) -> bool:
 	resources = incoming_resources.duplicate(true)
 	citizens = safe_citizens
 	buildings = safe_buildings
+	launch_capability_unlocked = bool(data.get("launch_capability_unlocked", has_building("launchpad"))) or has_building("launchpad")
 	_assign_workers()
 	_set_message("Saved colony loaded.")
 	changed.emit()

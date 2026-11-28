@@ -1,3 +1,4 @@
+# DEPRECATED — D-023 rejects this planet-first overview as the main game view. The main scene uses rendering/world_view.gd instead. Retained temporarily as historical prototype code; do not wire it into app/main.tscn.
 extends Control
 
 const PLANET_RADIUS := 100.0

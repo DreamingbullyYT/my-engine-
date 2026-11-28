@@ -78,3 +78,17 @@ The Android build workflow must run when Godot project code, scenes, resources, 
 - The passing checks cover the 20-citizen start, starter buildings, mine construction/metal production, food supply, housing capacity, rocket construction and launch, orbit insertion, positive orbital period, return to surface, and colony/rocket snapshot restoration.
 - The smoke test keeps domain Nodes outside the live SceneTree so gameplay timers cannot hold the headless process open on failure. The workflow command is bounded by a 120-second timeout.
 - Android ARM64 native compilation/export and physical-device validation are tracked separately and are not implied by this smoke-test pass.
+
+
+## City-first continuous world camera — D-023
+
+The updated `tests/gameplay_smoke.gd` must check:
+- New colony starts with the planetary zoom locked and the complete planet invisible.
+- The launch-pad construction event enables rocket-launch capability.
+- The camera's initial zoom is city-close and the automatic reveal targets a zoom small enough to fit the complete home planet in the viewport.
+- City recenter restores the city-scale target zoom.
+- Rocket ascent activates camera following; landing after flight recentres the camera on the same city.
+- World rendering and rocket physics read the same normalized home-world radius/gravitational parameter definition.
+- Existing colony economy, save snapshot, rocket ascent/orbit/return tests continue to pass.
+
+These headless checks verify state transitions and domain wiring only. They do not prove the visual transition looks correct, touch gesture behavior on the phone, frame pacing, or actual system-map targeting. Physical Android testing remains mandatory. The nearest additional celestial target test cannot be added until an authored body catalogue exists; do not mock a fake planet merely to pass a test.

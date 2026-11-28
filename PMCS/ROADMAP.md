@@ -12,17 +12,20 @@ Interstellar travel, additional star systems, multi-system autonomous fleets/col
 The first implementation slice is deliberately smaller than all of v1. It must form a coherent playable loop on one starting planet and remain lightweight on Android.
 
 - [x] Main scene opens the playable colony screen; M1–M4 diagnostics remain reachable from that screen.
-- [ ] Replace the rejected planet-first overview with the D-023 city-first continuous world camera.
+- [x] Replace the rejected planet-first overview with a city-first continuous world camera in source (`rendering/world_view.gd`); CI/device validation pending.
 - [x] Five functional building types: habitat, solar array, farm, mine, and launch pad.
 - [x] Start with 20 persistent citizen records containing identity, job, health, and happiness.
 - [x] Basic housing, worker assignment, food consumption/production, metal production, and energy balance.
 - [x] Build a rocket from colony resources, launch with simplified radial thrust and gravity, insert into a circular orbit, simulate orbital motion, and return to the surface.
 - [x] Save/load colony, citizens, buildings, resources, and rocket state to one local JSON slot.
 - [x] Pass the automated gameplay smoke test (Actions run 46136155425, commit 51e2fc43bacba6432c8d841a0e28e7ec426cac2b).
-- [ ] One persistent world scene with city → home planet → local-system camera reveal; no independent gameplay screens or duplicate simulation.
-- [ ] Hide the full planet until first real rocket-launch capability is unlocked, then perform the automatic camera reveal toward the nearest actual catalogue planet/target.
-- [ ] Connect city economy/construction, rocket progression, local exploration, and return of resources/results into one persistent gameplay loop.
-- [ ] Complete Android ARM64 APK export for the corrected city-first slice.
+- [x] Keep one persistent main world scene; diagnostics open as an overlay rather than replacing the game scene.
+- [x] Hide the full planet at new-game start; the launch-pad capability unlock triggers a smooth city-to-home-planet camera reveal.
+- [x] Use the same camera to follow the active rocket, allow user pan/zoom to stop following, and recenter on the same city after landing.
+- [x] Keep the home-world radius/gravity prototype values in one shared world definition used by rendering and rocket physics.
+- [ ] Add actual authored celestial-body catalogue data and automatically focus the nearest real planet/Moon/asteroid beyond the home planet; do not create decorative fake targets.
+- [ ] Connect local exploration outcomes and resource/science return to the same city economy; the current rocket can orbit and return but does not yet complete an exploration/reward cycle.
+- [ ] Pass the updated camera/progression/follow smoke test and complete Android ARM64 APK export for this source revision.
 - [ ] User confirms the APK runs and the full loop works on a physical Android device.
 
 Do not expand this slice into advanced needs, detailed citizen routines, excavation, underground colonies, research trees, Moon/asteroid gameplay, interstellar travel, or multiplayer before the city-first continuous loop is stable. These systems must later connect to the same world session; they are not separate prototypes.

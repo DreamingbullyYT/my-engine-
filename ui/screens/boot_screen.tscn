@@ -67,6 +67,13 @@ theme_override_font_sizes/font_size = 30
 text = "DREAM ENGINE"
 horizontal_alignment = 1
 
+[node name="CloseDiagnosticsButton" type="Button" parent="Panel/Scroll/Content"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 14
+text = "Close diagnostics and return to city"
+
 [node name="Subtitle" type="Label" parent="Panel/Scroll/Content"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.72, 0.91, 1)
@@ -160,3 +167,5 @@ autowrap_mode = 2
 [connection signal="pressed" from="Panel/Scroll/Content/TestExternalScriptButton" to="." method="_on_test_external_script_pressed"]
 [connection signal="pressed" from="Panel/Scroll/Content/InstallSampleModButton" to="." method="_on_install_sample_mod_pressed"]
 [connection signal="pressed" from="Panel/Scroll/Content/DisableSampleModButton" to="." method="_on_disable_sample_mod_pressed"]
+
+[connection signal="pressed" from="Panel/Scroll/Content/CloseDiagnosticsButton" to="." method="_on_close_pressed"]

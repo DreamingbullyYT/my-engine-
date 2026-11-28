@@ -198,17 +198,17 @@ Desenate cu **vârful în sus**. Pe lățime folosim 32/64/96 px (1/2/3 tile).
 
 ## K. Corpuri cerești, cer, hartă — `textures/space/` — 33
 
-**Pictograme pe hartă, 64x64 (12):** `sun`, `home`, `moon`, `ember` (stâncă fierbinte), `dust` (stil Marte), `gasgiant`, `gasmoon`, `icedwarf`, `asteroid_ice` (albăstrui), `asteroid_silicate` (gri-maro), `asteroid_metal` (strălucitor), `comet`.
+**Pictograme pe hartă, maximum 32×32 per imagine (12):** `sun`, `home`, `moon`, `ember` (stâncă fierbinte), `dust` (stil Marte), `gasgiant`, `gasmoon`, `icedwarf`, `asteroid_ice` (albăstrui), `asteroid_silicate` (gri-maro), `asteroid_metal` (strălucitor), `comet`.
 **Alte (21):**
 | Id | px | Descriere |
 | --- | --- | --- |
-| ring_gasgiant | 192x64 | inele |
-| sky_temperate_day / _dusk / _night | 8x256 fiecare | gradient de cer (se repetă pe orizontală) |
-| sky_dust_day / _dusk / _night | 8x256 | |
-| sky_space_day / _dusk / _night | 8x256 | fără atmosferă (aproape negru) |
-| starfield | 256x256 | stele, se repetă |
-| cloud_a, cloud_b | 96x48 | nori |
-| sun_disc | 64x64 | soare pe cer |
+| ring_gasgiant | 192x64 amprentă compusă; fiecare segment ≤32×32 | inele |
+| sky_temperate_day / _dusk / _night | gradient procedural sau coloane repetate de maximum 8×32 | gradient de cer (se repetă pe orizontală) |
+| sky_dust_day / _dusk / _night | gradient procedural sau coloane repetate de maximum 8×32 | |
+| sky_space_day / _dusk / _night | gradient procedural sau coloane repetate de maximum 8×32 | fără atmosferă (aproape negru) |
+| starfield | atlas compus din celule repetabile ≤32×32 | stele, se repetă |
+| cloud_a, cloud_b | compoziție din celule ≤32×32 | nori |
+| sun_disc | 32x32 | soare pe cer |
 | moon_disc | 32x32 | lună pe cer |
 | marker_ship | 16x16 | rachetă pe hartă |
 | marker_apoapsis | 16x16 | |
@@ -232,16 +232,16 @@ Cele marcate "9-slice" au colțuri de 8 px, centrul se întinde.
 
 | Id | px | Descriere |
 | --- | --- | --- |
-| panel_9 | 48x48 | panou, 9-slice |
-| panel_dark_9 | 48x48 | panou închis, 9-slice |
-| button_9_normal | 48x48 | 9-slice |
-| button_9_pressed | 48x48 | 9-slice |
-| button_9_disabled | 48x48 | 9-slice |
-| tab_9_active | 48x32 | 9-slice |
-| tab_9_inactive | 48x32 | 9-slice |
+| panel_9 | 32x32 | panou, 9-slice |
+| panel_dark_9 | 32x32 | panou închis, 9-slice |
+| button_9_normal | 32x32 | 9-slice |
+| button_9_pressed | 32x32 | 9-slice |
+| button_9_disabled | 32x32 | 9-slice |
+| tab_9_active | 32x32 | 9-slice |
+| tab_9_inactive | 32x32 | 9-slice |
 | tooltip_9 | 32x32 | 9-slice |
-| slot_9 | 48x48 | casetă pentru obiect, 9-slice |
-| slot_9_selected | 48x48 | selectată, 9-slice |
+| slot_9 | 32x32 | casetă pentru obiect, 9-slice |
+| slot_9_selected | 32x32 | selectată, 9-slice |
 | selection_outline_9 | 32x32 | contur pe clădire selectată, 9-slice |
 | bar_bg_9 | 32x8 | fundal bară progres, 9-slice |
 | bar_fill_9 | 32x8 | umplere, 9-slice |
@@ -255,7 +255,7 @@ Cele marcate "9-slice" au colțuri de 8 px, centrul se întinde.
 
 ## N. Efecte — `textures/effects/` — 14 (+ flăcările din J)
 
-`particle_dot` (8x8), `particle_spark` (8x8), `particle_smoke_sheet` (64x16, 4 cadre), `explosion_sheet` (192x32, 6 cadre), `dust_puff_sheet` (96x16, 6 cadre), `heart_float` (16x16), `confetti_a` (8x8), `confetti_b` (8x8), `confetti_c` (8x8), `firework_sheet` (192x32, 6 cadre), `reentry_glow` (64x64), `rain_drop` (4x8), `snow_flake` (8x8), `meteor_trail` (32x64).
+`particle_dot` (8x8), `particle_spark` (8x8), `particle_smoke` (4 cadre separate ≤32×16), `explosion` (6 cadre separate ≤32×32), `dust_puff` (6 cadre separate ≤16×16), `heart_float` (16x16), `confetti_a` (8x8), `confetti_b` (8x8), `confetti_c` (8x8), `firework` (6 cadre separate ≤32×32), `reentry_glow` (32x32 compus din 2×2 celule), `rain_drop` (4x8), `snow_flake` (8x8), `meteor_trail` (32x32 repetat pe segmente).
 
 ## P. Module de stație orbitală și megaship — `textures/station/` — 10
 
@@ -276,7 +276,7 @@ Modulele sunt piese vizuale independente, conectate prin puncte de atașare stan
 
 ## O. Aplicație (Android) — `textures/app/` — 5
 
-`icon_foreground` (432x432, în zona centrală de 288x288), `icon_background` (432x432), `icon_legacy` (192x192), `splash` (288x288), `logo` (256x64).
+`icon_foreground`, `icon_background`, `icon_legacy`, `splash` și `logo` folosesc numai imagini-sursă de maximum 32×32 px; dimensiunile cerute de Android/launcher se obțin prin scalare/vectorizare la export, nu prin păstrarea unor PNG-uri mai mari în repository.
 
 ---
 

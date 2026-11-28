@@ -80,7 +80,7 @@ Planetary surface/underground mining and asteroid mining both contribute to reso
 
 The initial playable implementation is intentionally a small foundation, not the complete v1 design above.
 
-- One starting planet is shown as a circular body with surface building locations.
+- The player starts with a close view of the city on the curved radial planetary surface. The full planet stays hidden until the rocket-launch capability is unlocked by constructing the launch pad; the same camera then reveals the home planet. There is no separate city/planet scene.
 - Five building types are implemented: habitat (housing), solar array (energy generation), farm (food production), mine (metal production), and launch pad (rocket access).
 - A new colony starts with 20 named citizen records. Each record has a stable local ID, current job, health, and happiness. Worker assignment is automatic and intentionally simple in this slice.
 - The day loop consumes food, produces food/metal, generates and consumes energy, and updates citizen happiness when food is insufficient. Offline progression remains paused; no catch-up simulation occurs while the app is closed.
@@ -90,7 +90,7 @@ The initial playable implementation is intentionally a small foundation, not the
 
 ## Art budget and temporary visuals — user decision, 2026-11-28
 
-The user will create all final textures and sprites. **32×32 pixels is the maximum size for any individual final sprite/texture.** Temporary visuals must follow the same maximum and stay extremely basic. Use flat colours and primitive pixel shapes that are straightforward to replace. Do not spend development effort on detailed textures, polished illustrations, or large texture atlases. The current planet presentation uses code-drawn markers rather than external texture assets.
+The user will create all final textures and sprites. **32×32 pixels is the maximum size for any individual final sprite/texture.** Temporary visuals must follow the same maximum and stay extremely basic. Use flat colours and primitive pixel shapes that are straightforward to replace. Do not spend development effort on detailed textures, polished illustrations, or large texture atlases. The current city-first presentation uses code-drawn primitive placeholders rather than external texture assets. It follows D-023; the rejected planet-first renderer is not the main scene.
 
 
 ## One continuous city-to-space gameplay loop — D-023
@@ -122,3 +122,13 @@ The city remains the player's home and the centre of progression. Space activity
 - Building/citizen visual LOD follows D-016 while all identities, jobs, needs, production, and save data remain persistent.
 - Use the radial/polar planetary surface and persistent underground topology from D-017–D-019. The local city is a close-up of this surface, not a separate disconnected map.
 - Keep the game clock paused while the app is closed, per D-014. A camera transition must not advance hidden/offline time.
+
+
+### D-023 first camera implementation — source status pending CI
+
+The current prototype connects the city and the home-world/rocket scale in one `GameScreen` session:
+- The home-world radius and gravitational parameter are read from `world/home_world_definition.gd` by both `rendering/world_view.gd` and `vehicles/rocket_flight.gd`.
+- Building the launch pad is the current prototype's unlock event for rocket construction/launch capability and triggers the one-time camera reveal.
+- The camera can follow the same rocket during powered ascent, orbit, and return. A user pan/pinch stops automatic follow; landing recentres the camera on the same city.
+- The `City` control recentres the camera without resetting colony or vehicle state.
+- The current starting-world definition is only a normalized prototype definition. The separate celestial-body catalogue, nearest additional target selection, local exploration/scanning, and returning resource/science rewards remain unimplemented. These are required before claiming that the complete city↔space gameplay loop is finished.
