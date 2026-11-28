@@ -1,13 +1,13 @@
 # Dream Engine Code Map
 
-- Source commit: d1b710ac67edb9df6102167ca533dd190e425786
-- Generated: 2026-11-28T11:24:11Z
+- Source commit: 7f7be485889104f57a86159f2014727ae4c50464
+- Generated: 2026-11-28T11:40:03Z
 
 ## GDScript
 # GDScript Code Map
 
-- Source commit: d1b710ac67edb9df6102167ca533dd190e425786
-- Generated (UTC): 2026-11-28T11:24:11Z
+- Source commit: 7f7be485889104f57a86159f2014727ae4c50464
+- Generated (UTC): 2026-11-28T11:40:03Z
 - Parser: tree-sitter-gdscript 6.1.0
 - Files: **13**
 - Script/nested classes: **0**
@@ -194,8 +194,8 @@
 ## CodeGraphContext (supported native/script languages)
 # CodeGraphContext Code Map
 
-- Commit: d1b710ac67edb9df6102167ca533dd190e425786
-- Generated: 2026-11-28T11:24:08Z
+- Commit: 7f7be485889104f57a86159f2014727ae4c50464
+- Generated: 2026-11-28T11:40:00Z
 - Indexer: CodeGraphContext 0.5.1
 
 ## Index statistics
@@ -207,7 +207,7 @@ Services initialized.
 ┏━━━━━━━━━━━━━━━━━━┳━━━━━━━┓
 ┃ Metric           ┃ Count ┃
 ┡━━━━━━━━━━━━━━━━━━╇━━━━━━━┩
-│ Files            │    36 │
+│ Files            │    37 │
 │ Functions        │     9 │
 │ Classes          │     1 │
 │ Imported Modules │     7 │
