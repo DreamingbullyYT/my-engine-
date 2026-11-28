@@ -1,6 +1,13 @@
 # Current State
 
 Snapshot: 2026-11-28
+
+## Current implementation priority — D-024
+- The user changed the implementation sequence: finish the city/colony management phase, with broad feature coverage described in PMCS/CITY_PHASE.md, before implementing playable space systems.
+- D-020's local-system v1 destination remains accepted; this is a sequencing decision, not a deletion of space scope.
+- During the city phase the game must stay in the city/local surface view. Existing rocket/flight code is dormant and must not be exposed as playable UI or trigger the planet reveal.
+- The eventual city-to-space experience remains one persistent world/session under D-023 and modular under D-022.
+- City completion is not claimed until every item in the City Completion Gate has been implemented, tested, and accepted by the user.
 Default branch: `main`
 Repository: DreamingbullyYT/my-engine-
 
@@ -58,12 +65,18 @@ Repository: DreamingbullyYT/my-engine-
 | Shared starting-body definition | SOURCE IMPLEMENTED; CI PENDING | world/home_world_definition.gd; consumed by renderer and rocket physics |
 | Nearest additional celestial target and exploration return rewards | NOT IMPLEMENTED | No authored celestial-body catalogue or exploration service exists yet; do not invent decorative target bodies or free rewards |
 
+## Latest CI failure — 2026-11-28
+- M1 run 46139676246 on source commit d1b710ac67edb9df6102167ca533dd190e425786 failed before native compilation/APK export.
+- Godot 4.7.2 reported GDScript parse/type-inference errors in rendering/world_view.gd at lines 203 (new_distance) and 360 (window_center). The smoke script then could not load its dependent world-view script and timed out; no APK artifact was uploaded.
+- M2 run 46139676241 on the same source commit completed successfully. This confirms the native-extension workflow only; it does not produce the M1 APK.
+
 ## Next milestones
-1. Run the updated gameplay smoke test and Android ARM64 export; fix any GDScript/import/export failures before publishing an APK.
-2. Validate on the phone: city-first opening, no full planet before the launch-pad unlock, complete home-planet reveal, pinch/drag, City recenter, rocket follow, return-to-city, diagnostics overlay, and save/load.
-3. Add the authored celestial-body catalogue and focus the nearest real planet/Moon/asteroid from that data; until then the camera reveals the home planet only and must not invent a target.
-4. Connect local exploration outcomes and resource/science return to the same colony economy. This is still needed for a genuinely complete city↔space gameplay loop.
-5. Separately finish M2/M3/M4 device checks. Continue to defer interstellar travel, complex needs, deep excavation, and other later systems until the local continuous loop is stable.
+1. Fix the two confirmed world_view.gd type annotations and make the city-only smoke test fail promptly on script-load errors.
+2. Hide/deactivate playable space controls and launch-pad progression during the city phase; retain only clean module boundaries for later integration.
+3. Implement the city feature vertical slices in the dependency order in PMCS/CITY_PHASE.md, with focused tests and PMCS updates after each slice.
+4. Pass the City Completion Gate with robust save/migration, performance, CI, and user-confirmed physical-device validation.
+5. Only after user acceptance of the city phase, implement playable space systems and activate D-023 camera scale reveal.
+6. Separately complete pending M2/M3/M4 device checks; CI status is not device evidence.
 
 ## Main-only development policy
 The user requires all future implementation, fixes, documentation, tests, and workflow changes to be committed directly to `main`; no feature branches or routine PRs. PR #1 was the one-time M2 transition exception and is now merged. Never bypass protections. Continue with small, focused commits and inspect latest `main` before each change.

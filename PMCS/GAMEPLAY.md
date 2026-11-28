@@ -1,6 +1,6 @@
 # Gameplay and Colony Simulation
 
-Status: planned design. Reference direction: adapt the colony-management principles of The Final Earth 2; no code, art, names, UI, or exact balance values are copied.
+Status: accepted gameplay design target; most systems are not yet implemented. Under D-024, this city/colony design is the active implementation phase and must pass PMCS/CITY_PHASE.md's completion gate before playable space work begins. Reference direction: adapt broad colony-management principles of The Final Earth 2; no code, art, names, UI, or exact balance values are copied.
 
 ## Core loop
 Build and maintain a settlement → extract and process resources → house and support citizens → assign workers → research technologies → unlock buildings and equipment → construct spacecraft → explore and bring back resources/knowledge → expand and sustain more settlements. Space activity must continually benefit inhabited colonies; it must not replace colony management as the central game.

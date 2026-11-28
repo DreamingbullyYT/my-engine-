@@ -7,33 +7,33 @@ The first playable v1 is a coherent local-system game slice: one starting planet
 
 Interstellar travel, additional star systems, multi-system autonomous fleets/colonization, and full-scale mobile-colony megaships are v2+ work. They remain in the long-term design; do not make them prerequisites for v1. Keep M1 (official Godot Android baseline) and M2 (separate GDExtension proof) as distinct early gates. M1 must not require a custom Godot source build; M2 proves the separate C++ extension can load without modifying Godot.
 
-## First playable vertical slice — immediate priority (approved 2026-11-28)
+## City-first project priority — D-024 (approved 2026-11-28)
 
-The first implementation slice is deliberately smaller than all of v1. It must form a coherent playable loop on one starting planet and remain lightweight on Android.
+The accepted release scope D-020 remains the destination, but implementation order changes: finish a substantial, enjoyable city/colony management game before starting playable space systems. Follow **PMCS/CITY_PHASE.md** as the authoritative feature inventory and City Completion Gate.
 
-- [x] Main scene opens the playable colony screen; M1–M4 diagnostics remain reachable from that screen.
-- [x] Replace the rejected planet-first overview with a city-first continuous world camera in source (`rendering/world_view.gd`); CI/device validation pending.
-- [x] Five functional building types: habitat, solar array, farm, mine, and launch pad.
-- [x] Start with 20 persistent citizen records containing identity, job, health, and happiness.
-- [x] Basic housing, worker assignment, food consumption/production, metal production, and energy balance.
-- [x] Build a rocket from colony resources, launch with simplified radial thrust and gravity, insert into a circular orbit, simulate orbital motion, and return to the surface.
-- [x] Save/load colony, citizens, buildings, resources, and rocket state to one local JSON slot.
-- [x] Pass the automated gameplay smoke test (Actions run 46136155425, commit 51e2fc43bacba6432c8d841a0e28e7ec426cac2b).
-- [x] Keep one persistent main world scene; diagnostics open as an overlay rather than replacing the game scene.
-- [x] Hide the full planet at new-game start; the launch-pad capability unlock triggers a smooth city-to-home-planet camera reveal.
-- [x] Use the same camera to follow the active rocket, allow user pan/zoom to stop following, and recenter on the same city after landing.
-- [x] Keep the home-world radius/gravity prototype values in one shared world definition used by rendering and rocket physics.
-- [ ] Add actual authored celestial-body catalogue data and automatically focus the nearest real planet/Moon/asteroid beyond the home planet; do not create decorative fake targets.
-- [ ] Connect local exploration outcomes and resource/science return to the same city economy; the current rocket can orbit and return but does not yet complete an exploration/reward cycle.
-- [ ] Pass the updated camera/progression/follow smoke test and complete Android ARM64 APK export for this source revision.
-- [ ] User confirms the APK runs and the full loop works on a physical Android device.
+- [ ] Keep the player-facing build city/local-surface focused. Do not expose rocket construction, launch, orbital gameplay, Moon/asteroid operations, stations, or the planet/system camera reveal during the city phase.
+- [ ] Keep any existing space/vehicle code dormant and disconnected from the city UI/economy until a real integration slice is approved after the City Completion Gate.
+- [ ] Build citizen identity, needs, health, happiness, jobs, skills, routines, inspection, and sustainable population growth.
+- [ ] Build a data-driven building/construction/service catalogue with placement, worker roles, operating constraints, upgrades, repairs, maintenance, and demolition.
+- [ ] Build resource inventories, storage, recipes, multi-step production, transport/logistics, graphs, bottlenecks, and shortage forecasts.
+- [ ] Build research with multiple progression paths, unlocks, policies, events, optional social/faction systems, and meaningful city-level progression.
+- [ ] Implement gradual mayor advice/delegation under D-011 and preserve human override/audit history.
+- [ ] Implement the accepted radial surface, construction interaction, excavation, and persistent underground topology under D-017–D-019.
+- [ ] Complete tutorial + unrestricted sandbox, citizen/building inspectors, touch-first UI, Romanian/English localization, robust city save/migrations, and mod extension points.
+- [ ] Pass the full City Completion Gate in PMCS/CITY_PHASE.md, automated tests, profiling, and user-confirmed Android device validation.
+- [ ] Only after the user accepts the city phase, start the space/local-system phase from D-020 and activate D-023's city → planet → nearest real destination reveal in the same world session.
 
-Do not expand this slice into advanced needs, detailed citizen routines, excavation, underground colonies, research trees, Moon/asteroid gameplay, interstellar travel, or multiplayer before the city-first continuous loop is stable. These systems must later connect to the same world session; they are not separate prototypes.
+### Existing playable slice — temporary baseline, not city completion
+
+The current prototype is a starting point for the city phase, not its completion:
+- It currently contains habitat, solar array, farm, mine, and a 20-citizen population with a minimal food/metal/energy tick.
+- It includes a prototype rocket/flight path and camera reveal. These are not part of the current playable city scope; keep them dormant/hidden while the city phase is developed.
+- It does not yet implement the broader citizens/needs/services/research/policies/logistics/terrain systems listed in CITY_PHASE.md.
+- Its earlier smoke test does not prove City Completion Gate readiness.
 
 ### Art and placeholder budget
 
 The user creates the final game textures/sprites. Every final sprite or texture must be no larger than **32×32 pixels**. Assistant-created temporary visuals must be extremely simple and obey the same maximum; prefer primitive pixel shapes and flat colours, avoid detailed texture work, and keep placeholders easy to replace. Do not generate or add elaborate art assets without a new request.
-
 
 ## M0 — Clean baseline and PMCS
 - [x] Empty source branches intentionally on 2026-11-27.
