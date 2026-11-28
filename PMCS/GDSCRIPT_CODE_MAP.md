@@ -1,11 +1,11 @@
 # GDScript Code Map
 
-- Source commit: 7f7be485889104f57a86159f2014727ae4c50464
-- Generated (UTC): 2026-11-28T11:40:03Z
+- Source commit: 043abc13cd4f00bc2cfe1904b40716d0b8272fed
+- Generated (UTC): 2026-11-28T11:43:51Z
 - Parser: tree-sitter-gdscript 6.1.0
 - Files: **13**
 - Script/nested classes: **0**
-- Functions: **122**
+- Functions: **118**
 - Files with syntax errors: **0**
 
 > Syntax-derived navigation only. Source and tests remain authoritative.
@@ -14,22 +14,22 @@
 ## colony/colony_simulation.gd
 
 - Functions:
-  - _ready() — line 65; calls start_new_game()
-  - start_new_game() — line 75; calls _assign_workers(), _set_message()
-  - can_spend() — line 102
-  - try_spend() — line 109; calls can_spend()
-  - can_build() — line 118; calls can_spend()
-  - build() — line 125; calls _assign_workers(), _set_message(), try_spend()
-  - has_building() — line 151
-  - get_housing_capacity() — line 158
-  - get_employed_count() — line 167
-  - get_average_happiness() — line 175
-  - advance_day() — line 184; calls _set_message()
-  - get_population_summary() — line 239; calls get_average_happiness(), get_employed_count(), get_housing_capacity()
-  - get_snapshot() — line 248
-  - restore_snapshot() — line 259; calls _assign_workers(), _set_message(), has_building()
-  - _assign_workers() — line 298
-  - _set_message() — line 328
+  - _ready() — line 56; calls start_new_game()
+  - start_new_game() — line 66; calls _assign_workers(), _set_message()
+  - can_spend() — line 91
+  - try_spend() — line 98; calls can_spend()
+  - can_build() — line 107; calls can_spend()
+  - build() — line 114; calls _assign_workers(), _set_message(), try_spend()
+  - has_building() — line 137
+  - get_housing_capacity() — line 144
+  - get_employed_count() — line 153
+  - get_average_happiness() — line 161
+  - advance_day() — line 170; calls _set_message()
+  - get_population_summary() — line 222; calls get_average_happiness(), get_employed_count(), get_housing_capacity()
+  - get_snapshot() — line 231
+  - restore_snapshot() — line 241; calls _assign_workers(), _set_message()
+  - _assign_workers() — line 279
+  - _set_message() — line 309
 
 ## core/app_lifecycle.gd
 
@@ -102,13 +102,13 @@
 
 - Functions:
   - save_game() — line 7
-  - load_game() — line 33
+  - load_game() — line 32
 
 ## tests/gameplay_smoke.gd
 
 - Functions:
-  - _initialize() — line 11; calls _check()
-  - _check() — line 85
+  - _initialize() — line 9; calls _check()
+  - _check() — line 58
 
 ## tests/native_extension_smoke.gd
 
@@ -135,26 +135,22 @@
 ## ui/screens/game_screen.gd
 
 - Functions:
-  - _ready() — line 21; calls _build_interface(), _build_world_view(), _refresh()
-  - _build_world_view() — line 39
-  - _build_interface() — line 46; calls _make_button(), _make_panel_style()
-  - _make_panel_style() — line 138
-  - _make_button() — line 151
-  - _on_build_pressed() — line 161; calls _refresh()
-  - _on_build_rocket_pressed() — line 166; calls _on_message_changed(), _refresh()
-  - _on_launch_pressed() — line 178; calls _on_message_changed(), _refresh()
-  - _on_return_pressed() — line 184; calls _on_message_changed(), _refresh()
-  - _on_city_pressed() — line 190
-  - _on_save_pressed() — line 194; calls _on_message_changed()
-  - _on_load_pressed() — line 199; calls _on_message_changed(), _refresh()
-  - _on_diagnostics_pressed() — line 218
-  - _close_diagnostics_overlay() — line 226
-  - _on_rocket_capability_unlocked() — line 232; calls _on_message_changed()
-  - _on_camera_scale_changed() — line 237; calls _refresh()
-  - _on_message_changed() — line 241
-  - _on_application_paused() — line 246; calls _on_message_changed()
-  - _on_application_resumed() — line 250; calls _on_message_changed()
-  - _refresh() — line 254
+  - _ready() — line 17; calls _build_interface(), _build_world_view(), _refresh()
+  - _build_world_view() — line 31
+  - _build_interface() — line 38; calls _make_button(), _make_panel_style()
+  - _make_panel_style() — line 120
+  - _make_button() — line 133
+  - _on_build_pressed() — line 143; calls _refresh()
+  - _on_city_pressed() — line 148
+  - _on_save_pressed() — line 152; calls _on_message_changed()
+  - _on_load_pressed() — line 157; calls _on_message_changed(), _refresh()
+  - _on_diagnostics_pressed() — line 171
+  - _close_diagnostics_overlay() — line 179
+  - _on_camera_scale_changed() — line 185; calls _refresh()
+  - _on_message_changed() — line 189
+  - _on_application_paused() — line 194; calls _on_message_changed()
+  - _on_application_resumed() — line 198; calls _on_message_changed()
+  - _refresh() — line 202
 
 ## vehicles/rocket_flight.gd
 
