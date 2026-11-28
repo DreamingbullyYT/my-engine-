@@ -35,10 +35,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: m1-android-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   GODOT_VERSION: "4.7.2-stable"
   GODOT_VERSION_DIR: "4.7.2.stable"
@@ -50,7 +46,7 @@ jobs:
   android-arm64:
     name: Export and validate Android ARM64 APK
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
